@@ -12,6 +12,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException
 from urllib.parse import urlparse, parse_qs
 import logging
+import datetime
 
 LOGGING_FORMAT = '%(asctime)s %(message)s'
 TAOBAO_MAIN_PAGE = 'https://www.taobao.com'
@@ -29,7 +30,6 @@ DOM_LOGIN_FORM_ID = 'login'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
 QUERY_STRING = '美剧'
-SAVE_TO_FILE_PATH = '%sTops.csv' % QUERY_STRING
 TB_SKU_ID_NAME_IN_LINK = 'skuId'
 ID = 'id'
 SKU_ID = 'sku_id'
@@ -137,7 +137,9 @@ def parse_taobao_search_results():
         except Exception as e:
             logger.error('get exception, ', str(e))
             continue
-    with open(SAVE_TO_FILE_PATH, 'w', newline='') as csvfile:
+    output_file = '%s_%s_%dpages.csv' % (
+        QUERY_STRING, datetime.datetime.now().strftime('%Y%m%d%H%M%S'), NUM_OF_PAGES_TO_PARSE)
+    with open(output_file, 'w', newline='') as csvfile:
         fieldnames = [ID, SKU_ID, SKU_TITLE, SKU_LINK, SKU_IMG_LINK, SKU_PRICE_UNIT, SKU_PRICE, SKU_SALES]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         for item in sku_info_list:
