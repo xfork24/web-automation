@@ -4,6 +4,7 @@ import enum
 import sys
 import time
 import csv
+import traceback
 from enum import Enum
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -39,6 +40,8 @@ SKU_TITLE = 'title'
 SKU_SALES = 'sales'
 SKU_PRICE_UNIT = 'price_unit'
 SKU_PRICE = 'price'
+SHOP_NAME = 'shop_name'
+SHOP_LINK = 'shop_link'
 DEBUG = True
 
 
@@ -134,13 +137,16 @@ def parse_taobao_search_results():
             btn_list[1].click()
             logger.info('wait search results for page %d for %d seconds' % (i + 1, SEARCH_WAIT_IN_SECONDS))
             time.sleep(SEARCH_WAIT_IN_SECONDS)
-        except Exception as e:
-            logger.error('get exception, ', str(e))
+        except Exception:
+            logger.error('get exception while parsing search results')
+            traceback.print_exc()
             continue
     output_file = '%s_%s_%dpages.csv' % (
         QUERY_STRING, datetime.datetime.now().strftime('%Y%m%d%H%M%S'), NUM_OF_PAGES_TO_PARSE)
     with open(output_file, 'w', newline='') as csvfile:
-        fieldnames = [ID, SKU_ID, SKU_TITLE, SKU_LINK, SKU_IMG_LINK, SKU_PRICE_UNIT, SKU_PRICE, SKU_SALES]
+        fieldnames = [ID, SKU_ID, SKU_TITLE, SKU_LINK, SKU_IMG_LINK,
+                      SHOP_NAME, SHOP_LINK,
+                      SKU_PRICE_UNIT, SKU_PRICE, SKU_SALES]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         for item in sku_info_list:
             writer.writerow(item)
@@ -196,18 +202,25 @@ def parse_taobao_search_result(search_result, sku_info_list):
         price_divs_inner = price_divs_wrapper[0].find_elements(By.XPATH, 'div')
         assert (len(price_divs_inner) == 2)
         price = '%s%s' % (price_divs_inner[0].text, price_divs_inner[1].text)
+        shop_info = shop_summary.find_element(By.XPATH, 'div/a')
+        shop_link = shop_info.get_attribute('href')
+        shop_name_wrapper = shop_info.find_elements(By.XPATH, 'div/span')
+        shop_name = shop_name_wrapper[-1].text
         sku_info_list.append({
             ID: parse_id(item_id),
             SKU_ID: parse_sku_id(link),
             SKU_LINK: link,
             SKU_IMG_LINK: img_link,
             SKU_TITLE: title,
+            SHOP_NAME: shop_name,
+            SHOP_LINK: shop_link,
             SKU_SALES: parse_sales(sales),
             SKU_PRICE_UNIT: price_unit,
             SKU_PRICE: price
         })
-    except Exception as e:
-        logger.error('get exception: ', e)
+    except Exception:
+        logger.error('get exception while parsing %s' % search_result.accessible_name)
+        traceback.print_exc()
 
 
 if __name__ == '__main__':
