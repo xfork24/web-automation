@@ -10,7 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException
-
+from urllib.parse import urlparse, parse_qs
 import logging
 
 LOGGING_FORMAT = '%(asctime)s %(message)s'
@@ -30,6 +30,9 @@ TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
 QUERY_STRING = '美剧'
 SAVE_TO_FILE_PATH = '%sTops.csv' % QUERY_STRING
+TB_SKU_ID_NAME_IN_LINK = 'skuId'
+ID = 'id'
+SKU_ID = 'sku_id'
 SKU_LINK = 'link'
 SKU_IMG_LINK = 'img_link'
 SKU_TITLE = 'title'
@@ -135,10 +138,23 @@ def parse_taobao_search_results():
             logger.error('get exception, ', str(e))
             continue
     with open(SAVE_TO_FILE_PATH, 'w', newline='') as csvfile:
-        fieldnames = [SKU_TITLE, SKU_LINK, SKU_IMG_LINK, SKU_PRICE_UNIT, SKU_PRICE, SKU_SALES]
+        fieldnames = [ID, SKU_ID, SKU_TITLE, SKU_LINK, SKU_IMG_LINK, SKU_PRICE_UNIT, SKU_PRICE, SKU_SALES]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         for item in sku_info_list:
             writer.writerow(item)
+
+
+def parse_id(item_id):
+    return item_id[item_id.rfind('_') + 1:]
+
+
+def parse_sku_id(link):
+    result = urlparse(link)
+    qs = parse_qs(result.query)
+    if TB_SKU_ID_NAME_IN_LINK in qs and len(qs[TB_SKU_ID_NAME_IN_LINK]) == 1:
+        return qs[TB_SKU_ID_NAME_IN_LINK][0]
+    else:
+        return '0'
 
 
 def parse_sales(sales):
@@ -154,6 +170,7 @@ def parse_taobao_search_result(search_result, sku_info_list):
     logger = get_logger()
     try:
         logger.info('parsing search result: %s' % search_result.accessible_name)
+        item_id = search_result.get_attribute('id')
         link = search_result.get_attribute('href')
         commodity_summary = search_result.find_elements(By.XPATH, 'div/div')
         assert (len(commodity_summary) == 3)
@@ -178,6 +195,8 @@ def parse_taobao_search_result(search_result, sku_info_list):
         assert (len(price_divs_inner) == 2)
         price = '%s%s' % (price_divs_inner[0].text, price_divs_inner[1].text)
         sku_info_list.append({
+            ID: parse_id(item_id),
+            SKU_ID: parse_sku_id(link),
             SKU_LINK: link,
             SKU_IMG_LINK: img_link,
             SKU_TITLE: title,
