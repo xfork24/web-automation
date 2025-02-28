@@ -141,6 +141,15 @@ def parse_taobao_search_results():
             writer.writerow(item)
 
 
+def parse_sales(sales):
+    sales_num = sales[:-3]
+    if sales_num[-1] == '+':
+        sales_num = sales_num[:-1]
+    if sales_num[-1] == '万':
+        sales_num = sales_num[:-1] + '0000'
+    return int(sales_num)
+
+
 def parse_taobao_search_result(search_result, sku_info_list):
     logger = get_logger()
     try:
@@ -172,7 +181,7 @@ def parse_taobao_search_result(search_result, sku_info_list):
             SKU_LINK: link,
             SKU_IMG_LINK: img_link,
             SKU_TITLE: title,
-            SKU_SALES: sales,
+            SKU_SALES: parse_sales(sales),
             SKU_PRICE_UNIT: price_unit,
             SKU_PRICE: price
         })
