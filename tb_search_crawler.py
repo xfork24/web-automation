@@ -19,7 +19,6 @@ SEARCH_WAIT_IN_SECONDS = 10
 QUERY_STRING = '美剧'
 NUM_OF_PAGES_TO_PARSE = 10
 
-Driver: webdriver.Remote = None
 COMMODITIES_IN_ONE_SEARCH = set()
 
 
@@ -56,8 +55,6 @@ def parse_price(price):
 
 
 def craw_taobao_search(qstring):
-    global Driver
-    Driver = init_webdriver(WebDriverType.ChromDriver)
     login_taobao()
     enter_query_string(qstring)
     crawl_taobao_search_results()

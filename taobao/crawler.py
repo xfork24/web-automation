@@ -31,3 +31,6 @@ def init_webdriver(webdriver_type: WebDriverType):
         driver = webdriver.Safari(options=options)
     logger.info('%s webdriver initialized' % webdriver_type)
     return driver
+
+
+Driver = init_webdriver(WebDriverType.ChromDriver)
