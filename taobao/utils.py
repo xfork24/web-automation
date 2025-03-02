@@ -15,3 +15,13 @@ def init_logger(log_format, file, level, debug):
 def get_logger(module_name=__name__):
     logger = logging.getLogger(module_name)
     return logger
+
+
+def parse_price_unit(unit):
+    if unit == '¥':
+        return 'CNY'
+    return unit
+
+
+def parse_price(price):
+    return int(float(price) * 100)

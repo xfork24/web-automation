@@ -1,6 +1,6 @@
 # coding: utf-8
 # !./bin/python
-import time
+
 import datetime
 import csv
 import traceback
@@ -9,7 +9,7 @@ from urllib.parse import urlparse, parse_qs
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException, NoSuchWindowException
+from selenium.common.exceptions import NoSuchWindowException
 
 TAOBAO_SEARCH_PAGE = 'https://s.taobao.com/search'
 OUTPUT_DIR = './output'
@@ -44,43 +44,10 @@ def parse_sales(sales):
     return int(sales_num)
 
 
-def parse_price_unit(unit):
-    if unit == '¥':
-        return 'CNY'
-    return unit
-
-
-def parse_price(price):
-    return int(float(price) * 100)
-
-
 def craw_taobao_search(qstring):
     login_taobao()
     enter_query_string(qstring)
     crawl_taobao_search_results()
-
-
-def login_taobao():
-    logger = get_logger()
-    logger.info('forward to taobao login page')
-    Driver.get(TAOBAO_LOGIN_PAGE)
-    while True:
-        try:
-            logger.info('check taobao login status...')
-            Driver.find_element(By.ID, 'login')
-            time.sleep(LOGIN_CHECK_INTERVAL_IN_SECONDS)
-        except NoSuchElementException:
-            logger.info('can not find login form, you should already logged in and in taobao/personal homepage')
-            break
-    logger.info('check if we are in taobao/personal homepage')
-    while True:
-        if Driver.title == TB_PERSONAL_HOMEPAGE_TITLE_NAME or Driver.title == TB_HOMEPAGE_TITLE_NAME:
-            logger.info('we are already in taobao/personal homepage, now perform following crawling')
-            break
-        else:
-            logger.info(
-                'we are not in taobao/personal homepage, finish authentication and navigate to taobao/personal homepage...')
-            time.sleep(LOGIN_CHECK_INTERVAL_IN_SECONDS)
 
 
 def enter_query_string(qstring):
@@ -105,7 +72,7 @@ def crawl_taobao_search_results():
         try:
             # TBD: 在这里检查是否有滑动验证弹窗，并解决 (<div class='nocaptcha>, XPATH 'div/div/div' .text)
             search_result_wrapper = Driver.find_element(By.ID, 'content_items_wrapper')
-            search_results = search_result_wrapper.find_elements(By.XPATH, './div/a')
+            search_results = search_result_wrapper.find_elements(By.XPATH, 'div/a')
             logger.info('find %d search results' % len(search_results))
             for search_result in search_results:
                 parse_taobao_search_result(search_result, sku_info_list)
@@ -228,7 +195,7 @@ def save_taobao_search_result(sku_info):
         new_ci.shop_name = sku_info[SHOP_NAME]
         new_ci.title_imgs = ''
         new_ci.page_imgs = ''
-        new_ci.detail = ''
+        new_ci.details = ''
         new_ci.create_ts = ts
         new_ci.update_ts = ts
         new_ci.save(force_insert=True)

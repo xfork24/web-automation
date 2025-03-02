@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS commodity_info
     shop_name  varchar(128)  NOT NULL,
     title_imgs varchar(4096) NOT NULL,
     page_imgs  varchar(4096) NOT NULL,
-    detail     varchar(4096) NOT NULL,
+    details    varchar(4096) NOT NULL,
     create_ts  int           NOT NULL,
     update_ts  int           NOT NULL
 ) ENGINE = InnoDB

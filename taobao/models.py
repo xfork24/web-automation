@@ -32,7 +32,7 @@ class CommodityInfo(BaseModel):
     shop_name = CharField(max_length=128, index=True)
     title_imgs = CharField(max_length=4096)
     page_imgs = CharField(max_length=4096)
-    detail = CharField(max_length=4096)
+    details = CharField(max_length=4096)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
 
