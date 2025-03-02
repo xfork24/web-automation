@@ -1,15 +1,15 @@
 # coding: utf-8
 # !./bin/python
-
+import time
 import datetime
 import csv
 import traceback
 from taobao import *
-
 from urllib.parse import urlparse, parse_qs
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException, NoSuchWindowException
 
 TAOBAO_SEARCH_PAGE = 'https://s.taobao.com/search'
 OUTPUT_DIR = './output'
@@ -101,7 +101,7 @@ def enter_query_string(qstring):
 def crawl_taobao_search_results():
     logger = get_logger()
     sku_info_list = []
-    for i in range(NUM_OF_PAGES_TO_PARSE):
+    for i in range(1, NUM_OF_PAGES_TO_PARSE + 1):
         try:
             # TBD: 在这里检查是否有滑动验证弹窗，并解决 (<div class='nocaptcha>, XPATH 'div/div/div' .text)
             search_result_wrapper = Driver.find_element(By.ID, 'content_items_wrapper')
@@ -116,10 +116,18 @@ def crawl_taobao_search_results():
             btn_list[1].click()
             logger.info('wait search results for page %d for %d seconds' % (i + 1, SEARCH_WAIT_IN_SECONDS))
             time.sleep(SEARCH_WAIT_IN_SECONDS)
-        except Exception:
-            logger.error('get exception while parsing search results')
+        except NoSuchWindowException:
+            logger.error('window is closed, now program will quit, searched results will be saved')
             traceback.print_exc()
-            continue
+            break
+        except AssertionError:
+            logger.error('assertion failed in search result page, just stop crawling')
+            traceback.print_exc()
+            break
+        except Exception:
+            logger.error('get unexcepted exception while parsing search results, just stop crawling')
+            traceback.print_exc()
+            break
     output_file = '%s/%s_%s_%dpages.csv' % (
         OUTPUT_DIR, QUERY_STRING, datetime.datetime.now().strftime('%Y%m%d%H%M%S'), NUM_OF_PAGES_TO_PARSE)
     with open(output_file, 'w', newline='') as csvfile:
@@ -179,6 +187,10 @@ def parse_taobao_search_result(search_result, sku_info_list):
             sku_info_list.append(sku_info)
         save_taobao_search_result(sku_info)
         COMMODITIES_IN_ONE_SEARCH.add(sku_info[ID])
+    except AssertionError:
+        logger.error('assertion failed while parsing %s' % search_result.accessible_name)
+        logger.error('it may be caused by unloaded resources, just ignore it')
+        traceback.print_exc()
     except Exception:
         logger.error('get exception while parsing %s' % search_result.accessible_name)
         traceback.print_exc()

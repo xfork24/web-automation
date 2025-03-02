@@ -1,11 +1,8 @@
 # coding: utf-8
 # !./bin/python
-import time
 from enum import Enum
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeDriverService
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.by import By
 from taobao.utils import *
 
 TAOBAO_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
