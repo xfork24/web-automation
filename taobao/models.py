@@ -1,9 +1,8 @@
 # coding: utf-8
 # !./bin/python
-import time
 
 from peewee import *
-from tb_config import (
+from taobao.config import (
     DB_NAME,
     DB_HOST,
     DB_USER,
@@ -56,9 +55,9 @@ class CommoditySales(BaseModel):
     ts = IntegerField()
     shop_name = CharField(max_length=128, index=True)
     price_unit = CharField(max_length=3)
-    price = IntegerField()
-    sale = IntegerField(index=True)
-    total_sale = IntegerField(index=True)
+    display_price = IntegerField()
+    display_sale = IntegerField(index=True)
+    estimated_total_sale = IntegerField(index=True)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
 

@@ -42,15 +42,15 @@ CREATE TABLE IF NOT EXISTS shop_info
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS commodity_sales
 (
-    id         varchar(32)  NOT NULL,
-    ts         int          NOT NULL,
-    shop_name  varchar(128) NOT NULL,
-    price_unit varchar(3)   NOT NULL,
-    price      int          NOT NULL,
-    sale       int          NOT NULL,
-    total_sale int          NOT NULL,
-    create_ts  int          NOT NULL,
-    update_ts  int          NOT NULL
+    id                   varchar(32)  NOT NULL,
+    ts                   int          NOT NULL,
+    shop_name            varchar(128) NOT NULL,
+    price_unit           varchar(3)   NOT NULL,
+    display_price        int          NOT NULL,
+    display_sale         int          NOT NULL,
+    estimated_total_sale int          NOT NULL,
+    create_ts            int          NOT NULL,
+    update_ts            int          NOT NULL
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
@@ -90,9 +90,9 @@ ALTER TABLE commodity_sales
 ALTER TABLE commodity_sales
     ADD INDEX idx_shop_name (shop_name);
 ALTER TABLE commodity_sales
-    ADD INDEX idx_sale (sale);
+    ADD INDEX idx_display_sale (display_sale);
 ALTER TABLE commodity_sales
-    ADD INDEX idx_total_sale (total_sale);
+    ADD INDEX idx_estimated_total_sale (estimated_total_sale);
 ALTER TABLE commodity_sales
     ADD INDEX idx_update_ts (update_ts);
 
