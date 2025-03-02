@@ -8,11 +8,11 @@ from taobao import *
 
 from urllib.parse import urlparse, parse_qs
 
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
 TAOBAO_SEARCH_PAGE = 'https://s.taobao.com/search'
+OUTPUT_DIR = './output'
 LOG_FILE_NAME = './logs/tb_search_crawler.log'
 SEARCH_WAIT_IN_SECONDS = 10
 
@@ -120,8 +120,8 @@ def crawl_taobao_search_results():
             logger.error('get exception while parsing search results')
             traceback.print_exc()
             continue
-    output_file = '%s_%s_%dpages.csv' % (
-        QUERY_STRING, datetime.datetime.now().strftime('%Y%m%d%H%M%S'), NUM_OF_PAGES_TO_PARSE)
+    output_file = '%s/%s_%s_%dpages.csv' % (
+        OUTPUT_DIR, QUERY_STRING, datetime.datetime.now().strftime('%Y%m%d%H%M%S'), NUM_OF_PAGES_TO_PARSE)
     with open(output_file, 'w', newline='') as csvfile:
         fieldnames = [ID, SKU_ID, SKU_TITLE, SKU_LINK, SKU_IMG_LINK,
                       SHOP_NAME, SHOP_LINK,
