@@ -20,4 +20,6 @@ SHOP_NAME = 'shop_name'
 SHOP_LINK = 'shop_link'
 
 LOGGING_FORMAT = '%(asctime)s %(message)s'
+OUTPUT_DIR = './output'
+
 DEBUG = True
