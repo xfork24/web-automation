@@ -24,10 +24,12 @@ TAOBAO_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TAOBAO_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
-LOGIN_CHECK_INTERVAL_IN_SECONDS = 10
+LOGIN_CHECK_INTERVAL_IN_SECONDS = 5
+DRIVER_IMPLICIT_WAIT_IN_SECONDS = 10
 SEARCH_WAIT_IN_SECONDS = 10
-CLICK_INTERCEPTED_WAIT_IN_SECONDS = 5
 DETAIL_PAGE_WAIT_IN_SECONDS = 10
+CLICK_INTERCEPTED_WAIT_IN_SECONDS = 1
+TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 MAX_SKU_ITEMS_NUM = 5
 
 SKU_CARD_RE_EXP = re.compile('^doubleCard--')
@@ -36,6 +38,8 @@ SKU_SHOP_INFO_RE_EXP = re.compile('^shopInfo--')
 SKU_ITEMS_RE_EXP = re.compile('^skuItem--')
 INNER_SKU_ITEMS_RE_EXP = re.compile('^content--')
 SKU_PRICE_RE_EXP = re.compile('^highlightPrice--')
+SKU_PRICE_UNIT_RE_EXP = re.compile('symbol--')
+SKU_PRICE_VAL_RE_EXP = re.compile('text--')
 SKU_TITLE_IMGS_RE_EXP = re.compile('^thumbnailsWrap--')
 SKU_MAIN_IMGS_RE_EXP = re.compile('^descV8-container')
 
@@ -84,6 +88,18 @@ def login_taobao():
             time.sleep(LOGIN_CHECK_INTERVAL_IN_SECONDS)
 
 
+def zoom_content(ratio):
+    zoom_script = 'document.body.style.zoom="%f"' % ratio
+    Driver.execute_script(zoom_script)
+
+
+def scroll_window(x, y):
+    x = x if x is not None else 'document.body.scrollWidth'
+    y = y if y is not None else 'document.body.scrollHeight'
+    scroll_script = 'window.scrollTo(%s, %s)' % (str(x), str(y))
+    Driver.execute_script(scroll_script)
+
+
 def parse_id(item_id):
     return item_id[item_id.rfind('_') + 1:]
 
@@ -112,6 +128,12 @@ def craw_taobao_search(qstring, num_of_pages):
     crawl_taobao_search_results(qstring, num_of_pages)
 
 
+def set_driver_implicit_wait(seconds):
+    logger = get_logger()
+    logger.info('set driver implicit wait to %d seconds' % seconds)
+    Driver.implicitly_wait(seconds)
+
+
 def enter_query_string(qstring):
     logger = get_logger()
     logger.info('navigate to taobao search page')
@@ -121,8 +143,6 @@ def enter_query_string(qstring):
     qbox.send_keys(qstring)
     qbox.send_keys(Keys.RETURN)
     logger.info('searching %s' % qstring)
-    logger.info('wait search results for %d seconds' % SEARCH_WAIT_IN_SECONDS)
-    time.sleep(SEARCH_WAIT_IN_SECONDS)
     global COMMODITIES_IN_ONE_SEARCH
     COMMODITIES_IN_ONE_SEARCH = set()
 
@@ -133,17 +153,20 @@ def crawl_taobao_search_results(qstring, num_of_pages):
     for i in range(1, num_of_pages + 1):
         try:
             # TBD: 在这里检查是否有滑动验证弹窗，并解决 (<div class='nocaptcha>, XPATH 'div/div/div' .text)
+            logger.info('wait search results for seconds')
+            time.sleep(SEARCH_WAIT_IN_SECONDS)
             search_result_wrapper = Driver.find_element(By.ID, 'content_items_wrapper')
             search_results = search_result_wrapper.find_elements(By.XPATH, 'div/a')
             logger.info('find %d search results' % len(search_results))
             for search_result in search_results:
                 parse_taobao_search_result(search_result, sku_info_list)
             btn_pages = Driver.find_elements(By.CLASS_NAME, 'next-pagination-pages')
-            assert (len(btn_pages) == 2)  # 上下各一个页数导航栏
-            btn_list = btn_pages[1].find_elements(By.XPATH, 'button')
+            assert (len(btn_pages) >= 1)  # 至少下面会有一个导航栏
+            btn_list = btn_pages[-1].find_elements(By.XPATH, 'button')
             assert (len(btn_list) == 3)  # 下面导航栏里直属三个按钮：上一页，下一页，确定
             while True:
                 try:
+                    logger.info('get search results for page %d by press next page' % (i + 1))
                     btn_list[1].click()
                     break
                 except ElementClickInterceptedException:
@@ -151,8 +174,6 @@ def crawl_taobao_search_results(qstring, num_of_pages):
                         'got ElementClickInterceptedException, wait several seconds and try again, may need human intervention')
                     traceback.print_exc()
                     time.sleep(CLICK_INTERCEPTED_WAIT_IN_SECONDS)
-            logger.info('wait search results for page %d for %d seconds' % (i + 1, SEARCH_WAIT_IN_SECONDS))
-            time.sleep(SEARCH_WAIT_IN_SECONDS)
         except NoSuchWindowException:
             logger.error('window is closed, now program will quit, searched results will be saved')
             traceback.print_exc()
@@ -301,7 +322,10 @@ def craw_taobao_detail_page(commodity_link, commodity_id=None):
     login_taobao()
     logger.info('navigate to commodity link')
     Driver.get(commodity_link)
+    logger.info('wait detail page for seconds')
     time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
+    logger.info('set detail page zoom ratio to %f' % TB_PAGE_DEFAULT_ZOOM_RATIO)
+    zoom_content(TB_PAGE_DEFAULT_ZOOM_RATIO)
     craw_taobao_detail_page_result(commodity_id)
 
 
@@ -353,7 +377,7 @@ def craw_taobao_detail_page_result(commodity_id):
     offers = craw_taobao_sku_prices(value_items_divs, sku_price_div)
     commodity_details = {
         "sku_items": sku_items,
-        "offers": offers
+        "valid_offers": offers
     }
     logger.info('get commodity [%s] details: %s' % (commodity_id, commodity_details))
     # parse title images
@@ -388,14 +412,32 @@ def craw_taobao_sku_prices(value_items_divs, sku_price_div):
     offers = []
     for combo in combos:
         offer = []
+        valid = True
         for value_item in combo:
+            cls_name = value_item.get_attribute('class')
+            if cls_name is not None and cls_name.find('isDisabled') != -1:
+                valid = False
+                break
             span = value_item.find_element(By.XPATH, 'span')
             offer.append(span.text)
             value_item.click()
+        if not valid:
+            continue
         price_spans = sku_price_div.find_elements(By.XPATH, 'span')
         assert (len(price_spans) >= 2)
-        offer.append(parse_price_unit(price_spans[0].text))
-        offer.append(parse_price(price_spans[1].text))
+        price_unit_span = None
+        price_val_span = None
+        for price_span in price_spans:
+            cls_name = price_span.get_attribute('class')
+            if cls_name is None:
+                continue
+            elif re.match(SKU_PRICE_UNIT_RE_EXP, cls_name):
+                price_unit_span = price_span
+            elif re.match(SKU_PRICE_VAL_RE_EXP, cls_name):
+                price_val_span = price_span
+        assert (price_unit_span is not None and price_val_span is not None)
+        offer.append(parse_price_unit(price_unit_span.text))
+        offer.append(parse_price(price_val_span.text))
         offers.append(offer)
     return offers
 
