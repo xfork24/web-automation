@@ -26,6 +26,7 @@ TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
 LOGIN_CHECK_INTERVAL_IN_SECONDS = 5
 DRIVER_IMPLICIT_WAIT_IN_SECONDS = 10
+DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 SEARCH_WAIT_IN_SECONDS = 10
 DETAIL_PAGE_WAIT_IN_SECONDS = 10
 SHOP_PAGE_WAIT_IN_SECONDS = 10
@@ -114,6 +115,7 @@ def login_taobao():
 def zoom_content(ratio=1.0):
     zoom_script = 'document.body.style.zoom="%f"' % ratio
     Driver.execute_script(zoom_script)
+    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
 
 
 def scroll_window(pos=None):
@@ -121,6 +123,7 @@ def scroll_window(pos=None):
     y = pos[1] if pos is not None else 'document.body.scrollHeight'
     scroll_script = 'window.scrollTo(%s, %s)' % (str(x), str(y))
     Driver.execute_script(scroll_script)
+    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
 
 
 def set_window_size(size=None):
@@ -128,11 +131,17 @@ def set_window_size(size=None):
         Driver.maximize_window()
     else:
         Driver.set_window_size(size[0], size[1])
+    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
 
 
 def scroll_windows_to_element(element):
     Driver.execute_script('arguments[0].scrollIntoView();', element)
     time.sleep(SHOP_PAGE_SKU_LOAD_WAIT_IN_SECONDS)
+
+
+def create_element_screenshot(element, file_path):
+    element.screenshot(file_path)
+    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
 
 
 def parse_id(item_id):
@@ -595,6 +604,7 @@ def craw_taobao_shop_page(shop_link):
 
 
 def craw_taobao_shop_page_results(shop_link):
+    logger = get_logger()
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
         load_more_flag_div = None
@@ -610,6 +620,7 @@ def craw_taobao_shop_page_results(shop_link):
             elif re.match(SHOP_LOAD_MORE_FLAG_RE_EXP, cls_name):
                 load_more_flag_div = div
         if loaded:
+            scroll_window((0, 0))
             break
         assert (load_more_flag_div is not None)
         scroll_windows_to_element(load_more_flag_div)
@@ -630,7 +641,12 @@ def craw_taobao_shop_page_results(shop_link):
     update_role = craw_taobao_shop_page_results.__name__
     update_shop_info(shop_name, shop_link, ts, ts, update_role)
     for shop_sku_div in shop_sku_divs:
-        craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts)
+        try:
+            craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts)
+        except PriceOCRGetEmptyError:
+            logger.error('get PriceOCRGetEmptyError, nothing will be updated and just continue crawling')
+            traceback.print_exc()
+            continue
 
 
 def craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts):
@@ -672,7 +688,7 @@ def craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts):
 
 def parse_price_span(price_span, commodity_id):
     temp_file_name = '%s/%s-%s.png' % (IMAGE_DIR, commodity_id, uuid.uuid4().hex)
-    price_span.screenshot(temp_file_name)
+    create_element_screenshot(price_span, temp_file_name)
     return parse_price_ocr(temp_file_name)
 
 

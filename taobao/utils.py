@@ -5,6 +5,9 @@ import sys
 import logging
 import pytesseract
 from PIL import Image
+from taobao.exceptions import PriceOCRGetEmptyError
+
+TESSERACT_PRICE_OCR_OPTIONS = "--psm 6 --oem 3 tessedit_char_whitelist=0123456789."
 
 
 def init_logger(log_format, file, level, debug):
@@ -30,7 +33,10 @@ def parse_price(price):
 
 
 def parse_price_ocr(image_file_path):
-    price = pytesseract.image_to_string(Image.open(image_file_path))
+    price = pytesseract.image_to_string(Image.open(image_file_path), config=TESSERACT_PRICE_OCR_OPTIONS)
     price = price.strip(' \t\r\n')
-    assert (price != '')
-    return int(float(price * 100))
+    try:
+        assert (price != '')
+    except AssertionError:
+        raise PriceOCRGetEmptyError()
+    return int(float(price) * 100)
