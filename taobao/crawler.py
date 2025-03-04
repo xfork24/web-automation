@@ -6,8 +6,8 @@ import datetime
 import csv
 import re
 import traceback
+import uuid
 from enum import Enum
-from json import dumps
 from urllib.parse import urlparse, parse_qs
 
 from selenium import webdriver
@@ -28,21 +28,32 @@ LOGIN_CHECK_INTERVAL_IN_SECONDS = 5
 DRIVER_IMPLICIT_WAIT_IN_SECONDS = 10
 SEARCH_WAIT_IN_SECONDS = 10
 DETAIL_PAGE_WAIT_IN_SECONDS = 10
+SHOP_PAGE_WAIT_IN_SECONDS = 10
+SHOP_PAGE_SKU_LOAD_WAIT_IN_SECONDS = 5
 CLICK_INTERCEPTED_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 MAX_SKU_ITEMS_NUM = 5
 
-SKU_CARD_RE_EXP = re.compile('^doubleCard--')
-SKU_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--')
-SKU_SHOP_INFO_RE_EXP = re.compile('^shopInfo--')
-SKU_ITEMS_RE_EXP = re.compile('^skuItem--')
-INNER_SKU_ITEMS_RE_EXP = re.compile('^content--')
-SKU_PRICE_RE_EXP = re.compile('^highlightPrice--')
-SKU_PRICE_UNIT_RE_EXP = re.compile('symbol--')
-SKU_PRICE_VAL_RE_EXP = re.compile('text--')
-SKU_TITLE_IMGS_RE_EXP = re.compile('^thumbnailsWrap--')
-SKU_MAIN_IMGS_RE_EXP = re.compile('^descV8-container')
-TB_GO_LOGIN_RE_EXP = re.compile('^GoLoginInfo--')
+SKU_CARD_RE_EXP = re.compile('^doubleCard--\\w+')
+SKU_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
+SKU_SHOP_INFO_RE_EXP = re.compile('^shopInfo--\\w+')
+SKU_ITEMS_RE_EXP = re.compile('^skuItem--\\w+')
+INNER_SKU_ITEMS_RE_EXP = re.compile('^content--\\w+')
+SKU_PRICE_RE_EXP = re.compile('^highlightPrice--\\w+')
+SKU_PRICE_UNIT_RE_EXP = re.compile('symbol--\\w+')
+SKU_PRICE_VAL_RE_EXP = re.compile('text--\\w+')
+SKU_TITLE_IMGS_RE_EXP = re.compile('^thumbnailsWrap--\\w+')
+SKU_MAIN_IMGS_RE_EXP = re.compile('^descV8-container$')
+TB_GO_LOGIN_RE_EXP = re.compile('^GoLoginInfo--\\w+')
+SKU_SHOP_HEADER_RE_EXP = re.compile('^shopHeader--\\w+')
+SKU_TITLE_RE_EXP = re.compile('^ItemTitle--\\w+')
+SHOP_NAME_RE_EXP = re.compile('^shopName--\\w+')
+SHOP_SKU_CARD_RE_EXP = re.compile('^cardContainer--\\w+')
+SHOP_SKU_CARD_TITLE_RE_EXP = re.compile('^title--\\w+')
+SHOP_SKU_CARD_PRICE_RE_EXP = re.compile('^price--\\w+')
+SHOP_SKU_CARD_SALE_RE_EXP = re.compile('^count--\\w+')
+SHOP_LOAD_MORE_FLAG_RE_EXP = re.compile('^loadmoreFlag--\\w+')
+SHOP_LOAD_STATUS_RE_EXP = re.compile('^loadStatus--\\w+')
 
 COMMODITIES_IN_ONE_SEARCH = set()
 
@@ -57,11 +68,20 @@ def init_webdriver(webdriver_type: WebDriverType):
     logger.info('start init %s webdriver ...' % webdriver_type)
     driver = None
     if webdriver_type == WebDriverType.ChromDriver:
+        # TBD: handle hiding selenium from chrome, remove 'chrome is controlled by automated test software'
         driver_service = ChromeDriverService('/Users/hengliu/Path/chromedriver')
-        driver = webdriver.Chrome(service=driver_service)
+        options = webdriver.ChromeOptions()
+        # options.add_experimental_option("excludeSwitches", ['enable_automation'])  # 取消“Chrome正受到自动测试软件的控制”和“请停用以开发者模式运行的扩展程序”
+        # options.add_argument("--disable-infobars")
+        # options.add_argument("--disable-notification")
+        # options.add_argument('--disable-blink-features')  # 禁用闪烁
+        # options.add_argument('--disable-blink-features=AutomationControlled')  # 去除浏览器selenium监控
+        # options.add_argument('--disable-gpu')  # 禁用GPU加速
+        driver = webdriver.Chrome(options=options, service=driver_service)
     elif webdriver_type == WebDriverType.SafariDriver:
         options = webdriver.SafariOptions()
         driver = webdriver.Safari(options=options)
+    assert (driver is not None)
     logger.info('%s webdriver initialized' % webdriver_type)
     return driver
 
@@ -110,6 +130,11 @@ def set_window_size(size=None):
         Driver.set_window_size(size[0], size[1])
 
 
+def scroll_windows_to_element(element):
+    Driver.execute_script('arguments[0].scrollIntoView();', element)
+    time.sleep(SHOP_PAGE_SKU_LOAD_WAIT_IN_SECONDS)
+
+
 def parse_id(item_id):
     return item_id[item_id.rfind('_') + 1:]
 
@@ -120,7 +145,16 @@ def parse_sku_id(link):
     if 'skuId' in qs and len(qs['skuId']) == 1:
         return qs['skuId'][0]
     else:
-        return '0'
+        return None
+
+
+def parse_commodity_id(link):
+    result = urlparse(link)
+    qs = parse_qs(result.query)
+    if 'id' in qs and len(qs['id']) == 1:
+        return qs['id'][0]
+    else:
+        return None
 
 
 def parse_sales(sales):
@@ -132,7 +166,7 @@ def parse_sales(sales):
     return int(sales_num)
 
 
-def craw_taobao_search(qstring, num_of_pages):
+def craw_taobao_search_page(qstring, num_of_pages):
     login_taobao()
     enter_query_string(qstring)
     crawl_taobao_search_results(qstring, num_of_pages)
@@ -251,7 +285,7 @@ def parse_taobao_search_result(search_result, sku_info_list):
         shop_name = shop_name_wrapper[-1].text
         sku_info = {
             ID: parse_id(item_id),
-            SKU_ID: parse_sku_id(link),
+            SKU_ID: parse_sku_id(link) or '0',
             SKU_LINK: link,
             SKU_IMG_LINK: img_link,
             SKU_TITLE: title,
@@ -277,54 +311,20 @@ def parse_taobao_search_result(search_result, sku_info_list):
 def save_taobao_search_result(sku_info):
     # save shop info
     ts = int(time.time())
-    try:
-        exist_si = ShopInfo.get(ShopInfo.name == sku_info[SHOP_NAME])
-        exist_si.link = sku_info[SHOP_LINK]
-        exist_si.update_ts = ts
-        exist_si.save()
-    except DoesNotExist:
-        new_si = ShopInfo()
-        new_si.name = sku_info[SHOP_NAME]
-        new_si.link = sku_info[SHOP_LINK]
-        new_si.create_ts = ts
-        new_si.update_ts = ts
-        new_si.save(force_insert=True)
+    update_role = save_taobao_search_result.__name__
+    # save shop info
+    update_shop_info(sku_info[SHOP_NAME], sku_info[SHOP_LINK], ts, ts, update_role)
     # save commodity info
-    try:
-        exist_ci = CommodityInfo.get(CommodityInfo.id == sku_info[ID])
-        exist_ci.sku_id = sku_info[SKU_ID]
-        exist_ci.title = sku_info[SKU_TITLE]
-        exist_ci.link = sku_info[SKU_LINK]
-        exist_ci.shop_name = sku_info[SHOP_NAME]
-        exist_ci.update_ts = ts
-    except DoesNotExist:
-        new_ci = CommodityInfo()
-        new_ci.id = sku_info[ID]
-        new_ci.sku_id = sku_info[SKU_ID]
-        new_ci.title = sku_info[SKU_TITLE]
-        new_ci.link = sku_info[SKU_LINK]
-        new_ci.shop_name = sku_info[SHOP_NAME]
-        new_ci.title_imgs = ''
-        new_ci.page_imgs = ''
-        new_ci.details = ''
-        new_ci.create_ts = ts
-        new_ci.update_ts = ts
-        new_ci.save(force_insert=True)
+    update_commodity_info(sku_info[ID], sku_info[SKU_ID], sku_info[SKU_TITLE], sku_info[SKU_LINK],
+                          sku_info[SHOP_NAME], '', '', '',
+                          ts, ts, update_role)
     # save commodity sales info,
     # remember there can be same commodity in different search pages,
     # we only add one sale record for same commodity in one search process.
     if sku_info[ID] not in COMMODITIES_IN_ONE_SEARCH:
-        new_cs = CommoditySales()
-        new_cs.id = sku_info[ID]
-        new_cs.ts = ts
-        new_cs.shop_name = sku_info[SHOP_NAME]
-        new_cs.price_unit = sku_info[SKU_PRICE_UNIT]
-        new_cs.display_price = sku_info[SKU_DISPLAY_PRICE]
-        new_cs.display_sale = sku_info[SKU_DISPLAY_SALE]
-        new_cs.estimated_total_sale = sku_info[SKU_DISPLAY_PRICE] * sku_info[SKU_DISPLAY_SALE]
-        new_cs.create_ts = ts
-        new_cs.update_ts = ts
-        new_cs.save(force_insert=True)
+        add_commodity_sale(sku_info[ID], ts, sku_info[SHOP_NAME],
+                           sku_info[SKU_PRICE_UNIT], sku_info[SKU_DISPLAY_PRICE], sku_info[SKU_DISPLAY_SALE],
+                           ts, ts, update_role)
 
 
 def craw_taobao_detail_page(commodity_link, commodity_id=None):
@@ -348,6 +348,8 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id):
     title_image_div = None
     main_image_div = None
     go_login_div = None
+    shop_info_div = None
+    sku_title_div = None
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
         for div in divs:
@@ -365,6 +367,10 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id):
                 title_image_div = div
             elif re.match(SKU_MAIN_IMGS_RE_EXP, cls_name):
                 main_image_div = div
+            elif re.match(SKU_SHOP_HEADER_RE_EXP, cls_name):
+                shop_info_div = div
+            elif re.match(SKU_TITLE_RE_EXP, cls_name):
+                sku_title_div = div
         if go_login_div is None:
             break
         else:
@@ -404,7 +410,6 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id):
         "sku_items": sku_items,
         "valid_offers": offers
     }
-    logger.info('get commodity [%s] details: %s' % (commodity_id, commodity_details))
     # parse title images
     title_imgs = title_image_div.find_elements(By.XPATH, 'ul/li/img')
     title_images = [title_img.get_attribute('src') for title_img in title_imgs]
@@ -413,23 +418,100 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id):
     main_imgs = main_image_div.find_elements(By.XPATH, 'div/img')
     main_images = [main_img.get_attribute('src') for main_img in main_imgs]
     logger.info('get main image list: %s' % main_images)
+    # parse commodity title and shop info
+    commodity_title = sku_title_div.find_element(By.XPATH, 'h1').text
+    shop_info_inner = shop_info_div.find_element(By.XPATH, 'a')
+    assert (shop_info_inner is not None)
+    shop_link = shop_info_inner.get_attribute('href')
+    shop_name_span = shop_info_inner.find_element(By.XPATH, 'div/div/span')
+    assert (shop_name_span is not None)
+    shop_name = shop_name_span.text
     # update commodity info in DB
-    if commodity_id is not None:
-        update_commodity_info(commodity_id, title_images, main_images, commodity_details)
+    update_commodity_and_shop_info(commodity_id, commodity_link, commodity_title,
+                                   shop_name, shop_link,
+                                   title_images, main_images, commodity_details)
 
 
-def update_commodity_info(commodity_id, title_imgs, main_imgs, details):
-    logger = get_logger()
+def update_commodity_and_shop_info(commodity_id, commodity_link, commodity_title,
+                                   shop_name, shop_link,
+                                   title_imgs, main_imgs, details):
     ts = int(time.time())
+    update_role = update_commodity_and_shop_info.__name__
+    commodity_id = commodity_id or parse_commodity_id(commodity_link)
+    sku_id = parse_sku_id(commodity_link) or '0'
+    if commodity_id is not None:
+        update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
+                              shop_name, title_imgs, main_imgs, details,
+                              ts, ts, update_role)
+    if shop_name is not None:
+        update_shop_info(shop_name, shop_link, ts, ts, update_role)
+
+
+def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
+                          shop_name, title_imgs, main_imgs, details,
+                          create_ts, update_ts, update_role):
+    # update commodity_info table
+    logger = get_logger()
     try:
         exist_ci = CommodityInfo.get(CommodityInfo.id == commodity_id)
-        exist_ci.title_imgs = dumps(title_imgs)
+        exist_ci.title_imgs = title_imgs
         exist_ci.page_imgs = main_imgs
         exist_ci.details = details
-        exist_ci.update_ts = ts
+        exist_ci.update_ts = update_ts
+        exist_ci.update_role = update_role
         exist_ci.save()
     except DoesNotExist:
-        logger.info('commodity [%s] not exist, ignore commodity detail update' % commodity_id)
+        logger.info('commodity [%s] not exist, create new item' % commodity_id)
+        new_ci = CommodityInfo()
+        new_ci.id = commodity_id
+        new_ci.sku_id = sku_id
+        new_ci.title = commodity_title
+        new_ci.link = commodity_link
+        new_ci.shop_name = shop_name
+        new_ci.title_imgs = title_imgs
+        new_ci.page_imgs = main_imgs
+        new_ci.details = details
+        new_ci.create_ts = create_ts
+        new_ci.update_ts = update_ts
+        new_ci.update_role = update_role
+        new_ci.save(force_insert=True)
+
+
+def update_shop_info(shop_name, shop_link, create_ts, update_ts, update_role):
+    # update shop_info table
+    logger = get_logger()
+    try:
+        exist_si = ShopInfo.get(ShopInfo.name == shop_name)
+        exist_si.link = shop_link
+        exist_si.update_ts = update_ts
+        exist_si.update_role = update_role
+        exist_si.save()
+    except DoesNotExist:
+        logger.info('shop [%s] not exist, create new item' % shop_name)
+        new_si = ShopInfo()
+        new_si.name = shop_name
+        new_si.link = shop_link
+        new_si.create_ts = create_ts
+        new_si.update_ts = update_ts
+        new_si.update_role = update_role
+        new_si.save(force_insert=True)
+
+
+def add_commodity_sale(commodity_id, ts, shop_name,
+                       price_unit, display_price, display_sale,
+                       create_ts, update_ts, update_role):
+    new_cs = CommoditySales()
+    new_cs.id = commodity_id
+    new_cs.ts = ts
+    new_cs.shop_name = shop_name
+    new_cs.price_unit = price_unit
+    new_cs.display_price = display_price
+    new_cs.display_sale = display_sale
+    new_cs.estimated_total_sale = display_price * display_sale
+    new_cs.create_ts = create_ts
+    new_cs.update_ts = update_ts
+    new_cs.update_role = update_role
+    new_cs.save(force_insert=True)
 
 
 def craw_taobao_sku_prices(value_items_divs, sku_price_div):
@@ -500,6 +582,98 @@ def craw_taobao_value_item_result(value_item):
     except Exception:
         logger.error('some sku_item do not have img, just ignore')
     return sku_item
+
+
+def craw_taobao_shop_page(shop_link):
+    logger = get_logger()
+    login_taobao()
+    logger.info('navigate to shop link')
+    Driver.get(shop_link)
+    logger.info('wait detail page for seconds')
+    time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
+    craw_taobao_shop_page_results(shop_link)
+
+
+def craw_taobao_shop_page_results(shop_link):
+    while True:
+        divs = Driver.find_elements(By.XPATH, '//div')
+        load_more_flag_div = None
+        loaded = False
+        for div in divs:
+            cls_name = div.get_attribute('class')
+            if cls_name is None:
+                continue
+            if re.match(SHOP_LOAD_STATUS_RE_EXP, cls_name):
+                if div.text == '没有更多商品':
+                    loaded = True
+                    break
+            elif re.match(SHOP_LOAD_MORE_FLAG_RE_EXP, cls_name):
+                load_more_flag_div = div
+        if loaded:
+            break
+        assert (load_more_flag_div is not None)
+        scroll_windows_to_element(load_more_flag_div)
+    shop_sku_divs = []
+    shop_name_div = None
+    divs = Driver.find_elements(By.XPATH, '//div')
+    for div in divs:
+        cls_name = div.get_attribute('class')
+        if cls_name is None:
+            continue
+        if re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
+            shop_sku_divs.append(div)
+        elif re.match(SHOP_NAME_RE_EXP, cls_name):
+            shop_name_div = div
+    assert (shop_name_div is not None)
+    shop_name = shop_name_div.find_element(By.XPATH, 'span').text
+    ts = time.time()
+    update_role = craw_taobao_shop_page_results.__name__
+    update_shop_info(shop_name, shop_link, ts, ts, update_role)
+    for shop_sku_div in shop_sku_divs:
+        craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts)
+
+
+def craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts):
+    sku_link_a = shop_sku_div.find_element(By.XPATH, 'a')
+    assert (sku_link_a is not None)
+    commodity_link = sku_link_a.get_attribute('href')
+    commodity_id = parse_commodity_id(commodity_link)
+    sku_id = parse_sku_id(commodity_link) or ''
+    divs = shop_sku_div.find_elements(By.XPATH, './/div')
+    title_div = None
+    price_div = None
+    sale_div = None
+    for div in divs:
+        cls_name = div.get_attribute('class')
+        if cls_name is None:
+            continue
+        if re.match(SHOP_SKU_CARD_TITLE_RE_EXP, cls_name):
+            title_div = div
+        elif re.match(SHOP_SKU_CARD_PRICE_RE_EXP, cls_name):
+            price_div = div
+        elif re.match(SHOP_SKU_CARD_SALE_RE_EXP, cls_name):
+            sale_div = div
+    assert (title_div is not None and price_div is not None and sale_div is not None)
+    commodity_title = title_div.text
+    price_spans = price_div.find_elements(By.XPATH, 'span')
+    assert (len(price_spans) == 2)
+    price_unit = parse_price_unit(price_spans[0].text)
+    price_val = parse_price_span(price_spans[1], commodity_id)
+    sales = parse_sales(sale_div.text)
+    # update commodity_info and commodity_sales table
+    update_role = craw_taobao_shop_sku_result.__name__
+    update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
+                          shop_name, '', '', '',
+                          ts, ts, update_role)
+    add_commodity_sale(commodity_id, ts, shop_name,
+                       price_unit, price_val, sales,
+                       ts, ts, update_role)
+
+
+def parse_price_span(price_span, commodity_id):
+    temp_file_name = '%s/%s-%s.png' % (IMAGE_DIR, commodity_id, uuid.uuid4().hex)
+    price_span.screenshot(temp_file_name)
+    return parse_price_ocr(temp_file_name)
 
 
 Driver = init_webdriver(WebDriverType.ChromDriver)

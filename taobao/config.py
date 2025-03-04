@@ -21,5 +21,6 @@ SHOP_LINK = 'shop_link'
 
 LOGGING_FORMAT = '%(asctime)s %(message)s'
 OUTPUT_DIR = './output'
+IMAGE_DIR = './images'
 
 DEBUG = True

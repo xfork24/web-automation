@@ -35,6 +35,7 @@ class CommodityInfo(BaseModel):
     details = CharField(max_length=4096)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_role = CharField(max_length=64)
 
     class Meta:
         table_name = 'commodity_info'
@@ -45,6 +46,7 @@ class ShopInfo(BaseModel):
     link = CharField(max_length=512)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_role = CharField(max_length=64)
 
     class Meta:
         table_name = 'shop_info'
@@ -60,19 +62,21 @@ class CommoditySales(BaseModel):
     estimated_total_sale = IntegerField(index=True)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_role = CharField(max_length=64)
 
     class Meta:
         table_name = 'commodity_sales'
         primary_key = CompositeKey('id', 'ts')
 
 
-class CrawlTasks(BaseModel):
+class DetailCrawlTasks(BaseModel):
     id = IntegerField(primary_key=True)
     commodity_id = CharField(max_length=32, index=True)
     link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_role = CharField(max_length=64)
 
     class Meta:
-        table_name = 'crawl_tasks'
+        table_name = 'detail_crawl_tasks'

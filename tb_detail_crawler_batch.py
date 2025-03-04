@@ -1,5 +1,6 @@
 # coding: utf-8
 # #!./bin/python
+# 获取commodity_info表中更新时间在一段时间内的商品记录，若它的img和offer详细信息缺失，则抓取并更新表
 
 from taobao import *
 

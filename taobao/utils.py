@@ -3,6 +3,8 @@
 
 import sys
 import logging
+import pytesseract
+from PIL import Image
 
 
 def init_logger(log_format, file, level, debug):
@@ -25,3 +27,10 @@ def parse_price_unit(unit):
 
 def parse_price(price):
     return int(float(price) * 100)
+
+
+def parse_price_ocr(image_file_path):
+    price = pytesseract.image_to_string(Image.open(image_file_path))
+    price = price.strip(' \t\r\n')
+    assert (price != '')
+    return int(float(price * 100))

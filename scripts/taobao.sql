@@ -12,16 +12,17 @@ USE taobao;
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS commodity_info
 (
-    id         varchar(32)   NOT NULL,
-    sku_id     varchar(32)   NOT NULL,
-    title      varchar(128)  NOT NULL,
-    link       varchar(512)  NOT NULL,
-    shop_name  varchar(128)  NOT NULL,
-    title_imgs varchar(4096) NOT NULL,
-    page_imgs  varchar(4096) NOT NULL,
-    details    varchar(4096) NOT NULL,
-    create_ts  int           NOT NULL,
-    update_ts  int           NOT NULL
+    id          varchar(32)   NOT NULL,
+    sku_id      varchar(32)   NOT NULL,
+    title       varchar(128)  NOT NULL,
+    link        varchar(512)  NOT NULL,
+    shop_name   varchar(128)  NOT NULL,
+    title_imgs  varchar(4096) NOT NULL,
+    page_imgs   varchar(4096) NOT NULL,
+    details     varchar(4096) NOT NULL,
+    create_ts   int           NOT NULL,
+    update_ts   int           NOT NULL,
+    update_role varchar(64)   NOT NULL
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
@@ -30,10 +31,11 @@ CREATE TABLE IF NOT EXISTS commodity_info
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS shop_info
 (
-    name      varchar(128) NOT NULL,
-    link      varchar(512) NOT NULL,
-    create_ts int          NOT NULL,
-    update_ts int          NOT NULL
+    name        varchar(128) NOT NULL,
+    link        varchar(512) NOT NULL,
+    create_ts   int          NOT NULL,
+    update_ts   int          NOT NULL,
+    update_role varchar(64)  NOT NULL
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
@@ -50,21 +52,23 @@ CREATE TABLE IF NOT EXISTS commodity_sales
     display_sale         int          NOT NULL,
     estimated_total_sale int          NOT NULL,
     create_ts            int          NOT NULL,
-    update_ts            int          NOT NULL
+    update_ts            int          NOT NULL,
+    update_role          varchar(64)  NOT NULL
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
 -- --------------------------------
--- Create crawl_tasks Table
+-- Create detail_crawl_tasks Table
 -- --------------------------------
-CREATE TABLE IF NOT EXISTS crawl_tasks
+CREATE TABLE IF NOT EXISTS detail_crawl_tasks
 (
     id           int          NOT NULL,
     commodity_id varchar(32)  NOT NULL,
     link         varchar(512) NOT NULL,
     status       tinyint      NOT NULL,
     create_ts    int          NOT NULL,
-    update_ts    int          NOT NULL
+    update_ts    int          NOT NULL,
+    update_role  varchar(64)  NOT NULL
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
@@ -96,13 +100,13 @@ ALTER TABLE commodity_sales
 ALTER TABLE commodity_sales
     ADD INDEX idx_update_ts (update_ts);
 
-ALTER TABLE crawl_tasks
+ALTER TABLE detail_crawl_tasks
     ADD PRIMARY KEY (id);
-ALTER TABLE crawl_tasks
+ALTER TABLE detail_crawl_tasks
     ADD INDEX idx_commodity_id (commodity_id);
-ALTER TABLE crawl_tasks
+ALTER TABLE detail_crawl_tasks
     ADD INDEX idx_status (status);
-ALTER TABLE crawl_tasks
+ALTER TABLE detail_crawl_tasks
     ADD INDEX idx_update_ts (update_ts);
 
 ALTER TABLE commodity_info
@@ -111,8 +115,8 @@ ALTER TABLE commodity_sales
     ADD CONSTRAINT fk_commodity_sales_id FOREIGN KEY (id) REFERENCES commodity_info (id);
 ALTER TABLE commodity_sales
     ADD CONSTRAINT fk_commodity_sales_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (name);
-ALTER TABLE crawl_tasks
-    ADD CONSTRAINT fk_crawl_tasks_commodity_id FOREIGN KEY (commodity_id) REFERENCES commodity_info (id);
+ALTER TABLE detail_crawl_tasks
+    ADD CONSTRAINT fk_detail_crawl_tasks_commodity_id FOREIGN KEY (commodity_id) REFERENCES commodity_info (id);
 
 -- --------------------------------------------
 -- Create User taobao And Grant Permissions
