@@ -13,7 +13,7 @@ if __name__ == '__main__':
     # only commodities with empty info will be updated
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
-    start_ts = time.time() - UPDATE_TIME_PERIOD_IN_SECONDS
+    start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
     commodities = CommodityInfo.select().where(CommodityInfo.update_ts > start_ts)
     logger.info('get %d commodities to be updated by applying update_ts > %d' % (len(commodities), start_ts))
     login_taobao()

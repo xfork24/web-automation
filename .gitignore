@@ -8,6 +8,7 @@ pyvenv.cfg
 __pycache__/
 models/__pycache__/
 share/
+images/
 output/
 logs/
 utils/__pycache__/

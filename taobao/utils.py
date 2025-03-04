@@ -35,8 +35,7 @@ def parse_price(price):
 def parse_price_ocr(image_file_path):
     price = pytesseract.image_to_string(Image.open(image_file_path), config=TESSERACT_PRICE_OCR_OPTIONS)
     price = price.strip(' \t\r\n')
-    try:
-        assert (price != '')
-    except AssertionError:
+    price = 0 if price == '' else int(float(price) * 100)
+    if price == 0:
         raise PriceOCRGetEmptyError()
     return int(float(price) * 100)

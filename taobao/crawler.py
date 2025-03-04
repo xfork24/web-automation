@@ -75,7 +75,7 @@ def init_webdriver(webdriver_type: WebDriverType):
         # options.add_experimental_option("excludeSwitches", ['enable_automation'])  # 取消“Chrome正受到自动测试软件的控制”和“请停用以开发者模式运行的扩展程序”
         # options.add_argument("--disable-infobars")
         # options.add_argument("--disable-notification")
-        # options.add_argument('--disable-blink-features')  # 禁用闪烁
+        options.add_argument('--disable-blink-features=AutomationControlled')  # 禁用闪烁
         # options.add_argument('--disable-blink-features=AutomationControlled')  # 去除浏览器selenium监控
         # options.add_argument('--disable-gpu')  # 禁用GPU加速
         driver = webdriver.Chrome(options=options, service=driver_service)
@@ -469,8 +469,8 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
         exist_ci.update_ts = update_ts
         exist_ci.update_role = update_role
         exist_ci.save()
+        logger.info('exist commodity info record updated: %s' % exist_ci.to_dict())
     except DoesNotExist:
-        logger.info('commodity [%s] not exist, create new item' % commodity_id)
         new_ci = CommodityInfo()
         new_ci.id = commodity_id
         new_ci.sku_id = sku_id
@@ -484,6 +484,7 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
         new_ci.update_ts = update_ts
         new_ci.update_role = update_role
         new_ci.save(force_insert=True)
+        logger.info('new commodity info record inserted: %s' % new_ci.to_dict())
 
 
 def update_shop_info(shop_name, shop_link, create_ts, update_ts, update_role):
@@ -495,8 +496,8 @@ def update_shop_info(shop_name, shop_link, create_ts, update_ts, update_role):
         exist_si.update_ts = update_ts
         exist_si.update_role = update_role
         exist_si.save()
+        logger.info('exist shop info record updated: %s' % exist_si.to_dict())
     except DoesNotExist:
-        logger.info('shop [%s] not exist, create new item' % shop_name)
         new_si = ShopInfo()
         new_si.name = shop_name
         new_si.link = shop_link
@@ -504,23 +505,31 @@ def update_shop_info(shop_name, shop_link, create_ts, update_ts, update_role):
         new_si.update_ts = update_ts
         new_si.update_role = update_role
         new_si.save(force_insert=True)
+        logger.info('new shop info record inserted: %s' % new_si.to_dict())
 
 
 def add_commodity_sale(commodity_id, ts, shop_name,
                        price_unit, display_price, display_sale,
                        create_ts, update_ts, update_role):
-    new_cs = CommoditySales()
-    new_cs.id = commodity_id
-    new_cs.ts = ts
-    new_cs.shop_name = shop_name
-    new_cs.price_unit = price_unit
-    new_cs.display_price = display_price
-    new_cs.display_sale = display_sale
-    new_cs.estimated_total_sale = display_price * display_sale
-    new_cs.create_ts = create_ts
-    new_cs.update_ts = update_ts
-    new_cs.update_role = update_role
-    new_cs.save(force_insert=True)
+    logger = get_logger()
+    # 有些情况下（比如shop中）同样的商品可以出现多次，所以这里我们仍然要检查一下是否有键重复
+    try:
+        CommoditySales.get(CommoditySales.id == commodity_id and CommoditySales.ts == ts)
+        logger.error('commodity sale record already exist, id = %s and ts = %s, just ignore' % (commodity_id, ts))
+    except DoesNotExist:
+        new_cs = CommoditySales()
+        new_cs.id = commodity_id
+        new_cs.ts = ts
+        new_cs.shop_name = shop_name
+        new_cs.price_unit = price_unit
+        new_cs.display_price = display_price
+        new_cs.display_sale = display_sale
+        new_cs.estimated_total_sale = display_price * display_sale
+        new_cs.create_ts = create_ts
+        new_cs.update_ts = update_ts
+        new_cs.update_role = update_role
+        new_cs.save(force_insert=True)
+        logger.info('new commodity sale record inserted: %s' % new_cs.to_dict())
 
 
 def craw_taobao_sku_prices(value_items_divs, sku_price_div):
@@ -637,7 +646,7 @@ def craw_taobao_shop_page_results(shop_link):
             shop_name_div = div
     assert (shop_name_div is not None)
     shop_name = shop_name_div.find_element(By.XPATH, 'span').text
-    ts = time.time()
+    ts = int(time.time())
     update_role = craw_taobao_shop_page_results.__name__
     update_shop_info(shop_name, shop_link, ts, ts, update_role)
     for shop_sku_div in shop_sku_divs:

@@ -9,6 +9,7 @@ from taobao.config import (
     DB_PASSWORD,
     DB_PORT,
     DB_CHARSET)
+from playhouse.shortcuts import model_to_dict
 
 DB = MySQLDatabase(DB_NAME,
                    host=DB_HOST,
@@ -22,6 +23,9 @@ DB.connect(reuse_if_open=True)
 class BaseModel(Model):
     class Meta:
         database = DB
+
+    def to_dict(self):
+        return model_to_dict(self)
 
 
 class CommodityInfo(BaseModel):
