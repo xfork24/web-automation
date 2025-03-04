@@ -1,0 +1,33 @@
+# coding: utf-8
+# #!./bin/python
+
+from taobao import *
+
+LOG_FILE_NAME = './logs/tb_detail_crawler_batch.log'
+UPDATE_TIME_PERIOD_IN_SECONDS = 86400
+ForceUpdate = False
+
+if __name__ == '__main__':
+    # scan commodity_info table in update_ts desc order and update commodities within time period
+    # only commodities with empty info will be updated
+    init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
+    logger = get_logger()
+    start_ts = time.time() - UPDATE_TIME_PERIOD_IN_SECONDS
+    commodities = CommodityInfo.select().where(CommodityInfo.update_ts > start_ts)
+    logger.info('get %d commodities to be updated by applying update_ts > %d' % (len(commodities), start_ts))
+    login_taobao()
+    for commodity in commodities:
+        if commodity.title_imgs != '' and commodity.page_imgs != '' and commodity.details != '' and not ForceUpdate:
+            logger.info('commodity [%s] information already updated, just ignore' % commodity.id)
+            continue
+        logger.info('update commodity [%s], link = %s' % (commodity.id, commodity.link))
+        logger.info('navigate to commodity link')
+        Driver.get(commodity.link)
+        logger.info('wait detail page for seconds')
+        time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
+        try:
+            craw_taobao_detail_page_result(commodity.link, commodity.id)
+        except Exception:
+            logger.error('get unhandled exception while crawling commodity, just print error and continue')
+            traceback.print_exc()
+            continue

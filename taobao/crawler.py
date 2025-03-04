@@ -42,6 +42,7 @@ SKU_PRICE_UNIT_RE_EXP = re.compile('symbol--')
 SKU_PRICE_VAL_RE_EXP = re.compile('text--')
 SKU_TITLE_IMGS_RE_EXP = re.compile('^thumbnailsWrap--')
 SKU_MAIN_IMGS_RE_EXP = re.compile('^descV8-container')
+TB_GO_LOGIN_RE_EXP = re.compile('^GoLoginInfo--')
 
 COMMODITIES_IN_ONE_SEARCH = set()
 
@@ -86,18 +87,27 @@ def login_taobao():
             logger.info(
                 'we are not in taobao/personal homepage, finish authentication and navigate to taobao/personal homepage...')
             time.sleep(LOGIN_CHECK_INTERVAL_IN_SECONDS)
+    logger.info('maximize window')
+    set_window_size()
 
 
-def zoom_content(ratio):
+def zoom_content(ratio=1.0):
     zoom_script = 'document.body.style.zoom="%f"' % ratio
     Driver.execute_script(zoom_script)
 
 
-def scroll_window(x, y):
-    x = x if x is not None else 'document.body.scrollWidth'
-    y = y if y is not None else 'document.body.scrollHeight'
+def scroll_window(pos=None):
+    x = pos[0] if pos is not None else 'document.body.scrollWidth'
+    y = pos[1] if pos is not None else 'document.body.scrollHeight'
     scroll_script = 'window.scrollTo(%s, %s)' % (str(x), str(y))
     Driver.execute_script(scroll_script)
+
+
+def set_window_size(size=None):
+    if size is None:
+        Driver.maximize_window()
+    else:
+        Driver.set_window_size(size[0], size[1])
 
 
 def parse_id(item_id):
@@ -324,31 +334,46 @@ def craw_taobao_detail_page(commodity_link, commodity_id=None):
     Driver.get(commodity_link)
     logger.info('wait detail page for seconds')
     time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
+    craw_taobao_detail_page_result(commodity_link, commodity_id)
+
+
+def craw_taobao_detail_page_result(commodity_link, commodity_id):
+    logger = get_logger()
+    # set zoom ratio
     logger.info('set detail page zoom ratio to %f' % TB_PAGE_DEFAULT_ZOOM_RATIO)
     zoom_content(TB_PAGE_DEFAULT_ZOOM_RATIO)
-    craw_taobao_detail_page_result(commodity_id)
-
-
-def craw_taobao_detail_page_result(commodity_id):
-    # find all sku items, which is the basic aspect of an offer
-    logger = get_logger()
-    divs = Driver.find_elements(By.XPATH, '//div')
+    # parse detail page
     sku_items_divs = []
     sku_price_div = None
     title_image_div = None
     main_image_div = None
-    for div in divs:
-        cls_name = div.get_attribute('class')
-        if cls_name is None:
-            continue
-        if re.match(SKU_ITEMS_RE_EXP, cls_name):
-            sku_items_divs.append(div)
-        elif re.match(SKU_PRICE_RE_EXP, cls_name):
-            sku_price_div = div
-        elif re.match(SKU_TITLE_IMGS_RE_EXP, cls_name):
-            title_image_div = div
-        elif re.match(SKU_MAIN_IMGS_RE_EXP, cls_name):
-            main_image_div = div
+    go_login_div = None
+    while True:
+        divs = Driver.find_elements(By.XPATH, '//div')
+        for div in divs:
+            cls_name = div.get_attribute('class')
+            if cls_name is None:
+                continue
+            if re.match(TB_GO_LOGIN_RE_EXP, cls_name):
+                go_login_div = div
+                break
+            elif re.match(SKU_ITEMS_RE_EXP, cls_name):
+                sku_items_divs.append(div)
+            elif re.match(SKU_PRICE_RE_EXP, cls_name):
+                sku_price_div = div
+            elif re.match(SKU_TITLE_IMGS_RE_EXP, cls_name):
+                title_image_div = div
+            elif re.match(SKU_MAIN_IMGS_RE_EXP, cls_name):
+                main_image_div = div
+        if go_login_div is None:
+            break
+        else:
+            logger.info('navigate to login page again because taobao log us off')
+            login_taobao()
+            logger.info('navigate to commodity link again')
+            Driver.get(commodity_link)
+            logger.info('wait detail page for seconds again')
+            time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
     assert (len(sku_items_divs) < MAX_SKU_ITEMS_NUM)
     assert (sku_price_div is not None)
     assert (main_image_div is not None)
