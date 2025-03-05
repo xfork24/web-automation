@@ -356,11 +356,11 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id):
     sku_price_div = None
     title_image_div = None
     main_image_div = None
-    go_login_div = None
     shop_info_div = None
     sku_title_div = None
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
+        go_login_div = None
         for div in divs:
             cls_name = div.get_attribute('class')
             if cls_name is None:
@@ -436,24 +436,14 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id):
     assert (shop_name_span is not None)
     shop_name = shop_name_span.text
     # update commodity info in DB
-    update_commodity_and_shop_info(commodity_id, commodity_link, commodity_title,
-                                   shop_name, shop_link,
-                                   title_images, main_images, commodity_details)
-
-
-def update_commodity_and_shop_info(commodity_id, commodity_link, commodity_title,
-                                   shop_name, shop_link,
-                                   title_imgs, main_imgs, details):
     ts = int(time.time())
-    update_role = update_commodity_and_shop_info.__name__
     commodity_id = commodity_id or parse_commodity_id(commodity_link)
     sku_id = parse_sku_id(commodity_link) or '0'
+    update_role = craw_taobao_detail_page_result.__name__
     if commodity_id is not None:
         update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
-                              shop_name, title_imgs, main_imgs, details,
+                              shop_name, title_imgs, main_imgs, commodity_details,
                               ts, ts, update_role)
-    if shop_name is not None:
-        update_shop_info(shop_name, shop_link, ts, ts, update_role)
 
 
 def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
