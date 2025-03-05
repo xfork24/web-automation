@@ -514,7 +514,7 @@ def add_commodity_sale(commodity_id, ts, shop_name,
     logger = get_logger()
     # 有些情况下（比如shop中）同样的商品可以出现多次，所以这里我们仍然要检查一下是否有键重复
     try:
-        CommoditySales.get(CommoditySales.id == commodity_id and CommoditySales.ts == ts)
+        CommoditySales.get(CommoditySales.id == commodity_id, CommoditySales.ts == ts)
         logger.error('commodity sale record already exist, id = %s and ts = %s, just ignore' % (commodity_id, ts))
     except DoesNotExist:
         new_cs = CommoditySales()
@@ -652,7 +652,7 @@ def craw_taobao_shop_page_results(shop_link):
     for shop_sku_div in shop_sku_divs:
         try:
             craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts)
-        except PriceOCRGetEmptyError:
+        except PriceOCRError:
             logger.error('get PriceOCRGetEmptyError, nothing will be updated and just continue crawling')
             traceback.print_exc()
             continue
@@ -698,7 +698,7 @@ def craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts):
 def parse_price_span(price_span, commodity_id):
     temp_file_name = '%s/%s-%s.png' % (IMAGE_DIR, commodity_id, uuid.uuid4().hex)
     create_element_screenshot(price_span, temp_file_name)
-    return parse_price_ocr(temp_file_name)
+    return parse_price_ocr_use_pyocr(temp_file_name)
 
 
 Driver = init_webdriver(WebDriverType.ChromDriver)

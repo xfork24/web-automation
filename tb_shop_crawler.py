@@ -4,7 +4,7 @@
 
 from taobao import *
 
-SHOP_LINK = 'https://pub3j449bi05z91rrq9g0rdk2cllz3f.taobao.com/shop/view_shop.htm?appUid=RAzN8HWMpyiDM8qfpXyYbtArqUPjk8Tnq8AC3EwXkEQHMJZ6cxJ&spm=a21n57.1.hoverItem.2'
+SHOP_LINK = 'https://1xzmdx4773dyohbj1ffdf4rhw6ucg6o.taobao.com/?ali_refid=a3_430620_1006:2355581875:H:FcjqB4KyR7kQZIEQJJbNXA%3D%3D:7331b94aae88bcc9013bedd6207b9050&ali_trackid=282_7331b94aae88bcc9013bedd6207b9050&spm=a21n57.1.1.1&mm_sceneid=1_0_7384168593_0'
 LOG_FILE_NAME = './logs/tb_shop_crawler.log'
 
 if __name__ == '__main__':

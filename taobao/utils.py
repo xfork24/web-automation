@@ -3,11 +3,15 @@
 
 import sys
 import logging
+import easyocr
 import pytesseract
 from PIL import Image
-from taobao.exceptions import PriceOCRGetEmptyError
+from taobao.exceptions import PriceOCRError
 
-TESSERACT_PRICE_OCR_OPTIONS = "--psm 6 --oem 3 tessedit_char_whitelist=0123456789."
+TESSERACT_PRICE_OCR_CONFIG = '--psm 7 --oem 1 tessedit_char_whitelist=0123456789.'
+PYOCR_PRICE_ALLOW_LIST = '0123456789.'
+
+EasyOcrReader = easyocr.Reader(['en'])
 
 
 def init_logger(log_format, file, level, debug):
@@ -32,10 +36,21 @@ def parse_price(price):
     return int(float(price) * 100)
 
 
-def parse_price_ocr(image_file_path):
-    price = pytesseract.image_to_string(Image.open(image_file_path), config=TESSERACT_PRICE_OCR_OPTIONS)
-    price = price.strip(' \t\r\n')
+def parse_price_ocr_use_pytesseract(image_file_path, config=TESSERACT_PRICE_OCR_CONFIG):
+    price = pytesseract.image_to_string(Image.open(image_file_path), config=config).strip(' \t\r\n')
     price = 0 if price == '' else int(float(price) * 100)
     if price == 0:
-        raise PriceOCRGetEmptyError()
-    return int(float(price) * 100)
+        raise PriceOCRError()
+    return price
+
+
+def parse_price_ocr_use_pyocr(image_file_path):
+    result = EasyOcrReader.readtext(image_file_path, allowlist=PYOCR_PRICE_ALLOW_LIST)
+    result_size = len(result)
+    if result_size == 0 or result_size > 1:
+        raise PriceOCRError()
+    price = result[0][1].strip(' \t\r\n')
+    price = 0 if price == '' else int(float(price) * 100)
+    if price == 0:
+        raise PriceOCRError()
+    return price

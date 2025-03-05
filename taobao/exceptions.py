@@ -1,5 +1,5 @@
 # coding: utf-8
 # !./bin/python
 
-class PriceOCRGetEmptyError(RuntimeError):
+class PriceOCRError(RuntimeError):
     pass
