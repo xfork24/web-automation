@@ -434,13 +434,16 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id=None)
     shop_name_span = shop_info_inner.find_element(By.XPATH, 'div/div/span')
     assert (shop_name_span is not None)
     shop_name = shop_name_span.text
+    shop_link = shop_info_inner.get_attribute('href')
     # update commodity info in DB
     commodity_id = commodity_id or parse_commodity_id(commodity_link)
     sku_id = parse_sku_id(commodity_link) or '0'
+    update_role = craw_taobao_detail_page_result.__name__
     if commodity_id is not None:
         update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
                               shop_name, title_imgs, main_imgs, commodity_details,
-                              update_id, craw_taobao_detail_page_result.__name__)
+                              update_id, update_role)
+        update_shop_info(shop_name, shop_link, update_id, update_role)
 
 
 def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
@@ -733,7 +736,7 @@ def craw_taobao_shop_page_results(shop_link, target_commodity_ids=None, update_i
     update_shop_info(shop_name, shop_link, update_id, craw_taobao_shop_page_results.__name__)
     for shop_sku_div in shop_sku_divs:
         try:
-            craw_taobao_shop_sku_result(shop_sku_div, shop_name, target_commodity_ids)
+            craw_taobao_shop_sku_result(shop_sku_div, shop_name, target_commodity_ids, update_id)
         except PriceOCRError:
             logger.error('get PriceOCRGetEmptyError, nothing will be updated and just continue crawling')
             traceback.print_exc()

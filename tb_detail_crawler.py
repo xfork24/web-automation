@@ -11,4 +11,4 @@ TAOBAO_COMMODITY_LINK = 'https://item.taobao.com/item.htm?abbucket=19&id=8755041
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
-    craw_taobao_detail_page(TAOBAO_COMMODITY_LINK, UPDATE_ID)
+    craw_taobao_detail_page(TAOBAO_COMMODITY_LINK, None, UPDATE_ID)
