@@ -90,7 +90,6 @@ class OperationHistory(BaseModel):
 
     class Meta:
         table_name = 'operation_history'
-        primary_key = CompositeKey('id', 'ts')
         indexes = (
             (('pk', 'table_name'), False),
             (('update_role', 'operation_ts'), False),
@@ -104,6 +103,7 @@ class DetailCrawlTask(BaseModel):
     status = SmallIntegerField(index=True)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
 
     class Meta:
@@ -117,6 +117,7 @@ class ShopCrawlTask(BaseModel):
     status = SmallIntegerField(index=True)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
 
     class Meta:
@@ -130,6 +131,7 @@ class SearchCrawlTask(BaseModel):
     status = SmallIntegerField(index=True)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
 
     class Meta:

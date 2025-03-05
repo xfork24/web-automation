@@ -6,6 +6,7 @@ from taobao import *
 
 LOG_FILE_NAME = './logs/tb_detail_crawler_batch.log'
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400
+UPDATE_ID = 'tb_detail_crawler_batch'
 ForceUpdate = False
 
 if __name__ == '__main__':
@@ -27,7 +28,7 @@ if __name__ == '__main__':
         logger.info('wait detail page for seconds')
         time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
         try:
-            craw_taobao_detail_page_result(commodity.link, commodity.id)
+            craw_taobao_detail_page_result(commodity.link, commodity.id, UPDATE_ID)
         except Exception:
             logger.error('get unhandled exception while crawling commodity, just print error and continue')
             traceback.print_exc()

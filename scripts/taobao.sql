@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS detail_crawl_task
     status       tinyint      NOT NULL,
     create_ts    int          NOT NULL,
     update_ts    int          NOT NULL,
+    update_id    varchar(32)  NOT NULL,
     update_role  varchar(64)  NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
@@ -106,6 +107,7 @@ CREATE TABLE IF NOT EXISTS shop_crawl_task
     status      tinyint      NOT NULL,
     create_ts   int          NOT NULL,
     update_ts   int          NOT NULL,
+    update_id   varchar(32)  NOT NULL,
     update_role varchar(64)  NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
@@ -122,6 +124,7 @@ CREATE TABLE IF NOT EXISTS search_crawl_task
     status       tinyint     NOT NULL,
     create_ts    int         NOT NULL,
     update_ts    int         NOT NULL,
+    update_id    varchar(32) NOT NULL,
     update_role  varchar(64) NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
@@ -170,6 +173,8 @@ ALTER TABLE detail_crawl_task
     ADD INDEX idx_status (status);
 ALTER TABLE detail_crawl_task
     ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE detail_crawl_task
+    ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE shop_crawl_task
     ADD INDEX idx_shop_name (shop_name);
@@ -177,6 +182,8 @@ ALTER TABLE shop_crawl_task
     ADD INDEX idx_status (status);
 ALTER TABLE shop_crawl_task
     ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE shop_crawl_task
+    ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE search_crawl_task
     ADD INDEX idx_search_key (search_key);
@@ -184,6 +191,8 @@ ALTER TABLE search_crawl_task
     ADD INDEX idx_status (status);
 ALTER TABLE search_crawl_task
     ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE search_crawl_task
+    ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE commodity_info
     ADD CONSTRAINT fk_commodity_info_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (name);
