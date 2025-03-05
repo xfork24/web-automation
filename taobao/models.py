@@ -11,6 +11,9 @@ from taobao.config import (
     DB_CHARSET)
 from playhouse.shortcuts import model_to_dict
 
+DB_OPS_CREATE_NEW = 1
+DB_OPS_UPDATE_EXIST = 2
+
 DB = MySQLDatabase(DB_NAME,
                    host=DB_HOST,
                    port=DB_PORT,
@@ -56,7 +59,7 @@ class ShopInfo(BaseModel):
         table_name = 'shop_info'
 
 
-class CommoditySales(BaseModel):
+class CommoditySale(BaseModel):
     id = CharField(max_length=32)
     ts = IntegerField()
     shop_name = CharField(max_length=128, index=True)
@@ -69,12 +72,30 @@ class CommoditySales(BaseModel):
     update_role = CharField(max_length=64)
 
     class Meta:
-        table_name = 'commodity_sales'
+        table_name = 'commodity_sale'
         primary_key = CompositeKey('id', 'ts')
 
 
-class DetailCrawlTasks(BaseModel):
-    id = IntegerField(primary_key=True)
+class OperationHistory(BaseModel):
+    id = CharField(max_length=32)
+    pk = CharField(max_length=128)
+    table_name = CharField(max_length=32)
+    update_role = CharField(max_length=64)
+    operation_ts = IntegerField()
+    operation = IntegerField()
+    create_ts = IntegerField(index=True)
+
+    class Meta:
+        table_name = 'operation_history'
+        primary_key = CompositeKey('id', 'ts')
+        indexes = (
+            (('pk', 'table_name'), False),
+            (('update_role', 'operation_ts'), False),
+        )
+
+
+class DetailCrawlTask(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
     commodity_id = CharField(max_length=32, index=True)
     link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
@@ -83,11 +104,11 @@ class DetailCrawlTasks(BaseModel):
     update_role = CharField(max_length=64)
 
     class Meta:
-        table_name = 'detail_crawl_tasks'
+        table_name = 'detail_crawl_task'
 
 
-class ShopCrawlTasks(BaseModel):
-    id = IntegerField(primary_key=True)
+class ShopCrawlTask(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
     shop_name = CharField(max_length=128, index=True)
     link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
@@ -96,4 +117,17 @@ class ShopCrawlTasks(BaseModel):
     update_role = CharField(max_length=64)
 
     class Meta:
-        table_name = 'shop_crawl_tasks'
+        table_name = 'shop_crawl_task'
+
+
+class SearchCrawlTask(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    search_key = CharField(max_length=32, index=True)
+    num_of_pages = IntegerField()
+    status = SmallIntegerField(index=True)
+    create_ts = IntegerField()
+    update_ts = IntegerField(index=True)
+    update_role = CharField(max_length=64)
+
+    class Meta:
+        table_name = 'search_crawl_task'

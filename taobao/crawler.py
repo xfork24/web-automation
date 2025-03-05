@@ -9,6 +9,7 @@ import traceback
 import uuid
 from enum import Enum
 from urllib.parse import urlparse, parse_qs
+from uuid import uuid4
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeDriverService
@@ -472,6 +473,11 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
         exist_ci.update_role = update_role
         exist_ci.save()
         logger.info('exist commodity info record updated: %s' % exist_ci.to_dict())
+        add_operation_history(commodity_id,
+                              CommodityInfo.table_name,
+                              update_role,
+                              update_ts,
+                              DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_ci = CommodityInfo()
         new_ci.id = commodity_id
@@ -487,6 +493,11 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
         new_ci.update_role = update_role
         new_ci.save(force_insert=True)
         logger.info('new commodity info record inserted: %s' % new_ci.to_dict())
+        add_operation_history(commodity_id,
+                              CommodityInfo.table_name,
+                              update_role,
+                              update_ts,
+                              DB_OPS_CREATE_NEW)
 
 
 def update_shop_info(shop_name, shop_link, create_ts, update_ts, update_role):
@@ -501,6 +512,11 @@ def update_shop_info(shop_name, shop_link, create_ts, update_ts, update_role):
         exist_si.update_role = update_role
         exist_si.save()
         logger.info('exist shop info record updated: %s' % exist_si.to_dict())
+        add_operation_history(shop_name,
+                              ShopInfo.table_name,
+                              update_role,
+                              update_ts,
+                              DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_si = ShopInfo()
         new_si.name = shop_name
@@ -510,6 +526,11 @@ def update_shop_info(shop_name, shop_link, create_ts, update_ts, update_role):
         new_si.update_role = update_role
         new_si.save(force_insert=True)
         logger.info('new shop info record inserted: %s' % new_si.to_dict())
+        add_operation_history(shop_name,
+                              ShopInfo.table_name,
+                              update_role,
+                              update_ts,
+                              DB_OPS_CREATE_NEW)
 
 
 def add_commodity_sale(commodity_id, ts, shop_name,
@@ -518,10 +539,10 @@ def add_commodity_sale(commodity_id, ts, shop_name,
     logger = get_logger()
     # 有些情况下（比如shop中）同样的商品可以出现多次，所以这里我们仍然要检查一下是否有键重复
     try:
-        CommoditySales.get(CommoditySales.id == commodity_id, CommoditySales.ts == ts)
+        CommoditySale.get(CommoditySale.id == commodity_id, CommoditySale.ts == ts)
         logger.error('commodity sale record already exist, id = %s and ts = %s, just ignore' % (commodity_id, ts))
     except DoesNotExist:
-        new_cs = CommoditySales()
+        new_cs = CommoditySale()
         new_cs.id = commodity_id
         new_cs.ts = ts
         new_cs.shop_name = shop_name
@@ -534,11 +555,31 @@ def add_commodity_sale(commodity_id, ts, shop_name,
         new_cs.update_role = update_role
         new_cs.save(force_insert=True)
         logger.info('new commodity sale record inserted: %s' % new_cs.to_dict())
+        add_operation_history('%s,%s' % (commodity_id, ts),
+                              CommoditySale.table_name,
+                              update_role,
+                              ts,
+                              DB_OPS_CREATE_NEW)
+
+
+def add_operation_history(pk, table_name, update_role, operation_ts, operation):
+    logger = get_logger()
+    new_oh = OperationHistory()
+    new_oh.pk = pk
+    new_oh.table_name = table_name
+    new_oh.update_role = update_role
+    new_oh.operation_ts = operation_ts
+    new_oh.operation = operation
+    new_oh.create_ts = int(time.time())
+    new_oh.save(force_insert=True)
+    logger.info('new operation history record inserted: %s' % new_oh.to_dict())
 
 
 def add_detail_crawl_task(commodity_id, link, status, create_ts, update_ts, update_role):
     logger = get_logger()
-    new_dct = DetailCrawlTasks()
+    pk = uuid4().hex
+    new_dct = DetailCrawlTask()
+    new_dct.id = pk
     new_dct.commodity_id = commodity_id
     new_dct.link = link
     new_dct.status = status
@@ -547,11 +588,18 @@ def add_detail_crawl_task(commodity_id, link, status, create_ts, update_ts, upda
     new_dct.update_role = update_role
     new_dct.save(force_insert=True)
     logger.info('new detail crawl task record inserted: %s' % new_dct.to_dict())
+    add_operation_history(pk,
+                          DetailCrawlTask.table_name,
+                          update_role,
+                          update_ts,
+                          DB_OPS_CREATE_NEW)
 
 
 def add_shop_crawl_task(shop_name, link, status, create_ts, update_ts, update_role):
     logger = get_logger()
-    new_sct = ShopCrawlTasks()
+    pk = uuid4().hex
+    new_sct = ShopCrawlTask()
+    new_sct.id = pk
     new_sct.shop_name = shop_name
     new_sct.link = link
     new_sct.status = status
@@ -560,6 +608,31 @@ def add_shop_crawl_task(shop_name, link, status, create_ts, update_ts, update_ro
     new_sct.update_role = update_role
     new_sct.save(force_insert=True)
     logger.info('new shop crawl task record inserted: %s' % new_sct.to_dict())
+    add_operation_history(pk,
+                          ShopCrawlTask.table_name,
+                          update_role,
+                          update_ts,
+                          DB_OPS_CREATE_NEW)
+
+
+def add_search_crawl_task(search_key, num_of_pages, status, create_ts, update_ts, update_role):
+    logger = get_logger()
+    pk = uuid4().hex
+    new_sct = SearchCrawlTask()
+    new_sct.id = pk
+    new_sct.search_key = search_key
+    new_sct.num_of_pages = num_of_pages
+    new_sct.status = status
+    new_sct.create_ts = create_ts
+    new_sct.update_ts = update_ts
+    new_sct.update_role = update_role
+    new_sct.save(force_insert=True)
+    logger.info('new search crawl task record inserted: %s' % new_sct.to_dict())
+    add_operation_history(pk,
+                          SearchCrawlTask.table_name,
+                          update_role,
+                          update_ts,
+                          DB_OPS_CREATE_NEW)
 
 
 def craw_taobao_sku_prices(value_items_divs, sku_price_div):
@@ -632,17 +705,17 @@ def craw_taobao_value_item_result(value_item):
     return sku_item
 
 
-def craw_taobao_shop_page(shop_link, target_commodity_id=None):
+def craw_taobao_shop_page(shop_link, target_commodity_ids=None):
     logger = get_logger()
     login_taobao()
     logger.info('navigate to shop link')
     Driver.get(shop_link)
     logger.info('wait detail page for seconds')
     time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
-    craw_taobao_shop_page_results(shop_link, target_commodity_id)
+    craw_taobao_shop_page_results(shop_link, target_commodity_ids)
 
 
-def craw_taobao_shop_page_results(shop_link, target_commodity_id=None):
+def craw_taobao_shop_page_results(shop_link, target_commodity_ids=None):
     logger = get_logger()
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
@@ -681,21 +754,21 @@ def craw_taobao_shop_page_results(shop_link, target_commodity_id=None):
     update_shop_info(shop_name, shop_link, ts, ts, update_role)
     for shop_sku_div in shop_sku_divs:
         try:
-            craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts, target_commodity_id)
+            craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts, target_commodity_ids)
         except PriceOCRError:
             logger.error('get PriceOCRGetEmptyError, nothing will be updated and just continue crawling')
             traceback.print_exc()
             continue
 
 
-def craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts, target_commodity_id=None):
+def craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts, target_commodity_ids=None):
     logger = get_logger()
     sku_link_a = shop_sku_div.find_element(By.XPATH, 'a')
     assert (sku_link_a is not None)
     commodity_link = sku_link_a.get_attribute('href')
     commodity_id = parse_commodity_id(commodity_link)
-    if target_commodity_id is not None and target_commodity_id != commodity_id:
-        logger.info('target_commodity_id [%s] and parsed commodity_id [%s] doesn\'t match, ignore this commodity' % (target_commodity_id, commodity_id))
+    if target_commodity_ids is not None and commodity_id not in target_commodity_ids:
+        logger.info('parsed commodity_id [%s] not in target_commodity_ids, ignore this commodity' % commodity_id)
         return
     sku_id = parse_sku_id(commodity_link) or ''
     divs = shop_sku_div.find_elements(By.XPATH, './/div')
