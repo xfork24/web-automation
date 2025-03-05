@@ -452,10 +452,22 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
     # update commodity_info table
     logger = get_logger()
     try:
+        # if record already exists, update only if value is valid
         exist_ci = CommodityInfo.get(CommodityInfo.id == commodity_id)
-        exist_ci.title_imgs = title_imgs
-        exist_ci.page_imgs = main_imgs
-        exist_ci.details = details
+        if sku_id != '':
+            exist_ci.sku_id = sku_id
+        if commodity_title != '':
+            exist_ci.title = commodity_title
+        if commodity_link != '':
+            exist_ci.link = commodity_link
+        if shop_name != '':
+            exist_ci.shop_name = shop_name
+        if title_imgs != '':
+            exist_ci.title_imgs = title_imgs
+        if main_imgs != '':
+            exist_ci.page_imgs = main_imgs
+        if details != '':
+            exist_ci.details = details
         exist_ci.update_ts = update_ts
         exist_ci.update_role = update_role
         exist_ci.save()
@@ -481,8 +493,10 @@ def update_shop_info(shop_name, shop_link, create_ts, update_ts, update_role):
     # update shop_info table
     logger = get_logger()
     try:
+        # update only when value is valid
         exist_si = ShopInfo.get(ShopInfo.name == shop_name)
-        exist_si.link = shop_link
+        if shop_link != '':
+            exist_si.link = shop_link
         exist_si.update_ts = update_ts
         exist_si.update_role = update_role
         exist_si.save()
@@ -520,6 +534,32 @@ def add_commodity_sale(commodity_id, ts, shop_name,
         new_cs.update_role = update_role
         new_cs.save(force_insert=True)
         logger.info('new commodity sale record inserted: %s' % new_cs.to_dict())
+
+
+def add_detail_crawl_task(commodity_id, link, status, create_ts, update_ts, update_role):
+    logger = get_logger()
+    new_dct = DetailCrawlTasks()
+    new_dct.commodity_id = commodity_id
+    new_dct.link = link
+    new_dct.status = status
+    new_dct.create_ts = create_ts
+    new_dct.update_ts = update_ts
+    new_dct.update_role = update_role
+    new_dct.save(force_insert=True)
+    logger.info('new detail crawl task record inserted: %s' % new_dct.to_dict())
+
+
+def add_shop_crawl_task(shop_name, link, status, create_ts, update_ts, update_role):
+    logger = get_logger()
+    new_sct = ShopCrawlTasks()
+    new_sct.shop_name = shop_name
+    new_sct.link = link
+    new_sct.status = status
+    new_sct.create_ts = create_ts
+    new_sct.update_ts = update_ts
+    new_sct.update_role = update_role
+    new_sct.save(force_insert=True)
+    logger.info('new shop crawl task record inserted: %s' % new_sct.to_dict())
 
 
 def craw_taobao_sku_prices(value_items_divs, sku_price_div):
@@ -592,17 +632,17 @@ def craw_taobao_value_item_result(value_item):
     return sku_item
 
 
-def craw_taobao_shop_page(shop_link):
+def craw_taobao_shop_page(shop_link, target_commodity_id=None):
     logger = get_logger()
     login_taobao()
     logger.info('navigate to shop link')
     Driver.get(shop_link)
     logger.info('wait detail page for seconds')
     time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
-    craw_taobao_shop_page_results(shop_link)
+    craw_taobao_shop_page_results(shop_link, target_commodity_id)
 
 
-def craw_taobao_shop_page_results(shop_link):
+def craw_taobao_shop_page_results(shop_link, target_commodity_id=None):
     logger = get_logger()
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
@@ -641,18 +681,22 @@ def craw_taobao_shop_page_results(shop_link):
     update_shop_info(shop_name, shop_link, ts, ts, update_role)
     for shop_sku_div in shop_sku_divs:
         try:
-            craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts)
+            craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts, target_commodity_id)
         except PriceOCRError:
             logger.error('get PriceOCRGetEmptyError, nothing will be updated and just continue crawling')
             traceback.print_exc()
             continue
 
 
-def craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts):
+def craw_taobao_shop_sku_result(shop_sku_div, shop_name, ts, target_commodity_id=None):
+    logger = get_logger()
     sku_link_a = shop_sku_div.find_element(By.XPATH, 'a')
     assert (sku_link_a is not None)
     commodity_link = sku_link_a.get_attribute('href')
     commodity_id = parse_commodity_id(commodity_link)
+    if target_commodity_id is not None and target_commodity_id != commodity_id:
+        logger.info('target_commodity_id [%s] and parsed commodity_id [%s] doesn\'t match, ignore this commodity' % (target_commodity_id, commodity_id))
+        return
     sku_id = parse_sku_id(commodity_link) or ''
     divs = shop_sku_div.find_elements(By.XPATH, './/div')
     title_div = None

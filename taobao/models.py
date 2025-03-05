@@ -84,3 +84,16 @@ class DetailCrawlTasks(BaseModel):
 
     class Meta:
         table_name = 'detail_crawl_tasks'
+
+
+class ShopCrawlTasks(BaseModel):
+    id = IntegerField(primary_key=True)
+    shop_name = CharField(max_length=128, index=True)
+    link = CharField(max_length=512)
+    status = SmallIntegerField(index=True)
+    create_ts = IntegerField()
+    update_ts = IntegerField(index=True)
+    update_role = CharField(max_length=64)
+
+    class Meta:
+        table_name = 'shop_crawl_tasks'
