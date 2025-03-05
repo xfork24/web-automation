@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS commodity_info
     details     varchar(4096) NOT NULL,
     create_ts   int           NOT NULL,
     update_ts   int           NOT NULL,
+    update_id   varchar(32)   NOT NULL,
     update_role varchar(64)   NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
@@ -36,6 +37,7 @@ CREATE TABLE IF NOT EXISTS shop_info
     link        varchar(512) NOT NULL,
     create_ts   int          NOT NULL,
     update_ts   int          NOT NULL,
+    update_id   varchar(32)  NOT NULL,
     update_role varchar(64)  NOT NULL,
     PRIMARY KEY (name)
 ) ENGINE = InnoDB
@@ -47,7 +49,6 @@ CREATE TABLE IF NOT EXISTS shop_info
 CREATE TABLE IF NOT EXISTS commodity_sale
 (
     id                   varchar(32)  NOT NULL,
-    ts                   int          NOT NULL,
     shop_name            varchar(128) NOT NULL,
     price_unit           varchar(3)   NOT NULL,
     display_price        int          NOT NULL,
@@ -55,8 +56,9 @@ CREATE TABLE IF NOT EXISTS commodity_sale
     estimated_total_sale int          NOT NULL,
     create_ts            int          NOT NULL,
     update_ts            int          NOT NULL,
+    update_id            varchar(32)  NOT NULL,
     update_role          varchar(64)  NOT NULL,
-    PRIMARY KEY (id, ts)
+    PRIMARY KEY (id, update_ts)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
@@ -68,6 +70,7 @@ CREATE TABLE IF NOT EXISTS operation_history
     id           int          NOT NULL AUTO_INCREMENT,
     pk           varchar(128) NOT NULL,
     table_name   varchar(32)  NOT NULL,
+    update_id    varchar(32)  NOT NULL,
     update_role  varchar(64)  NOT NULL,
     operation_ts int          NOT NULL,
     operation    int          NOT NULL,
@@ -133,9 +136,13 @@ ALTER TABLE commodity_info
     ADD INDEX idx_shop_name (shop_name);
 ALTER TABLE commodity_info
     ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE commodity_info
+    ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE shop_info
     ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE shop_info
+    ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE commodity_sale
     ADD INDEX idx_shop_name (shop_name);
@@ -145,6 +152,8 @@ ALTER TABLE commodity_sale
     ADD INDEX idx_estimated_total_sale (estimated_total_sale);
 ALTER TABLE commodity_sale
     ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE commodity_sale
+    ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE operation_history
     ADD INDEX idx_pk_table_name (pk, table_name);
@@ -152,6 +161,8 @@ ALTER TABLE operation_history
     ADD INDEX idx_update_role_operation_ts (update_role, operation_ts);
 ALTER TABLE operation_history
     ADD INDEX idx_create_ts (create_ts);
+ALTER TABLE operation_history
+    ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE detail_crawl_task
     ADD INDEX idx_commodity_id (commodity_id);

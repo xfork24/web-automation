@@ -42,6 +42,7 @@ class CommodityInfo(BaseModel):
     details = CharField(max_length=4096)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
 
     class Meta:
@@ -53,6 +54,7 @@ class ShopInfo(BaseModel):
     link = CharField(max_length=512)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
 
     class Meta:
@@ -61,7 +63,6 @@ class ShopInfo(BaseModel):
 
 class CommoditySale(BaseModel):
     id = CharField(max_length=32)
-    ts = IntegerField()
     shop_name = CharField(max_length=128, index=True)
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
@@ -69,17 +70,19 @@ class CommoditySale(BaseModel):
     estimated_total_sale = IntegerField(index=True)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
 
     class Meta:
         table_name = 'commodity_sale'
-        primary_key = CompositeKey('id', 'ts')
+        primary_key = CompositeKey('id', 'update_ts')
 
 
 class OperationHistory(BaseModel):
     id = CharField(max_length=32)
     pk = CharField(max_length=128)
     table_name = CharField(max_length=32)
+    update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
     operation_ts = IntegerField()
     operation = IntegerField()
