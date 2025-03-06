@@ -10,6 +10,8 @@ from taobao.utils import get_logger
 
 LLM_MODEL = 'deepseek-r1-distill-llama-70b'
 GROQ_KEY = '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'
+KEYWORD_NAME_MAX_LENGTH = 10
+CATEGORY_NAME_MAX_LENGTH = 10
 
 GroqClient = Groq(api_key=GROQ_KEY)
 
@@ -17,8 +19,9 @@ GroqClient = Groq(api_key=GROQ_KEY)
 # Data model for LLM to generate
 class ProductInfo(BaseModel):
     id: str
-    keywords: conlist(constr(min_length=1, max_length=5), min_length=1, max_length=3)
-    categories: conlist(constr(min_length=1, max_length=7), min_length=1, max_length=2)
+    keyword: constr(max_length=KEYWORD_NAME_MAX_LENGTH)
+    category: constr(max_length=CATEGORY_NAME_MAX_LENGTH)
+    digital: bool
 
 
 class ProductInfoList(BaseModel):
@@ -36,12 +39,7 @@ def parse_product_by_dsr1_70b(product: Product) -> ProductInfo:
     request = [
         {
             "role": "system",
-            "content": "You are an e-commerce manager that process product id and title and output product information in JSON\n"
-                       f"The JSON object must use this schema: {dumps(ProductInfo.model_json_schema())}"
-                       "Number of keywords must be between 1 and 3, with each no more than 5 characters"
-                       "Number of categories must be between 1 and 2, with each no more than 7 characters"
-                       "If the product is a virtual product, add VIRTUAL as an additional category"
-                       "Both keyword and category should be sorted by importance from high to low",
+            "content": f"分析按行分隔的商品信息，输出为{dumps(ProductInfo.model_json_schema())}格式的JSON\n",
         },
         {
             "role": "user",
@@ -81,13 +79,7 @@ def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductInfoList:
     request = [
         {
             "role": "system",
-            "content": "You are an e-commerce manager that process product id and title and output product information in JSON\n"
-                       "Each input line contains one product with its id and title"
-                       f" The returned JSON object must use the schema: {dumps(ProductInfoList.model_json_schema())}"
-                       "Number of keywords must be between 1 and 3, with each no more than 5 characters"
-                       "Number of categories must be between 1 and 2, with each no more than 7 characters"
-                       "If the product is a virtual product, add VIRTUAL as an additional category"
-                       "Both keyword and category should be sorted by importance from high to low",
+            "content": f"分析按行分隔的商品信息，输出为{dumps(ProductInfoList.model_json_schema())}格式的JSON\n",
         },
         {
             "role": "user",
