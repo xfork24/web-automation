@@ -36,7 +36,7 @@ def parse_price(price):
     return int(float(price) * 100)
 
 
-def parse_price_ocr_use_pytesseract(image_file_path, config=TESSERACT_PRICE_OCR_CONFIG):
+def parse_price_ocr_by_pytesseract(image_file_path, config=TESSERACT_PRICE_OCR_CONFIG):
     price = pytesseract.image_to_string(Image.open(image_file_path), config=config).strip(' \t\r\n')
     price = 0 if price == '' else int(float(price) * 100)
     if price == 0:
@@ -44,7 +44,7 @@ def parse_price_ocr_use_pytesseract(image_file_path, config=TESSERACT_PRICE_OCR_
     return price
 
 
-def parse_price_ocr_use_pyocr(image_file_path):
+def parse_price_ocr_by_pyocr(image_file_path):
     result = EasyOcrReader.readtext(image_file_path, allowlist=PYOCR_PRICE_ALLOW_LIST)
     result_size = len(result)
     if result_size == 0 or result_size > 1:

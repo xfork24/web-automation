@@ -16,13 +16,13 @@ if __name__ == '__main__':
     logger = get_logger()
     start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
     commodities = CommodityInfo.select().where(CommodityInfo.update_ts > start_ts)
-    logger.info('get %d commodities to be updated by applying update_ts > %d' % (len(commodities), start_ts))
+    logger.info(f'get {len(commodities)} commodities to be updated by applying update_ts > {start_ts}')
     login_taobao()
     for commodity in commodities:
         if commodity.title_imgs != '' and commodity.page_imgs != '' and commodity.details != '' and not ForceUpdate:
-            logger.info('commodity [%s] information already updated, just ignore' % commodity.id)
+            logger.info(f'commodity [{commodity.id}] information already updated, just ignore')
             continue
-        logger.info('update commodity [%s], link = %s' % (commodity.id, commodity.link))
+        logger.info(f'update commodity [{commodity.id}], link = {commodity.link}')
         logger.info('navigate to commodity link')
         Driver.get(commodity.link)
         logger.info('wait detail page for seconds')

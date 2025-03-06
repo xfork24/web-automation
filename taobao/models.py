@@ -30,6 +30,9 @@ class BaseModel(Model):
     def to_dict(self):
         return model_to_dict(self)
 
+    def table_name(self):
+        return self._meta.table_name
+
 
 class CommodityInfo(BaseModel):
     id = CharField(max_length=32, primary_key=True)
