@@ -43,6 +43,7 @@ class CommodityInfo(BaseModel):
     title_imgs = CharField(max_length=4096)
     page_imgs = CharField(max_length=4096)
     details = CharField(max_length=4096)
+    llm_analysis = CharField(max_length=1024)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)

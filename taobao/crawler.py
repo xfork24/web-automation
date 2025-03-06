@@ -181,7 +181,7 @@ def parse_sku_id_from_commodity_link(link):
 
 
 def parse_sales(sales):
-    assert (len(sales) > 3 and sales[-3:] == '人付款')
+    assert (len(sales) > 3 and (sales[-3:] == '人付款' or sales[-3:] == '人看过'))
     sales_num = sales[:-3]
     if sales_num[-1] == '+':
         sales_num = sales_num[:-1]
@@ -311,7 +311,7 @@ def save_taobao_search_result(sku_info, update_id):
     update_shop_info(sku_info[SHOP_NAME], sku_info[SHOP_LINK], update_id, update_role)
     # save commodity info
     update_commodity_info(sku_info[ID], sku_info[SKU_ID], sku_info[SKU_TITLE], sku_info[SKU_LINK],
-                          sku_info[SHOP_NAME], '', '', '',
+                          sku_info[SHOP_NAME], '', '', '', '',
                           update_id, update_role)
     # save commodity sales info,
     # remember there can be same commodity in different search pages,
@@ -424,14 +424,14 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
     sku_id = parse_sku_id_from_commodity_link(commodity_link) or '0'
     update_role = craw_taobao_detail_page_result.__name__
     if commodity_id is not None:
-        update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
-                              shop_name, title_imgs, main_imgs, commodity_details,
+        update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,
+                              title_imgs, main_imgs, commodity_details, '',
                               update_id, update_role)
         update_shop_info(shop_name, shop_link, update_id, update_role)
 
 
-def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
-                          shop_name, title_imgs, main_imgs, details, update_id, update_role):
+def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,
+                          title_imgs, main_imgs, details, llm_analysis, update_id, update_role):
     # update commodity_info table
     logger = get_logger()
     ts = int(time.time())
@@ -445,6 +445,7 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
         exist_ci.title_imgs = title_imgs if title_imgs != '' else exist_ci.title_imgs
         exist_ci.page_imgs = main_imgs if main_imgs != '' else exist_ci.page_imgs
         exist_ci.details = details if details != '' else exist_ci.details
+        exist_ci.llm_analysis = llm_analysis if llm_analysis != '' else exist_ci.llm_analysis
         exist_ci.update_ts = ts
         exist_ci.update_id = update_id
         exist_ci.update_role = update_role
@@ -462,6 +463,7 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
         new_ci.title_imgs = title_imgs
         new_ci.page_imgs = main_imgs
         new_ci.details = details
+        new_ci.llm_analysis = llm_analysis
         new_ci.create_ts = ts
         new_ci.update_ts = ts
         new_ci.update_id = update_id
@@ -750,8 +752,8 @@ def craw_taobao_shop_sku_result(shop_sku_div, shop_name, update_id, target_commo
     sales = parse_sales(sale_div.text)
     # update commodity_info and commodity_sales table
     update_role = craw_taobao_shop_sku_result.__name__
-    update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
-                          shop_name, '', '', '',
+    update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,
+                          '', '', '', '',
                           update_id, update_role)
     add_commodity_sale(commodity_id, shop_name, price_unit, price_val, sales, update_id, update_role)
 

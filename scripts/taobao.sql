@@ -12,18 +12,19 @@ USE taobao;
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS commodity_info
 (
-    id          varchar(32)   NOT NULL,
-    sku_id      varchar(32)   NOT NULL,
-    title       varchar(128)  NOT NULL,
-    link        varchar(512)  NOT NULL,
-    shop_name   varchar(128)  NOT NULL,
-    title_imgs  varchar(4096) NOT NULL,
-    page_imgs   varchar(4096) NOT NULL,
-    details     varchar(4096) NOT NULL,
-    create_ts   int           NOT NULL,
-    update_ts   int           NOT NULL,
-    update_id   varchar(32)   NOT NULL,
-    update_role varchar(64)   NOT NULL,
+    id           varchar(32)   NOT NULL,
+    sku_id       varchar(32)   NOT NULL,
+    title        varchar(128)  NOT NULL,
+    link         varchar(512)  NOT NULL,
+    shop_name    varchar(128)  NOT NULL,
+    title_imgs   varchar(4096) NULL,
+    page_imgs    varchar(4096) NULL,
+    details      varchar(4096) NULL,
+    llm_analysis varchar(1024) NULL,
+    create_ts    int           NOT NULL,
+    update_ts    int           NOT NULL,
+    update_id    varchar(32)   NOT NULL,
+    update_role  varchar(64)   NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
