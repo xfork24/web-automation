@@ -10,17 +10,32 @@ from taobao.utils import get_logger
 
 LLM_MODEL = 'deepseek-r1-distill-llama-70b'
 GROQ_KEY = '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'
-KEYWORD_NAME_MAX_LENGTH = 10
-CATEGORY_NAME_MAX_LENGTH = 10
+GROQ_TIMEOUT_IN_SECONDS = 60
+MAX_KEYWORD_SIZE = 1
+MAX_CATEGORY_SIZE = 1
+KEYWORD_NAME_MAX_LENGTH = 32  # 这里给出足够的长度，因为有可能有长英文，大模型并不总会强制应用字符限制
+CATEGORY_NAME_MAX_LENGTH = 10  # 这里强迫大模型缩短长度，虽然有时候并不会超常但大模型仍把keyword当category给出，就是这么怪
 
-GroqClient = Groq(api_key=GROQ_KEY)
+GroqClient = Groq(api_key=GROQ_KEY, timeout=GROQ_TIMEOUT_IN_SECONDS)
 
 
 # Data model for LLM to generate
+# 这里有几个问题：
+# 1. 如果写keywords、categories，大模型会认不出来导致格式错误
+# 2. 如果写 keyword_list: conlist(constr(min_length=1, max_length=KEYWORD_NAME_MAX_LENGTH), min_length=1,
+#                           max_length=MAX_KEYWORD_SIZE)
+#          category_list: conlist(constr(min_length=1, max_length=CATEGORY_NAME_MAX_LENGTH), min_length=1,
+#                           max_length=MAX_CATEGORY_SIZE)
+#    是可以的，但不能限制数组最大长度为1，大模型同样会导致格式错误
+# 3. 如果写 keyword: constr(min_length=1, max_length=KEYWORD_NAME_MAX_LENGTH)
+#          category: constr(min_length=1, max_length=CATEGORY_NAME_MAX_LENGTH)
+#    也是可以的，但只能提供一个关键字和一个类别。
+#
+# 综合考虑，我们选择 #3 的写法
 class ProductInfo(BaseModel):
     id: str
-    keyword: constr(max_length=KEYWORD_NAME_MAX_LENGTH)
-    category: constr(max_length=CATEGORY_NAME_MAX_LENGTH)
+    keyword: constr(min_length=1, max_length=KEYWORD_NAME_MAX_LENGTH)
+    category: constr(min_length=1, max_length=CATEGORY_NAME_MAX_LENGTH)
     digital: bool
 
 
@@ -39,7 +54,9 @@ def parse_product_by_dsr1_70b(product: Product) -> ProductInfo:
     request = [
         {
             "role": "system",
-            "content": f"分析按行分隔的商品信息，输出为{dumps(ProductInfo.model_json_schema())}格式的JSON\n",
+            "content": "You are an e-commerce manager that outputs product in JSON.\n"
+            # Pass the json schema to the model. Pretty printing improves results. We will fill if remove indent=2.
+                       f" The JSON object must use the schema: {dumps(ProductInfo.model_json_schema(), indent=2)}",
         },
         {
             "role": "user",
@@ -79,7 +96,9 @@ def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductInfoList:
     request = [
         {
             "role": "system",
-            "content": f"分析按行分隔的商品信息，输出为{dumps(ProductInfoList.model_json_schema())}格式的JSON\n",
+            "content": "You are an e-commerce manager that outputs products in JSON.\n"
+            # Pass the json schema to the model. Pretty printing improves results. We will fill if remove indent=2.
+                       f" The JSON object must use the schema: {dumps(ProductInfoList.model_json_schema(), indent=2)}",
         },
         {
             "role": "user",
