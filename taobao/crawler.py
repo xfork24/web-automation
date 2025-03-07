@@ -34,14 +34,14 @@ SHOP_PAGE_SKU_LOAD_WAIT_IN_SECONDS = 5
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 MAX_SKU_ITEMS_NUM = 5
 
-SKU_CARD_RE_EXP = re.compile('^doubleCard--\\w+')
 SKU_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
 SKU_SHOP_INFO_RE_EXP = re.compile('^shopInfo--\\w+')
 SKU_ITEMS_RE_EXP = re.compile('^skuItem--\\w+')
 INNER_SKU_ITEMS_RE_EXP = re.compile('^content--\\w+')
 SKU_PRICE_RE_EXP = re.compile('^highlightPrice--\\w+')
-SKU_PRICE_UNIT_RE_EXP = re.compile('symbol--\\w+')
-SKU_PRICE_VAL_RE_EXP = re.compile('text--\\w+')
+SKU_PRICE_UNIT_RE_EXP = re.compile('^symbol--\\w+')
+SKU_PRICE_VAL_RE_EXP = re.compile('^text--\\w+')
+SKU_SALE_RE_EXP = re.compile('^salesDesc--\\w+')
 SKU_TITLE_IMGS_RE_EXP = re.compile('^thumbnailsWrap--\\w+')
 SKU_MAIN_IMGS_RE_EXP = re.compile('^descV8-container$')
 TB_GO_LOGIN_RE_EXP = re.compile('^GoLoginInfo--\\w+')
@@ -179,13 +179,26 @@ def parse_sku_id_from_commodity_link(link):
         return None
 
 
-def parse_sales(sales):
-    assert (len(sales) > 3)
-    desc = sales[-3:]
-    assert (desc == '人付款' or desc == '人看过')
-    if desc == '人看过':
-        return 0
-    sales_num = sales[:-3]
+def parse_sale_in_search(sale):
+    assert (len(sale) > 3)
+    desc = sale[-3:]
+    if desc != '人付款':
+        return -1
+    sales_num = sale[:-3]
+    if sales_num[-1] == '+':
+        sales_num = sales_num[:-1]
+    if sales_num[-1] == '万':
+        sales_num = sales_num[:-1] + '0000'
+    return int(sales_num)
+
+
+def parse_sale_in_detail(sale):
+    idx = sale.rfind('已售')
+    if idx == -1:
+        return -1
+    sale = sale[idx:]
+    assert (len(sale) > 2)
+    sales_num = sale[2:].strip()
     if sales_num[-1] == '+':
         sales_num = sales_num[:-1]
     if sales_num[-1] == '万':
@@ -209,11 +222,21 @@ def craw_taobao_search_page(qstring, num_of_pages, update_id):
 def crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id):
     logger = get_logger()
     sku_info_list = []
-    for i in range(1, num_of_pages + 1):
+    for page in range(1, num_of_pages + 1):
         try:
             # TBD: 在这里检查是否有滑动验证弹窗，并解决 (<div class='nocaptcha>, XPATH 'div/div/div' .text)
             logger.info('wait search results ready for seconds')
             time.sleep(SEARCH_WAIT_IN_SECONDS)
+            # press '销量' navigate bar on first page
+            if page == 1:
+                sale_order_div = None
+                divs = Driver.find_elements(By.CLASS_NAME, 'next-tabs-tab-inner')
+                for div in divs:
+                    if div.text == '销量':
+                        sale_order_div = div
+                        break
+                assert (sale_order_div is not None)
+                sale_order_div.click()
             search_result_wrapper = Driver.find_element(By.ID, 'content_items_wrapper')
             search_results = search_result_wrapper.find_elements(By.XPATH, 'div/a')
             logger.info(f'find {len(search_results)} search results')
@@ -223,7 +246,7 @@ def crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id):
             assert (len(btn_pages) >= 1)  # 至少下面会有一个导航栏
             btn_list = btn_pages[-1].find_elements(By.XPATH, 'button')
             assert (len(btn_list) == 3)  # 下面导航栏里直属三个按钮：上一页，下一页，确定
-            logger.info(f'get search results for page {i + 1} by press next page')
+            logger.info(f'get search results for page {page + 1} by press next page')
             btn_list[1].click()
         except AssertionError:
             logger.error('assertion failed in search result page, just stop crawling')
@@ -292,7 +315,7 @@ def parse_taobao_search_result(search_result, sku_info_list, ids_set, update_id)
             SHOP_LINK: shop_link,
             SKU_PRICE_UNIT: parse_price_unit(price_unit),
             SKU_DISPLAY_PRICE: parse_price(display_price),
-            SKU_DISPLAY_SALE: parse_sales(display_sale)
+            SKU_DISPLAY_SALE: parse_sale_in_search(display_sale)
         }
         if sku_info[ID] not in ids_set:
             sku_info_list.append(sku_info)
@@ -342,6 +365,7 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
     # parse detail page
     sku_items_divs = []
     sku_price_div = None
+    sku_sale_div = None
     title_image_div = None
     main_image_div = None
     shop_info_div = None
@@ -360,6 +384,8 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
                 sku_items_divs.append(div)
             elif re.match(SKU_PRICE_RE_EXP, cls_name):
                 sku_price_div = div
+            elif re.match(SKU_SALE_RE_EXP, cls_name):
+                sku_sale_div = div
             elif re.match(SKU_TITLE_IMGS_RE_EXP, cls_name):
                 title_image_div = div
             elif re.match(SKU_MAIN_IMGS_RE_EXP, cls_name):
@@ -379,6 +405,7 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
     assert (len(sku_items_divs) < MAX_SKU_ITEMS_NUM)
     assert (sku_price_div is not None)
     assert (main_image_div is not None)
+    update_sale = sku_sale_div is not None
     # parse all sku items
     value_items_divs = []
     sku_items = []
@@ -400,12 +427,16 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
             assert (sku_item is not None)
             sku_item_list.append(sku_item)
         sku_items.append(sku_item_list)
-    # parse all prices
-    offers = craw_taobao_sku_prices(value_items_divs, sku_price_div)
+    # parse all offers
+    offers, price_unit, lowest_price = craw_taobao_sku_prices(value_items_divs, sku_price_div)
     commodity_details = {
         "sku_items": sku_items,
         "valid_offers": offers
     }
+    # parse sku sale
+    sale_val = 0
+    if update_sale:
+        sale_val = parse_sale_in_detail(sku_sale_div.text)
     # parse title images
     title_imgs = title_image_div.find_elements(By.XPATH, 'ul/li/img')
     title_images = [title_img.get_attribute('src') for title_img in title_imgs]
@@ -428,8 +459,10 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
     update_role = craw_taobao_detail_page_result.__name__
     if commodity_id is not None:
         update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,
-                              title_imgs, main_imgs, commodity_details, '',
+                              title_images, main_images, commodity_details, '',
                               update_id, update_role)
+        if update_sale:
+            add_commodity_sale(commodity_id, shop_name, price_unit, lowest_price, sale_val, update_id, update_role)
         update_shop_info(shop_name, shop_link, update_id, update_role)
 
 
@@ -602,6 +635,8 @@ def add_search_crawl_task(search_key, num_of_pages, status, update_id, update_ro
 def craw_taobao_sku_prices(value_items_divs, sku_price_div):
     combos = get_value_item_combos(value_items_divs)
     offers = []
+    lowest_price = 6553500
+    price_unit = ''
     for combo in combos:
         offer = []
         valid = True
@@ -628,10 +663,14 @@ def craw_taobao_sku_prices(value_items_divs, sku_price_div):
             elif re.match(SKU_PRICE_VAL_RE_EXP, cls_name):
                 price_val_span = price_span
         assert (price_unit_span is not None and price_val_span is not None)
-        offer.append(parse_price_unit(price_unit_span.text))
-        offer.append(parse_price(price_val_span.text))
+        price_unit = parse_price_unit(price_unit_span.text)
+        offer.append(price_unit)
+        price_val = parse_price(price_val_span.text)
+        if price_val < lowest_price:
+            lowest_price = price_val
+        offer.append(price_val)
         offers.append(offer)
-    return offers
+    return offers, price_unit, lowest_price
 
 
 def get_value_item_combos(value_items_divs):
@@ -752,7 +791,7 @@ def craw_taobao_shop_sku_result(shop_sku_div, shop_name, update_id, target_commo
     assert (len(price_spans) == 2)
     price_unit = parse_price_unit(price_spans[0].text)
     price_val = parse_price_span(price_spans[1], commodity_id)
-    sales = parse_sales(sale_div.text)
+    sales = parse_sale_in_search(sale_div.text)
     # update commodity_info and commodity_sales table
     update_role = craw_taobao_shop_sku_result.__name__
     update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,

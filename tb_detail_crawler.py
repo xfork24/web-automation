@@ -7,7 +7,7 @@ from taobao import *
 
 LOG_FILE_NAME = './logs/tb_detail_crawler.log'
 UPDATE_ID = 'tb_detail_crawler'
-TAOBAO_COMMODITY_LINK = 'https://item.taobao.com/item.htm?abbucket=19&id=875504141840&ns=1&priceTId=2147839617411762401696384e1174&skuId=5879122806810&spm=a21n57.1.item.38&utparam=%7B%22aplus_abtest%22%3A%2218712a5613a8e8696c6257737268360c%22%7D&xxc=taobaoSearch'
+TAOBAO_COMMODITY_LINK = 'https://item.taobao.com/item.htm?id=810884615884'
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
