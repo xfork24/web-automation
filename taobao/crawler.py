@@ -16,7 +16,6 @@ from selenium.webdriver.chrome.service import Service as ChromeDriverService
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchWindowException, ElementClickInterceptedException
 from taobao.config import *
 from taobao.utils import *
 from taobao.models import *
@@ -181,7 +180,11 @@ def parse_sku_id_from_commodity_link(link):
 
 
 def parse_sales(sales):
-    assert (len(sales) > 3 and (sales[-3:] == '人付款' or sales[-3:] == '人看过'))
+    assert (len(sales) > 3)
+    desc = sales[-3:]
+    assert (desc == '人付款' or desc == '人看过')
+    if desc == '人看过':
+        return 0
     sales_num = sales[:-3]
     if sales_num[-1] == '+':
         sales_num = sales_num[:-1]
