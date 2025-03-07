@@ -1,6 +1,6 @@
 # coding: utf-8
 # !./bin/python
-# 定期以一定规则生成抓取任务，参考taobao/parser.py
+# 定期以一定规则生成抓取任务，参考README.md
 
 from taobao import *
 

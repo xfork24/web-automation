@@ -4,12 +4,12 @@
     会更新commodity_info, shop_info, commodity_sales表,
     这两种抓取方式都不会更新商品详细信息（如offers和素材图），仅更新商品ID、标题、链接等基本信息；
  2. 指定商品，其销售信息的更新方式有一种：通过店铺页指定商品列表抓取，这种抓取也不太容易被封，
-    会更新commodity_info, shop_info, commodity_sales表,
+    会更新commodity_info, shop_info, commodity_sales表；
    不会更新商品详细信息（如offers和素材图），仅更新商品ID、标题、链接等基本信息；
 3. 商品细节的抓取方式有一种：即商品页面抓取，这很容易被封，
-   会更新commodity_info表，
-   这种抓取会更新商品的所有信息，包括基本信息（ID、标题、链接）和详细信息（如offers和素材图）
-   可选的，这种抓取会下载所有商品页面素材到本地
+   会更新commodity_info、shop_info，并可能附带更新commodity_sale表；
+   这种抓取会更新商品的所有信息，包括基本信息（ID、标题、链接）和详细信息（如offers和素材图），
+   可选的，这种抓取会下载所有商品页面素材到本地；
 4. 为满足 #1、#2 和 #3 的要求，有三种手动抓取任务，分别为search_crawl_task, shop_crawl_task(可指定商品ID列表), detail_crawl_task,
    同时有一个自动抓取任务tb_crawler_task，它自动读取对应的task表并长时间自动运行；
 5. 商品销售分析的基本思路如下：

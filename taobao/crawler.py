@@ -44,6 +44,8 @@ SKU_PRICE_VAL_RE_EXP = re.compile('^text--\\w+')
 SKU_SALE_RE_EXP = re.compile('^salesDesc--\\w+')
 SKU_TITLE_IMGS_RE_EXP = re.compile('^thumbnailsWrap--\\w+')
 SKU_MAIN_IMGS_RE_EXP = re.compile('^descV8-container$')
+SKU_MAIN_IMGS_SINGLE_IMG_RE_EXP = re.compile('^descV8-singleImage$')
+SKU_MAIN_IMGS_RICHTEXT_RE_EXP = re.compile('^descV8-richtext$')
 TB_GO_LOGIN_RE_EXP = re.compile('^GoLoginInfo--\\w+')
 SKU_SHOP_HEADER_RE_EXP = re.compile('^shopHeader--\\w+')
 SKU_TITLE_RE_EXP = re.compile('^ItemTitle--\\w+')
@@ -437,14 +439,6 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
     sale_val = 0
     if update_sale:
         sale_val = parse_sale_in_detail(sku_sale_div.text)
-    # parse title images
-    title_imgs = title_image_div.find_elements(By.XPATH, 'ul/li/img')
-    title_images = [title_img.get_attribute('src') for title_img in title_imgs]
-    logger.info('get title image list: %s' % title_images)
-    # parse main images
-    main_imgs = main_image_div.find_elements(By.XPATH, 'div/img')
-    main_images = [main_img.get_attribute('src') for main_img in main_imgs]
-    logger.info('get main image list: %s' % main_images)
     # parse commodity title and shop info
     commodity_title = sku_title_div.find_element(By.XPATH, 'h1').text
     shop_info_inner = shop_info_div.find_element(By.XPATH, 'a')
@@ -453,6 +447,29 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
     assert (shop_name_span is not None)
     shop_name = shop_name_span.text
     shop_link = shop_info_inner.get_attribute('href')
+    # parse title images
+    title_imgs = title_image_div.find_elements(By.XPATH, 'ul/li/img')
+    title_images = [title_img.get_attribute('src') for title_img in title_imgs]
+    logger.info('get title image list: %s' % title_images)
+    # parse main images, descV8-richtext or descV8-singleImage
+    main_images = []
+    main_imgs = main_image_div.find_elements(By.XPATH, './/div')
+    for main_img in main_imgs:
+        cls_name = main_img.get_attribute('class')
+        if cls_name is None:
+            continue
+        if re.match(SKU_MAIN_IMGS_SINGLE_IMG_RE_EXP, cls_name):
+            data_src = main_img.find_element(By.XPATH, 'img').get_attribute('data-src')
+            if data_src is not None:
+                main_images.append(data_src)
+            else:
+                main_images.append(main_img.find_element(By.XPATH, 'img').get_attribute('src'))
+        elif re.match(SKU_MAIN_IMGS_RICHTEXT_RE_EXP, cls_name):
+            for img_element in main_img.find_elements(By.XPATH, 'p/img'):
+                scroll_windows_to_element(img_element)
+            img_elements = main_img.find_elements(By.XPATH, 'p/img')
+            main_images += [img_element.get_attribute('src') for img_element in img_elements]
+    logger.info('get main image list: %s' % main_images)
     # update commodity info in DB
     commodity_id = commodity_id or parse_id_from_commodity_link(commodity_link)
     sku_id = parse_sku_id_from_commodity_link(commodity_link) or '0'
