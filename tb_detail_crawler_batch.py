@@ -10,12 +10,12 @@ UPDATE_ID = 'tb_detail_crawler_batch'
 ForceUpdate = False
 
 if __name__ == '__main__':
-    # scan commodity_info table in update_ts desc order and update commodities within time period
+    # scan commodity_info table in update_ts order and update commodities within time period
     # only commodities with empty info will be updated
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
     start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
-    commodities = CommodityInfo.select().where(CommodityInfo.update_ts > start_ts)
+    commodities = CommodityInfo.select().where(CommodityInfo.update_ts > start_ts).order_by(CommodityInfo.update_ts)
     logger.info(f'get {len(commodities)} commodities to be updated by applying update_ts > {start_ts}')
     login_taobao()
     for commodity in commodities:

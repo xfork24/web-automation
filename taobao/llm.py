@@ -56,7 +56,11 @@ def parse_product_by_dsr1_70b(product: Product) -> ProductInfo:
             "role": "system",
             "content": "You are an e-commerce manager that outputs product in JSON.\n"
             # Pass the json schema to the model. Pretty printing improves results. We will fill if remove indent=2.
-                       f" The JSON object must use the schema: {dumps(ProductInfo.model_json_schema(), indent=2)}",
+                       f" The JSON object must use the schema: {dumps(ProductInfo.model_json_schema(), indent=2)}.\n"
+                       f" Keyword length should be less than {KEYWORD_NAME_MAX_LENGTH} characters.\n"
+                       f" Category length should be less than {CATEGORY_NAME_MAX_LENGTH} characters.\n"
+                       " Set digital to true if the product is a virtual digital product.\n"
+                       " Both keyword and category should be in Chinese.\n",
         },
         {
             "role": "user",
@@ -98,7 +102,11 @@ def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductInfoList:
             "role": "system",
             "content": "You are an e-commerce manager that outputs products in JSON.\n"
             # Pass the json schema to the model. Pretty printing improves results. We will fill if remove indent=2.
-                       f" The JSON object must use the schema: {dumps(ProductInfoList.model_json_schema(), indent=2)}",
+                       f" The JSON object must use the schema: {dumps(ProductInfoList.model_json_schema(), indent=2)}.\n"
+                       f" Keyword length should be less than {KEYWORD_NAME_MAX_LENGTH} characters.\n"
+                       f" Category length should be less than {CATEGORY_NAME_MAX_LENGTH} characters.\n"
+                       " Set digital to true if the product is a virtual digital product.\n"
+                       " Both keyword and category should be in Chinese.\n",
         },
         {
             "role": "user",
