@@ -1,7 +1,6 @@
 # coding: utf-8
 # !./bin/python
 
-import time
 import datetime
 import csv
 import re
@@ -9,7 +8,6 @@ import traceback
 import uuid
 from enum import Enum
 from urllib.parse import urlparse, parse_qs
-from uuid import uuid4
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeDriverService
@@ -481,172 +479,6 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
         if update_sale:
             add_commodity_sale(commodity_id, shop_name, price_unit, lowest_price, sale_val, update_id, update_role)
         update_shop_info(shop_name, shop_link, update_id, update_role)
-
-
-def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,
-                          title_imgs, main_imgs, details, llm_analysis, update_id, update_role):
-    # update commodity_info table
-    logger = get_logger()
-    ts = int(time.time())
-    try:
-        # if record already exists, update only if value is valid
-        exist_ci = CommodityInfo.get(CommodityInfo.id == commodity_id)
-        exist_ci.sku_id = sku_id if sku_id != '' else exist_ci.sku_id
-        exist_ci.title = commodity_title if commodity_id != '' else exist_ci.title
-        exist_ci.link = commodity_link if commodity_link != '' else exist_ci.link
-        exist_ci.shop_name = shop_name if shop_name != '' else exist_ci.shop_name
-        exist_ci.title_imgs = title_imgs if title_imgs != '' else exist_ci.title_imgs
-        exist_ci.page_imgs = main_imgs if main_imgs != '' else exist_ci.page_imgs
-        exist_ci.details = details if details != '' else exist_ci.details
-        exist_ci.llm_analysis = llm_analysis if llm_analysis != '' else exist_ci.llm_analysis
-        exist_ci.update_ts = ts
-        exist_ci.update_id = update_id
-        exist_ci.update_role = update_role
-        exist_ci.save()
-        logger.info(f'exist commodity info record updated: {exist_ci.to_dict()}')
-        add_operation_history(commodity_id, exist_ci.table_name(), update_id, update_role, ts,
-                              DB_OPS_UPDATE_EXIST)
-    except DoesNotExist:
-        new_ci = CommodityInfo()
-        new_ci.id = commodity_id
-        new_ci.sku_id = sku_id
-        new_ci.title = commodity_title
-        new_ci.link = commodity_link
-        new_ci.shop_name = shop_name
-        new_ci.title_imgs = title_imgs
-        new_ci.page_imgs = main_imgs
-        new_ci.details = details
-        new_ci.llm_analysis = llm_analysis
-        new_ci.create_ts = ts
-        new_ci.update_ts = ts
-        new_ci.update_id = update_id
-        new_ci.update_role = update_role
-        new_ci.save(force_insert=True)
-        logger.info(f'new commodity info record inserted: {new_ci.to_dict()}')
-        add_operation_history(commodity_id, new_ci.table_name(), update_id, update_role, ts,
-                              DB_OPS_CREATE_NEW)
-
-
-def update_shop_info(shop_name, shop_link, update_id, update_role):
-    # update shop_info table
-    logger = get_logger()
-    ts = int(time.time())
-    try:
-        # update only when value is valid
-        exist_si = ShopInfo.get(ShopInfo.name == shop_name)
-        exist_si.link = shop_link if shop_link != '' else exist_si.link
-        exist_si.update_ts = ts
-        exist_si.update_id = update_id
-        exist_si.update_role = update_role
-        exist_si.save()
-        logger.info(f'exist shop info record updated: {exist_si.to_dict()}')
-        add_operation_history(shop_name, exist_si.table_name(), update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
-    except DoesNotExist:
-        new_si = ShopInfo()
-        new_si.name = shop_name
-        new_si.link = shop_link
-        new_si.create_ts = ts
-        new_si.update_ts = ts
-        new_si.update_id = update_id
-        new_si.update_role = update_role
-        new_si.save(force_insert=True)
-        logger.info(f'new shop info record inserted: {new_si.to_dict()}')
-        add_operation_history(shop_name, new_si.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
-
-
-def add_commodity_sale(commodity_id, shop_name,
-                       price_unit, display_price, display_sale,
-                       update_id, update_role):
-    logger = get_logger()
-    ts = int(time.time())
-    # 有些情况下（比如shop中）同样的商品可以出现多次，所以这里我们仍然要检查一下是否有键重复
-    try:
-        CommoditySale.get(CommoditySale.id == commodity_id, CommoditySale.update_ts == ts)
-        logger.error(f'commodity sale record already exist, id = {commodity_id} and update_ts = {ts}, just ignore')
-    except DoesNotExist:
-        new_cs = CommoditySale()
-        new_cs.id = commodity_id
-        new_cs.shop_name = shop_name
-        new_cs.price_unit = price_unit
-        new_cs.display_price = display_price
-        new_cs.display_sale = display_sale
-        new_cs.estimated_total_sale = display_price * display_sale
-        new_cs.create_ts = ts
-        new_cs.update_ts = ts
-        new_cs.update_id = update_id
-        new_cs.update_role = update_role
-        new_cs.save(force_insert=True)
-        logger.info(f'new commodity sale record inserted: {new_cs.to_dict()}')
-        add_operation_history(f'{commodity_id},{ts}', new_cs.table_name(),
-                              update_id, update_role, ts, DB_OPS_CREATE_NEW)
-
-
-def add_operation_history(pk, table_name, update_id, update_role, operation_ts, operation):
-    logger = get_logger()
-    new_oh = OperationHistory()
-    new_oh.pk = pk
-    new_oh.table_name = table_name
-    new_oh.update_id = update_id
-    new_oh.update_role = update_role
-    new_oh.operation_ts = operation_ts
-    new_oh.operation = operation
-    new_oh.create_ts = int(time.time())
-    new_oh.save(force_insert=True)
-    logger.info(f'new operation history record inserted: {new_oh.to_dict()}')
-
-
-def add_detail_crawl_task(commodity_id, link, status, update_id, update_role):
-    logger = get_logger()
-    ts = int(time.time())
-    pk = uuid4().hex
-    new_dct = DetailCrawlTask()
-    new_dct.id = pk
-    new_dct.commodity_id = commodity_id
-    new_dct.link = link
-    new_dct.status = status
-    new_dct.create_ts = ts
-    new_dct.update_ts = ts
-    new_dct.update_id = update_id
-    new_dct.update_role = update_role
-    new_dct.save(force_insert=True)
-    logger.info(f'new detail crawl task record inserted: {new_dct.to_dict()}')
-    add_operation_history(pk, new_dct.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
-
-
-def add_shop_crawl_task(shop_name, link, status, update_id, update_role):
-    logger = get_logger()
-    ts = int(time.time())
-    pk = uuid4().hex
-    new_sct = ShopCrawlTask()
-    new_sct.id = pk
-    new_sct.shop_name = shop_name
-    new_sct.link = link
-    new_sct.status = status
-    new_sct.create_ts = ts
-    new_sct.update_ts = ts
-    new_sct.update_id = update_id
-    new_sct.update_role = update_role
-    new_sct.save(force_insert=True)
-    logger.info(f'new shop crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
-
-
-def add_search_crawl_task(search_key, num_of_pages, status, update_id, update_role):
-    logger = get_logger()
-    ts = int(time.time())
-    pk = uuid4().hex
-    new_sct = SearchCrawlTask()
-    new_sct.id = pk
-    new_sct.search_key = search_key
-    new_sct.num_of_pages = num_of_pages
-    new_sct.status = status
-    new_sct.create_ts = ts
-    new_sct.update_ts = ts
-    new_sct.update_id = update_id
-    new_sct.update_role = update_role
-    new_sct.save(force_insert=True)
-    logger.info(f'new search crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def craw_taobao_sku_prices(value_items_divs, sku_price_div):
