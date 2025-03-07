@@ -4,7 +4,7 @@
 
 from taobao import *
 
-LOG_FILE_NAME = './logs/tb_sales_parser.log'
+LOG_FILE_NAME = './logs/tb_sales_analysis.log'
 
 if __name__ == '__main__':
     pass
