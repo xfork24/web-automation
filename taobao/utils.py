@@ -54,3 +54,10 @@ def parse_price_ocr_by_pyocr(image_file_path):
     if price == 0:
         raise PriceOCRError()
     return price
+
+
+def par_price_ocr(image_file_path):
+    try:
+        return parse_price_ocr_by_pyocr(image_file_path)
+    except PriceOCRError:
+        return parse_price_ocr_by_pytesseract(image_file_path)

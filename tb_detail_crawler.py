@@ -7,8 +7,19 @@ from taobao import *
 
 LOG_FILE_NAME = './logs/tb_detail_crawler.log'
 UPDATE_ID = 'tb_detail_crawler'
-TAOBAO_COMMODITY_LINK = 'https://item.taobao.com/item.htm?id=810884615884'
+COMMODITY_IDS = ['885720370978', '885754626983', '887311224888']
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
-    craw_taobao_detail_page(TAOBAO_COMMODITY_LINK, UPDATE_ID, None)
+    logger = get_logger()
+    login_taobao()
+    for commodity_id in COMMODITY_IDS:
+        try:
+            commodity = CommodityInfo.get(CommodityInfo.id == commodity_id)
+            logger.info('navigate to commodity link')
+            Driver.get(commodity.link)
+            logger.info('wait detail page for seconds')
+            time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
+            craw_taobao_detail_page_result(commodity.link, commodity.id, UPDATE_ID)
+        except DoesNotExist:
+            logger.error(f'can not find commodity [{commodity_id}] in database')

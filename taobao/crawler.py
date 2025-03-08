@@ -3,7 +3,6 @@
 
 import datetime
 import csv
-import re
 import traceback
 import uuid
 from enum import Enum
@@ -23,7 +22,6 @@ TAOBAO_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
 LOGIN_CHECK_INTERVAL_IN_SECONDS = 5
-# DRIVER_IMPLICIT_WAIT_IN_SECONDS = 10
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 SEARCH_WAIT_IN_SECONDS = 5
 DETAIL_PAGE_WAIT_IN_SECONDS = 5
@@ -45,6 +43,8 @@ SKU_MAIN_IMGS_RE_EXP = re.compile('^descV8-container$')
 SKU_MAIN_IMGS_SINGLE_IMG_RE_EXP = re.compile('^descV8-singleImage$')
 SKU_MAIN_IMGS_RICHTEXT_RE_EXP = re.compile('^descV8-richtext$')
 TB_GO_LOGIN_RE_EXP = re.compile('^GoLoginInfo--\\w+')
+TB_SEARCH_SHOP_TAB_RE_EXP = re.compile('^baseStyle--\\w+')
+SHOP_TITLE_RE_EXP = re.compile('^title--\\w+')
 SKU_SHOP_HEADER_RE_EXP = re.compile('^shopHeader--\\w+')
 SKU_TITLE_RE_EXP = re.compile('^ItemTitle--\\w+')
 SHOP_NAME_RE_EXP = re.compile('^shopName--\\w+')
@@ -350,7 +350,7 @@ def save_taobao_search_result(sku_info, update_id):
                        update_id, update_role)
 
 
-def craw_taobao_detail_page(commodity_link, update_id, commodity_id=None):
+def craw_taobao_detail_page(commodity_link, commodity_id, update_id):
     logger = get_logger()
     login_taobao()
     logger.info('navigate to commodity link')
@@ -657,7 +657,7 @@ def craw_taobao_shop_sku_result(shop_sku_div, shop_name, update_id, target_commo
 def parse_price_span(price_span, commodity_id):
     temp_file_name = f'{IMAGE_DIR}/{commodity_id}-{uuid.uuid4().hex}.png'
     create_element_screenshot(price_span, temp_file_name)
-    return parse_price_ocr_by_pyocr(temp_file_name)
+    return par_price_ocr(temp_file_name)
 
 
 Driver = init_webdriver(WebDriverType.ChromDriver)

@@ -1,6 +1,7 @@
 # coding: utf-8
 # !./bin/python
 
+import re
 import time
 from uuid import uuid4
 from peewee import *
@@ -21,6 +22,8 @@ TASK_STATUS_NEW = 1
 TASK_STATUS_IN_PROGRESS = 2
 TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
+
+SHOP_LINK_RE_EXP = re.compile('^https://store.taobao.com/shop/view_shop.htm')
 
 DB = MySQLDatabase(DB_NAME,
                    host=DB_HOST,

@@ -4,11 +4,11 @@
 
 from taobao import *
 
-LOG_FILE_NAME = './logs/tb_llm_analysis.log'
+LOG_FILE_NAME = './logs/tb_fix_llm_analysis.log'
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400
 LLM_BATCH_WAIT_IN_SECONDS = 10
 LLM_QUERY_BATCH_SIZE = 10
-UPDATE_ID = 'tb_llm_analysis_batch'
+UPDATE_ID = 'tb_fix_llm_analysis'
 ForceUpdate = False
 
 

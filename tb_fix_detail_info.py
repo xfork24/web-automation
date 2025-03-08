@@ -4,9 +4,9 @@
 
 from taobao import *
 
-LOG_FILE_NAME = './logs/tb_detail_crawler_batch.log'
+LOG_FILE_NAME = './logs/tb_fix_detail_info.log'
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400
-UPDATE_ID = 'tb_detail_crawler_batch'
+UPDATE_ID = 'tb_fix_detail_info'
 ForceUpdate = False
 
 if __name__ == '__main__':
