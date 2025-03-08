@@ -12,19 +12,23 @@ USE taobao;
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS commodity_info
 (
-    id           varchar(32)   NOT NULL,
-    sku_id       varchar(32)   NOT NULL,
-    title        varchar(128)  NOT NULL,
-    link         varchar(512)  NOT NULL,
-    shop_name    varchar(128)  NOT NULL,
-    title_imgs   varchar(4096) NULL,
-    page_imgs    varchar(4096) NULL,
-    details      varchar(4096) NULL,
-    llm_analysis varchar(1024) NULL,
-    create_ts    int           NOT NULL,
-    update_ts    int           NOT NULL,
-    update_id    varchar(32)   NOT NULL,
-    update_role  varchar(64)   NOT NULL,
+    id                varchar(32)   NOT NULL,
+    sku_id            varchar(32)   NOT NULL,
+    title             varchar(128)  NOT NULL,
+    link              varchar(512)  NOT NULL,
+    shop_name         varchar(128)  NOT NULL,
+    price_unit        varchar(3)    NOT NULL,
+    display_price     int           NOT NULL,
+    display_sale      int           NOT NULL,
+    estimated_revenue int           NOT NULL,
+    title_imgs        varchar(4096) NULL,
+    page_imgs         varchar(4096) NULL,
+    details           varchar(4096) NULL,
+    llm_analysis      varchar(1024) NULL,
+    create_ts         int           NOT NULL,
+    update_ts         int           NOT NULL,
+    update_id         varchar(32)   NOT NULL,
+    update_role       varchar(64)   NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -49,16 +53,16 @@ CREATE TABLE IF NOT EXISTS shop_info
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS commodity_sale
 (
-    id                   varchar(32)  NOT NULL,
-    shop_name            varchar(128) NOT NULL,
-    price_unit           varchar(3)   NOT NULL,
-    display_price        int          NOT NULL,
-    display_sale         int          NOT NULL,
-    estimated_total_sale int          NOT NULL,
-    create_ts            int          NOT NULL,
-    update_ts            int          NOT NULL,
-    update_id            varchar(32)  NOT NULL,
-    update_role          varchar(64)  NOT NULL,
+    id                varchar(32)  NOT NULL,
+    shop_name         varchar(128) NOT NULL,
+    price_unit        varchar(3)   NOT NULL,
+    display_price     int          NOT NULL,
+    display_sale      int          NOT NULL,
+    estimated_revenue int          NOT NULL,
+    create_ts         int          NOT NULL,
+    update_ts         int          NOT NULL,
+    update_id         varchar(32)  NOT NULL,
+    update_role       varchar(64)  NOT NULL,
     PRIMARY KEY (id, update_ts)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -139,6 +143,10 @@ ALTER TABLE commodity_info
 ALTER TABLE commodity_info
     ADD INDEX idx_shop_name (shop_name);
 ALTER TABLE commodity_info
+    ADD INDEX idx_display_sale (display_sale);
+ALTER TABLE commodity_info
+    ADD INDEX idx_estimated_revenue (estimated_revenue);
+ALTER TABLE commodity_info
     ADD INDEX idx_update_ts (update_ts);
 ALTER TABLE commodity_info
     ADD INDEX idx_update_id (update_id);
@@ -153,7 +161,7 @@ ALTER TABLE commodity_sale
 ALTER TABLE commodity_sale
     ADD INDEX idx_display_sale (display_sale);
 ALTER TABLE commodity_sale
-    ADD INDEX idx_estimated_total_sale (estimated_total_sale);
+    ADD INDEX idx_estimated_revenue (estimated_revenue);
 ALTER TABLE commodity_sale
     ADD INDEX idx_update_ts (update_ts);
 ALTER TABLE commodity_sale

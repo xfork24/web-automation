@@ -17,6 +17,11 @@ from playhouse.shortcuts import model_to_dict
 DB_OPS_CREATE_NEW = 1
 DB_OPS_UPDATE_EXIST = 2
 
+TASK_STATUS_NEW = 1
+TASK_STATUS_IN_PROGRESS = 2
+TASK_STATUS_DONE = 3
+TASK_STATUS_ERROR = 4
+
 DB = MySQLDatabase(DB_NAME,
                    host=DB_HOST,
                    port=DB_PORT,
@@ -43,6 +48,10 @@ class CommodityInfo(BaseModel):
     title = CharField(max_length=128)
     link = CharField(max_length=512)
     shop_name = CharField(max_length=128, index=True)
+    price_unit = CharField(max_length=3)
+    display_price = IntegerField()
+    display_sale = IntegerField(index=True)
+    estimated_revenue = IntegerField(index=True)
     title_imgs = CharField(max_length=4096)
     page_imgs = CharField(max_length=4096)
     details = CharField(max_length=4096)
@@ -74,7 +83,7 @@ class CommoditySale(BaseModel):
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
     display_sale = IntegerField(index=True)
-    estimated_total_sale = IntegerField(index=True)
+    estimated_revenue = IntegerField(index=True)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -146,10 +155,13 @@ class SearchCrawlTask(BaseModel):
 
 
 def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,
+                          price_unit, display_price, display_sale,
                           title_imgs, main_imgs, details, llm_analysis, update_id, update_role):
     # update commodity_info table
     logger = get_logger()
     ts = int(time.time())
+    estimated_revenue = display_price * display_sale
+    estimated_revenue = -1 if estimated_revenue < 0 else estimated_revenue
     try:
         # if record already exists, update only if value is valid
         exist_ci = CommodityInfo.get(CommodityInfo.id == commodity_id)
@@ -157,6 +169,10 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
         exist_ci.title = commodity_title if commodity_id != '' else exist_ci.title
         exist_ci.link = commodity_link if commodity_link != '' else exist_ci.link
         exist_ci.shop_name = shop_name if shop_name != '' else exist_ci.shop_name
+        exist_ci.price_unit = price_unit if price_unit != '' else exist_ci.price_unit
+        exist_ci.display_price = display_price if display_price != -1 else exist_ci.display_price
+        exist_ci.display_sale = display_sale if display_sale != -1 else exist_ci.display_sale
+        exist_ci.estimated_revenue = estimated_revenue if estimated_revenue != -1 else exist_ci.estimated_revenue
         exist_ci.title_imgs = title_imgs if title_imgs != '' else exist_ci.title_imgs
         exist_ci.page_imgs = main_imgs if main_imgs != '' else exist_ci.page_imgs
         exist_ci.details = details if details != '' else exist_ci.details
@@ -175,6 +191,10 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
         new_ci.title = commodity_title
         new_ci.link = commodity_link
         new_ci.shop_name = shop_name
+        new_ci.price_unit = price_unit
+        new_ci.display_price = display_price
+        new_ci.display_sale = display_sale
+        new_ci.estimated_revenue = estimated_revenue
         new_ci.title_imgs = title_imgs
         new_ci.page_imgs = main_imgs
         new_ci.details = details
@@ -221,6 +241,8 @@ def add_commodity_sale(commodity_id, shop_name,
                        update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
+    estimated_revenue = display_price * display_sale
+    estimated_revenue = -1 if estimated_revenue < 0 else estimated_revenue
     # 有些情况下（比如shop中）同样的商品可以出现多次，所以这里我们仍然要检查一下是否有键重复
     try:
         CommoditySale.get(CommoditySale.id == commodity_id, CommoditySale.update_ts == ts)
@@ -232,7 +254,7 @@ def add_commodity_sale(commodity_id, shop_name,
         new_cs.price_unit = price_unit
         new_cs.display_price = display_price
         new_cs.display_sale = display_sale
-        new_cs.estimated_total_sale = display_price * display_sale
+        new_cs.estimated_revenue = estimated_revenue
         new_cs.create_ts = ts
         new_cs.update_ts = ts
         new_cs.update_id = update_id

@@ -23,11 +23,11 @@ TAOBAO_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
 LOGIN_CHECK_INTERVAL_IN_SECONDS = 5
-DRIVER_IMPLICIT_WAIT_IN_SECONDS = 10
+# DRIVER_IMPLICIT_WAIT_IN_SECONDS = 10
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
-SEARCH_WAIT_IN_SECONDS = 10
-DETAIL_PAGE_WAIT_IN_SECONDS = 10
-SHOP_PAGE_WAIT_IN_SECONDS = 10
+SEARCH_WAIT_IN_SECONDS = 5
+DETAIL_PAGE_WAIT_IN_SECONDS = 5
+SHOP_PAGE_WAIT_IN_SECONDS = 5
 SHOP_PAGE_SKU_LOAD_WAIT_IN_SECONDS = 5
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 MAX_SKU_ITEMS_NUM = 5
@@ -182,7 +182,7 @@ def parse_sku_id_from_commodity_link(link):
 def parse_sale_in_search(sale):
     assert (len(sale) > 3)
     desc = sale[-3:]
-    if desc != '人付款':
+    if desc != '人付款' and desc != '人收货':
         return -1
     sales_num = sale[:-3]
     if sales_num[-1] == '+':
@@ -219,7 +219,7 @@ def craw_taobao_search_page(qstring, num_of_pages, update_id):
     crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id)
 
 
-def crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id):
+def crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id, sale_order=False):
     logger = get_logger()
     sku_info_list = []
     for page in range(1, num_of_pages + 1):
@@ -228,7 +228,7 @@ def crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id):
             logger.info('wait search results ready for seconds')
             time.sleep(SEARCH_WAIT_IN_SECONDS)
             # press '销量' navigate bar on first page
-            if page == 1:
+            if page == 1 and sale_order:
                 sale_order_div = None
                 divs = Driver.find_elements(By.CLASS_NAME, 'next-tabs-tab-inner')
                 for div in divs:
@@ -237,6 +237,8 @@ def crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id):
                         break
                 assert (sale_order_div is not None)
                 sale_order_div.click()
+                logger.info('wait search results ready for seconds')
+                time.sleep(SEARCH_WAIT_IN_SECONDS)
             search_result_wrapper = Driver.find_element(By.ID, 'content_items_wrapper')
             search_results = search_result_wrapper.find_elements(By.XPATH, 'div/a')
             logger.info(f'find {len(search_results)} search results')
@@ -312,7 +314,7 @@ def parse_taobao_search_result(search_result, sku_info_list, ids_set, update_id)
             SKU_TITLE: title,
             SKU_LINK: link,
             SHOP_NAME: shop_name,
-            SHOP_LINK: shop_link,
+            SHOP_LINK: shop_link if shop_link is not None else '',
             SKU_PRICE_UNIT: parse_price_unit(price_unit),
             SKU_DISPLAY_PRICE: parse_price(display_price),
             SKU_DISPLAY_SALE: parse_sale_in_search(display_sale)
@@ -336,8 +338,9 @@ def save_taobao_search_result(sku_info, update_id):
     # save shop info
     update_shop_info(sku_info[SHOP_NAME], sku_info[SHOP_LINK], update_id, update_role)
     # save commodity info
-    update_commodity_info(sku_info[ID], sku_info[SKU_ID], sku_info[SKU_TITLE], sku_info[SKU_LINK],
-                          sku_info[SHOP_NAME], '', '', '', '',
+    update_commodity_info(sku_info[ID], sku_info[SKU_ID], sku_info[SKU_TITLE], sku_info[SKU_LINK], sku_info[SHOP_NAME],
+                          sku_info[SKU_PRICE_UNIT], sku_info[SKU_DISPLAY_PRICE], sku_info[SKU_DISPLAY_SALE],
+                          '', '', '', '',
                           update_id, update_role)
     # save commodity sales info,
     # remember there can be same commodity in different search pages,
@@ -434,7 +437,7 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
         "valid_offers": offers
     }
     # parse sku sale
-    sale_val = 0
+    sale_val = -1
     if update_sale:
         sale_val = parse_sale_in_detail(sku_sale_div.text)
     # parse commodity title and shop info
@@ -474,6 +477,7 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
     update_role = craw_taobao_detail_page_result.__name__
     if commodity_id is not None:
         update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,
+                              price_unit, lowest_price, sale_val,
                               title_images, main_images, commodity_details, '',
                               update_id, update_role)
         if update_sale:
@@ -644,6 +648,7 @@ def craw_taobao_shop_sku_result(shop_sku_div, shop_name, update_id, target_commo
     # update commodity_info and commodity_sales table
     update_role = craw_taobao_shop_sku_result.__name__
     update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,
+                          price_unit, price_val, sales,
                           '', '', '', '',
                           update_id, update_role)
     add_commodity_sale(commodity_id, shop_name, price_unit, price_val, sales, update_id, update_role)
