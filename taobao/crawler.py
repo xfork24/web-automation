@@ -460,16 +460,24 @@ def craw_taobao_detail_page_result(commodity_link, commodity_id, update_id):
         if cls_name is None:
             continue
         if re.match(SKU_MAIN_IMGS_SINGLE_IMG_RE_EXP, cls_name):
-            data_src = main_img.find_element(By.XPATH, 'img').get_attribute('data-src')
-            if data_src is not None:
-                main_images.append(data_src)
-            else:
-                main_images.append(main_img.find_element(By.XPATH, 'img').get_attribute('src'))
+            # we only get pic links and ignore other format
+            try:
+                data_src = main_img.find_element(By.XPATH, 'img').get_attribute('data-src')
+                if data_src is not None:
+                    main_images.append(data_src)
+                else:
+                    main_images.append(main_img.find_element(By.XPATH, 'img').get_attribute('src'))
+            except NoSuchElementException:
+                logger.info('detail page material is not an image, ignore')
         elif re.match(SKU_MAIN_IMGS_RICHTEXT_RE_EXP, cls_name):
-            for img_element in main_img.find_elements(By.XPATH, 'p/img'):
-                scroll_windows_to_element(img_element)
-            img_elements = main_img.find_elements(By.XPATH, 'p/img')
-            main_images += [img_element.get_attribute('src') for img_element in img_elements]
+            # we only get pic links and ignore other format
+            try:
+                for img_element in main_img.find_elements(By.XPATH, 'p/img'):
+                    scroll_windows_to_element(img_element)
+                img_elements = main_img.find_elements(By.XPATH, 'p/img')
+                main_images += [img_element.get_attribute('src') for img_element in img_elements]
+            except NoSuchElementException:
+                logger.info('detail page material is not an image, ignore')
     logger.info('get main image list: %s' % main_images)
     # update commodity info in DB
     commodity_id = commodity_id or parse_id_from_commodity_link(commodity_link)
@@ -589,6 +597,8 @@ def craw_taobao_shop_page_results(shop_link, update_id, target_commodity_ids=Non
         if loaded:
             scroll_window((0, 0))
             break
+        # 有些特殊店铺没有 load_more_flag_div, 这种店铺是完全定制的页面（非淘宝模板）
+        # 我们暂时不支持这种店铺。参考：https://shop61333799.taobao.com/
         assert (load_more_flag_div is not None)
         scroll_windows_to_element(load_more_flag_div)
     shop_sku_divs = []

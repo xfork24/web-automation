@@ -120,6 +120,7 @@ class DetailCrawlTask(BaseModel):
     commodity_id = CharField(max_length=32, index=True)
     link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
+    try_count = IntegerField()
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -134,6 +135,7 @@ class ShopCrawlTask(BaseModel):
     shop_name = CharField(max_length=128, index=True)
     link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
+    try_count = IntegerField()
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -148,6 +150,7 @@ class SearchCrawlTask(BaseModel):
     search_key = CharField(max_length=32, index=True)
     num_of_pages = IntegerField()
     status = SmallIntegerField(index=True)
+    try_count = IntegerField()
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -291,6 +294,7 @@ def add_detail_crawl_task(commodity_id, link, status, update_id, update_role):
     new_dct.commodity_id = commodity_id
     new_dct.link = link
     new_dct.status = status
+    new_dct.try_count = 0
     new_dct.create_ts = ts
     new_dct.update_ts = ts
     new_dct.update_id = update_id
@@ -309,6 +313,7 @@ def add_shop_crawl_task(shop_name, link, status, update_id, update_role):
     new_sct.shop_name = shop_name
     new_sct.link = link
     new_sct.status = status
+    new_sct.try_count = 0
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id
@@ -327,6 +332,7 @@ def add_search_crawl_task(search_key, num_of_pages, status, update_id, update_ro
     new_sct.search_key = search_key
     new_sct.num_of_pages = num_of_pages
     new_sct.status = status
+    new_sct.try_count = 0
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id

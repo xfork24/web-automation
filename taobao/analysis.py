@@ -67,7 +67,7 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_AGGREGATE_TOPN,
     for cf in cf_query:
         if idx > top_n and cf.estimated_revenue < revenue_threshold * 100:
             # 我们暂时不分析商品销量历史数据，因为这逻辑上相当于年度均线，且淘宝给出的信息很含糊
-            pass
+            break
         idx += 1
         query = DetailCrawlTask.select().where(DetailCrawlTask.commodity_id == cf.id,
                                                DetailCrawlTask.update_ts > start_ts).order_by(

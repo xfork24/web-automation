@@ -16,7 +16,7 @@ if __name__ == '__main__':
     for commodity_id in COMMODITY_IDS:
         try:
             commodity = CommodityInfo.get(CommodityInfo.id == commodity_id)
-            logger.info('navigate to commodity link')
+            logger.info(f'navigate to commodity [{commodity.id}] link: {commodity.link}')
             Driver.get(commodity.link)
             logger.info('wait detail page for seconds')
             time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
