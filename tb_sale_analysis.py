@@ -10,6 +10,7 @@ DEFAULT_SEARCH_KEYS = ['教程', '影视', '音乐', '素材', '自动发货']
 DEFAULT_SEARCH_NUM_OF_PAGES = 10
 
 if __name__ == '__main__':
+    init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     for search_key in DEFAULT_SEARCH_KEYS:
         analyze_and_add_search_crawl_tasks(search_key, DEFAULT_SEARCH_NUM_OF_PAGES, UPDATE_ID)
     analyze_and_add_shop_crawl_tasks(UPDATE_ID)
