@@ -1,6 +1,6 @@
 # coding: utf-8
 # !./bin/python
-# 给定搜索关键字，抓取指定页面数的商品基本信息，更新如下表：commodity_info, commodity_sales, shop_info
+# 给定搜索关键字，抓取指定页面数的商品基本信息，更新如下表：product_info, product_sales, shop_info
 
 from taobao import *
 

@@ -9,15 +9,15 @@ UPDATE_TIME_PERIOD_IN_SECONDS = 86400
 UPDATE_ID = 'tb_fix_shop_link'
 
 if __name__ == '__main__':
-    # scan commodity_info table in update_ts order and update commodities within time period
-    # only commodities with empty llm_analysis be updated
+    # scan product_info table in update_ts order and update products within time period
+    # only products with empty llm_analysis be updated
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
     start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
     shops = ShopInfo.select().where(ShopInfo.update_ts > start_ts).order_by(ShopInfo.update_ts)
     login_taobao()
     logger.info('navigate to taobao shop search page')
-    Driver.get(TAOBAO_SEARCH_PAGE)
+    Driver.get(TB_SEARCH_PAGE)
     shop_tab_div = None
     divs = Driver.find_elements(By.XPATH, '//div')
     for div in divs:
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     assert (shop_tab_div is not None)
     shop_tab_div.click()
     for shop in shops:
-        if not re.match(SHOP_LINK_RE_EXP, shop.link):
+        if not re.match(SHOP_LINK_RE_EXP, shop.product_link):
             qbox = Driver.find_element(By.ID, 'q')
             qbox.clear()
             qbox.send_keys(shop.name)
@@ -52,6 +52,6 @@ if __name__ == '__main__':
                 if shop_name == shop.name:
                     shop_link = shop_a.get_attribute('href')
                     logger.info(f'update shop [{shop_name}] link to {shop_link}')
-                    shop.link = shop_link
+                    shop.product_link = shop_link
                     shop.save()
                     break

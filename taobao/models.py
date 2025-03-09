@@ -45,11 +45,11 @@ class BaseModel(Model):
         return self._meta.table_name
 
 
-class CommodityInfo(BaseModel):
-    id = CharField(max_length=32, primary_key=True)
+class ProductInfo(BaseModel):
+    product_id = CharField(max_length=32, primary_key=True)
     sku_id = CharField(max_length=32, index=True)
-    title = CharField(max_length=128)
-    link = CharField(max_length=512)
+    product_title = CharField(max_length=128)
+    product_link = CharField(max_length=512)
     shop_name = CharField(max_length=128, index=True)
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
@@ -65,12 +65,12 @@ class CommodityInfo(BaseModel):
     update_role = CharField(max_length=64)
 
     class Meta:
-        table_name = 'commodity_info'
+        table_name = 'product_info'
 
 
 class ShopInfo(BaseModel):
-    name = CharField(max_length=128, primary_key=True)
-    link = CharField(max_length=512)
+    shop_name = CharField(max_length=128, primary_key=True)
+    shop_link = CharField(max_length=512)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -80,8 +80,8 @@ class ShopInfo(BaseModel):
         table_name = 'shop_info'
 
 
-class CommoditySale(BaseModel):
-    id = CharField(max_length=32)
+class ProductSale(BaseModel):
+    product_id = CharField(max_length=32)
     shop_name = CharField(max_length=128, index=True)
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
@@ -93,7 +93,7 @@ class CommoditySale(BaseModel):
     update_role = CharField(max_length=64)
 
     class Meta:
-        table_name = 'commodity_sale'
+        table_name = 'product_sale'
         primary_key = CompositeKey('id', 'update_ts')
 
 
@@ -117,8 +117,8 @@ class OperationHistory(BaseModel):
 
 class DetailCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    commodity_id = CharField(max_length=32, index=True)
-    link = CharField(max_length=512)
+    product_id = CharField(max_length=32, index=True)
+    product_link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
     create_ts = IntegerField()
@@ -133,7 +133,7 @@ class DetailCrawlTask(BaseModel):
 class ShopCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
     shop_name = CharField(max_length=128, index=True)
-    link = CharField(max_length=512)
+    product_link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
     create_ts = IntegerField()
@@ -160,49 +160,48 @@ class SearchCrawlTask(BaseModel):
         table_name = 'search_crawl_task'
 
 
-def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link, shop_name,
-                          price_unit, display_price, display_sale,
-                          title_imgs, main_imgs, details, llm_analysis, update_id, update_role):
-    # update commodity_info table
+def update_product_info(product_id, sku_id, product_title, product_link, shop_name,
+                        price_unit, display_price, display_sale,
+                        title_imgs, page_imgs, details, llm_analysis, update_id, update_role):
+    # update product_info table
     logger = get_logger()
     ts = int(time.time())
     estimated_revenue = display_price * display_sale
     estimated_revenue = -1 if estimated_revenue < 0 else estimated_revenue
     try:
         # if record already exists, update only if value is valid
-        exist_ci = CommodityInfo.get(CommodityInfo.id == commodity_id)
+        exist_ci = ProductInfo.get(ProductInfo.product_id == product_id)
         exist_ci.sku_id = sku_id if sku_id != '' else exist_ci.sku_id
-        exist_ci.title = commodity_title if commodity_id != '' else exist_ci.title
-        exist_ci.link = commodity_link if commodity_link != '' else exist_ci.link
+        exist_ci.product_title = product_title if product_id != '' else exist_ci.product_title
+        exist_ci.product_link = product_link if product_link != '' else exist_ci.product_link
         exist_ci.shop_name = shop_name if shop_name != '' else exist_ci.shop_name
         exist_ci.price_unit = price_unit if price_unit != '' else exist_ci.price_unit
         exist_ci.display_price = display_price if display_price != -1 else exist_ci.display_price
         exist_ci.display_sale = display_sale if display_sale != -1 else exist_ci.display_sale
         exist_ci.estimated_revenue = estimated_revenue if estimated_revenue != -1 else exist_ci.estimated_revenue
         exist_ci.title_imgs = title_imgs if title_imgs != '' else exist_ci.title_imgs
-        exist_ci.page_imgs = main_imgs if main_imgs != '' else exist_ci.page_imgs
+        exist_ci.page_imgs = page_imgs if page_imgs != '' else exist_ci.page_imgs
         exist_ci.details = details if details != '' else exist_ci.details
         exist_ci.llm_analysis = llm_analysis if llm_analysis != '' else exist_ci.llm_analysis
         exist_ci.update_ts = ts
         exist_ci.update_id = update_id
         exist_ci.update_role = update_role
         exist_ci.save()
-        logger.info(f'exist commodity info record updated: {exist_ci.to_dict()}')
-        add_operation_history(commodity_id, exist_ci.table_name(), update_id, update_role, ts,
-                              DB_OPS_UPDATE_EXIST)
+        logger.info(f'exist product info record updated: {exist_ci.to_dict()}')
+        add_operation_history(product_id, exist_ci.table_name(), update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
-        new_ci = CommodityInfo()
-        new_ci.id = commodity_id
+        new_ci = ProductInfo()
+        new_ci.product_id = product_id
         new_ci.sku_id = sku_id
-        new_ci.title = commodity_title
-        new_ci.link = commodity_link
+        new_ci.product_title = product_title
+        new_ci.product_link = product_link
         new_ci.shop_name = shop_name
         new_ci.price_unit = price_unit
         new_ci.display_price = display_price
         new_ci.display_sale = display_sale
         new_ci.estimated_revenue = estimated_revenue
         new_ci.title_imgs = title_imgs
-        new_ci.page_imgs = main_imgs
+        new_ci.page_imgs = page_imgs
         new_ci.details = details
         new_ci.llm_analysis = llm_analysis
         new_ci.create_ts = ts
@@ -210,9 +209,8 @@ def update_commodity_info(commodity_id, sku_id, commodity_title, commodity_link,
         new_ci.update_id = update_id
         new_ci.update_role = update_role
         new_ci.save(force_insert=True)
-        logger.info(f'new commodity info record inserted: {new_ci.to_dict()}')
-        add_operation_history(commodity_id, new_ci.table_name(), update_id, update_role, ts,
-                              DB_OPS_CREATE_NEW)
+        logger.info(f'new product info record inserted: {new_ci.to_dict()}')
+        add_operation_history(product_id, new_ci.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def update_shop_info(shop_name, shop_link, update_id, update_role):
@@ -221,8 +219,8 @@ def update_shop_info(shop_name, shop_link, update_id, update_role):
     ts = int(time.time())
     try:
         # update only when value is valid
-        exist_si = ShopInfo.get(ShopInfo.name == shop_name)
-        exist_si.link = shop_link if shop_link != '' else exist_si.link
+        exist_si = ShopInfo.get(ShopInfo.shop_name == shop_name)
+        exist_si.shop_link = shop_link if shop_link != '' else exist_si.shop_link
         exist_si.update_ts = ts
         exist_si.update_id = update_id
         exist_si.update_role = update_role
@@ -231,8 +229,8 @@ def update_shop_info(shop_name, shop_link, update_id, update_role):
         add_operation_history(shop_name, exist_si.table_name(), update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_si = ShopInfo()
-        new_si.name = shop_name
-        new_si.link = shop_link
+        new_si.shop_name = shop_name
+        new_si.shop_link = shop_link
         new_si.create_ts = ts
         new_si.update_ts = ts
         new_si.update_id = update_id
@@ -242,20 +240,20 @@ def update_shop_info(shop_name, shop_link, update_id, update_role):
         add_operation_history(shop_name, new_si.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def add_commodity_sale(commodity_id, shop_name,
-                       price_unit, display_price, display_sale,
-                       update_id, update_role):
+def add_product_sale(product_id, shop_name,
+                     price_unit, display_price, display_sale,
+                     update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     estimated_revenue = display_price * display_sale
     estimated_revenue = -1 if estimated_revenue < 0 else estimated_revenue
     # 有些情况下（比如shop中）同样的商品可以出现多次，所以这里我们仍然要检查一下是否有键重复
     try:
-        CommoditySale.get(CommoditySale.id == commodity_id, CommoditySale.update_ts == ts)
-        logger.error(f'commodity sale record already exist, id = {commodity_id} and update_ts = {ts}, just ignore')
+        ProductSale.get(ProductSale.product_id == product_id, ProductSale.update_ts == ts)
+        logger.error(f'product sale record already exist, id = {product_id} and update_ts = {ts}, just ignore')
     except DoesNotExist:
-        new_cs = CommoditySale()
-        new_cs.id = commodity_id
+        new_cs = ProductSale()
+        new_cs.product_id = product_id
         new_cs.shop_name = shop_name
         new_cs.price_unit = price_unit
         new_cs.display_price = display_price
@@ -266,9 +264,9 @@ def add_commodity_sale(commodity_id, shop_name,
         new_cs.update_id = update_id
         new_cs.update_role = update_role
         new_cs.save(force_insert=True)
-        logger.info(f'new commodity sale record inserted: {new_cs.to_dict()}')
-        add_operation_history(f'{commodity_id},{ts}', new_cs.table_name(),
-                              update_id, update_role, ts, DB_OPS_CREATE_NEW)
+        logger.info(f'new product sale record inserted: {new_cs.to_dict()}')
+        add_operation_history(f'{product_id},{ts}', new_cs.table_name(), update_id, update_role, ts,
+                              DB_OPS_CREATE_NEW)
 
 
 def add_operation_history(pk, table_name, update_id, update_role, operation_ts, operation):
@@ -285,14 +283,14 @@ def add_operation_history(pk, table_name, update_id, update_role, operation_ts, 
     logger.info(f'new operation history record inserted: {new_oh.to_dict()}')
 
 
-def add_detail_crawl_task(commodity_id, link, status, update_id, update_role):
+def add_detail_crawl_task(product_id, link, status, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     pk = uuid4().hex
     new_dct = DetailCrawlTask()
     new_dct.id = pk
-    new_dct.commodity_id = commodity_id
-    new_dct.link = link
+    new_dct.product_id = product_id
+    new_dct.product_link = link
     new_dct.status = status
     new_dct.try_count = 0
     new_dct.create_ts = ts
@@ -304,14 +302,14 @@ def add_detail_crawl_task(commodity_id, link, status, update_id, update_role):
     add_operation_history(pk, new_dct.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def add_shop_crawl_task(shop_name, link, status, update_id, update_role):
+def add_shop_crawl_task(shop_name, shop_link, status, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     pk = uuid4().hex
     new_sct = ShopCrawlTask()
     new_sct.id = pk
     new_sct.shop_name = shop_name
-    new_sct.link = link
+    new_sct.product_link = shop_link
     new_sct.status = status
     new_sct.try_count = 0
     new_sct.create_ts = ts

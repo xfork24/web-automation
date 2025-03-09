@@ -30,14 +30,14 @@ if __name__ == '__main__':
             try:
                 task.try_count = task.try_count + 1
                 update_task_status(task, TASK_STATUS_IN_PROGRESS)
-                logger.info(f'navigate to commodity [{task.commodity_id}] link: {task.link}')
-                Driver.get(task.link)
+                logger.info(f'navigate to product [{task.product_id}] link: {task.product_link}')
+                Driver.get(task.product_link)
                 logger.info('wait detail page for seconds')
                 time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
-                craw_taobao_detail_page_result(task.link, task.commodity_id, UPDATE_ID)
+                craw_taobao_detail_page_result(task.product_link, task.product_id, UPDATE_ID)
                 update_task_status(task, TASK_STATUS_DONE)
             except Exception:
-                logger.error(f'get unhandled exception while crawling commodity [{task.commodity_id}]')
+                logger.error(f'get unhandled exception while crawling product [{task.product_id}]')
                 traceback.print_exc()
                 update_task_status(task, TASK_STATUS_ERROR)
                 continue

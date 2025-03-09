@@ -21,7 +21,7 @@ if __name__ == '__main__':
     logger = get_logger()
     login_taobao()
     logger.info(f'navigate to taobao search page')
-    Driver.get(TAOBAO_SEARCH_PAGE)
+    Driver.get(TB_SEARCH_PAGE)
     while True:
         # scan search_crawl_task and get all unfinished tasks
         start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS

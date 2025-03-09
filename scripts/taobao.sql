@@ -8,13 +8,13 @@ CREATE DATABASE IF NOT EXISTS taobao
 USE taobao;
 
 -- --------------------------------
--- Create commodity_info Table
+-- Create product_info Table
 -- --------------------------------
-CREATE TABLE IF NOT EXISTS commodity_info
+CREATE TABLE IF NOT EXISTS product_info
 (
-    id                varchar(32)   NOT NULL,
+    product_id        varchar(32)   NOT NULL,
     sku_id            varchar(32)   NOT NULL,
-    title             varchar(128)  NOT NULL,
+    product_title     varchar(128)  NOT NULL,
     link              varchar(512)  NOT NULL,
     shop_name         varchar(128)  NOT NULL,
     price_unit        varchar(3)    NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS commodity_info
     update_ts         int           NOT NULL,
     update_id         varchar(32)   NOT NULL,
     update_role       varchar(64)   NOT NULL,
-    PRIMARY KEY (id)
+    PRIMARY KEY (product_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
@@ -38,22 +38,22 @@ CREATE TABLE IF NOT EXISTS commodity_info
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS shop_info
 (
-    name        varchar(128) NOT NULL,
-    link        varchar(512) NOT NULL,
+    shop_name   varchar(128) NOT NULL,
+    shop_link   varchar(512) NOT NULL,
     create_ts   int          NOT NULL,
     update_ts   int          NOT NULL,
     update_id   varchar(32)  NOT NULL,
     update_role varchar(64)  NOT NULL,
-    PRIMARY KEY (name)
+    PRIMARY KEY (shop_name)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
 -- --------------------------------
--- Create commodity_sales Table
+-- Create product_sale Table
 -- --------------------------------
-CREATE TABLE IF NOT EXISTS commodity_sale
+CREATE TABLE IF NOT EXISTS product_sale
 (
-    id                varchar(32)  NOT NULL,
+    product_id        varchar(32)  NOT NULL,
     shop_name         varchar(128) NOT NULL,
     price_unit        varchar(3)   NOT NULL,
     display_price     int          NOT NULL,
@@ -63,7 +63,21 @@ CREATE TABLE IF NOT EXISTS commodity_sale
     update_ts         int          NOT NULL,
     update_id         varchar(32)  NOT NULL,
     update_role       varchar(64)  NOT NULL,
-    PRIMARY KEY (id, update_ts)
+    PRIMARY KEY (product_id, update_ts)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+-- --------------------------------
+-- Create hot_product Table
+-- --------------------------------
+CREATE TABLE IF NOT EXISTS hot_product
+(
+    product_id  varchar(32)  NOT NULL,
+    shop_name   varchar(128) NOT NULL,
+    create_ts   int          NOT NULL,
+    update_id   varchar(32)  NOT NULL,
+    update_role varchar(64)  NOT NULL,
+    PRIMARY KEY (product_id, create_ts)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
@@ -85,13 +99,13 @@ CREATE TABLE IF NOT EXISTS operation_history
   DEFAULT CHARSET = utf8mb4;
 
 -- --------------------------------
--- Create detail_crawl_tasks Table
+-- Create detail_crawl_task Table
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS detail_crawl_task
 (
     id           varchar(32)  NOT NULL,
-    commodity_id varchar(32)  NOT NULL,
-    link         varchar(512) NOT NULL,
+    product_id   varchar(32)  NOT NULL,
+    product_link varchar(512) NOT NULL,
     status       tinyint      NOT NULL,
     try_count    int          NOT NULL,
     create_ts    int          NOT NULL,
@@ -103,13 +117,13 @@ CREATE TABLE IF NOT EXISTS detail_crawl_task
   DEFAULT CHARSET = utf8mb4;
 
 -- --------------------------------
--- Create shop_crawl_tasks Table
+-- Create shop_crawl_task Table
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS shop_crawl_task
 (
     id          varchar(32)  NOT NULL,
     shop_name   varchar(128) NOT NULL,
-    link        varchar(512) NOT NULL,
+    shop_link   varchar(512) NOT NULL,
     status      tinyint      NOT NULL,
     try_count   int          NOT NULL,
     create_ts   int          NOT NULL,
@@ -121,7 +135,7 @@ CREATE TABLE IF NOT EXISTS shop_crawl_task
   DEFAULT CHARSET = utf8mb4;
 
 -- --------------------------------
--- Create search_crawl_tasks Table
+-- Create search_crawl_task Table
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS search_crawl_task
 (
@@ -141,17 +155,17 @@ CREATE TABLE IF NOT EXISTS search_crawl_task
 -- -----------------------------------
 -- Create Indexes And Foreign Keys
 -- -----------------------------------
-ALTER TABLE commodity_info
+ALTER TABLE product_info
     ADD INDEX idx_sku_id (sku_id);
-ALTER TABLE commodity_info
+ALTER TABLE product_info
     ADD INDEX idx_shop_name (shop_name);
-ALTER TABLE commodity_info
+ALTER TABLE product_info
     ADD INDEX idx_display_sale (display_sale);
-ALTER TABLE commodity_info
+ALTER TABLE product_info
     ADD INDEX idx_estimated_revenue (estimated_revenue);
-ALTER TABLE commodity_info
+ALTER TABLE product_info
     ADD INDEX idx_update_ts (update_ts);
-ALTER TABLE commodity_info
+ALTER TABLE product_info
     ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE shop_info
@@ -159,15 +173,20 @@ ALTER TABLE shop_info
 ALTER TABLE shop_info
     ADD INDEX idx_update_id (update_id);
 
-ALTER TABLE commodity_sale
+ALTER TABLE product_sale
     ADD INDEX idx_shop_name (shop_name);
-ALTER TABLE commodity_sale
+ALTER TABLE product_sale
     ADD INDEX idx_display_sale (display_sale);
-ALTER TABLE commodity_sale
+ALTER TABLE product_sale
     ADD INDEX idx_estimated_revenue (estimated_revenue);
-ALTER TABLE commodity_sale
+ALTER TABLE product_sale
     ADD INDEX idx_update_ts (update_ts);
-ALTER TABLE commodity_sale
+ALTER TABLE product_sale
+    ADD INDEX idx_update_id (update_id);
+
+ALTER TABLE hot_product
+    ADD INDEX idx_create_ts (create_ts);
+ALTER TABLE hot_product
     ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE operation_history
@@ -180,7 +199,7 @@ ALTER TABLE operation_history
     ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE detail_crawl_task
-    ADD INDEX idx_commodity_id (commodity_id);
+    ADD INDEX idx_product_id (product_id);
 ALTER TABLE detail_crawl_task
     ADD INDEX idx_status (status);
 ALTER TABLE detail_crawl_task
@@ -206,16 +225,20 @@ ALTER TABLE search_crawl_task
 ALTER TABLE search_crawl_task
     ADD INDEX idx_update_id (update_id);
 
-ALTER TABLE commodity_info
-    ADD CONSTRAINT fk_commodity_info_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (name);
-ALTER TABLE commodity_sale
-    ADD CONSTRAINT fk_commodity_sale_id FOREIGN KEY (id) REFERENCES commodity_info (id);
-ALTER TABLE commodity_sale
-    ADD CONSTRAINT fk_commodity_sale_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (name);
+ALTER TABLE product_info
+    ADD CONSTRAINT fk_product_info_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
+ALTER TABLE product_sale
+    ADD CONSTRAINT fk_product_sale_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
+ALTER TABLE product_sale
+    ADD CONSTRAINT fk_product_sale_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
+ALTER TABLE hot_product
+    ADD CONSTRAINT fk_hot_product_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
+ALTER TABLE hot_product
+    ADD CONSTRAINT fk_hot_product_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
 ALTER TABLE detail_crawl_task
-    ADD CONSTRAINT fk_detail_crawl_task_commodity_id FOREIGN KEY (commodity_id) REFERENCES commodity_info (id);
+    ADD CONSTRAINT fk_detail_crawl_task_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
 ALTER TABLE shop_crawl_task
-    ADD CONSTRAINT fk_shop_crawl_task_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (name);
+    ADD CONSTRAINT fk_shop_crawl_task_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
 
 -- --------------------------------------------
 -- Create User taobao And Grant Permissions
