@@ -18,11 +18,9 @@ if __name__ == '__main__':
     login_taobao()
     start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
     # 先用搜索法
-    query = ProductInfo.select().where(ProductInfo.display_sale == -1,
-                                       ProductInfo.update_ts > start_ts).order_by(ProductInfo.update_ts)
+    query = ProductLLMInfo.select().where(ProductLLMInfo.display_sale == -1,
+                                          ProductLLMInfo.update_ts > start_ts).order_by(ProductLLMInfo.update_ts)
     ill_product_titles = [ci.product_title for ci in query]
-    logger.info(f'navigate to taobao search page')
-    Driver.get(TB_SEARCH_PAGE)
     for ill_product_title in ill_product_titles:
         try:
             crawl_taobao_search_results(ill_product_title, 1, SALE_ORDER, UPDATE_ID)
@@ -33,8 +31,8 @@ if __name__ == '__main__':
             continue
         time.sleep(SEARCH_CRAWL_GAP_IN_SECONDS)
     # 再用店铺法
-    query = ProductInfo.select().where(ProductInfo.display_sale == -1,
-                                       ProductInfo.update_ts > start_ts).order_by(ProductInfo.update_ts)
+    query = ProductLLMInfo.select().where(ProductLLMInfo.display_sale == -1,
+                                          ProductLLMInfo.update_ts > start_ts).order_by(ProductLLMInfo.update_ts)
     ill_products = {}
     for ci in query:
         if ci.shop_name not in ill_products.keys():
@@ -43,9 +41,6 @@ if __name__ == '__main__':
     for k, v in ill_products.items():
         try:
             exist_si = ShopInfo.get(ShopInfo.shop_name == k)
-            logger.info(f'navigate to shop [{k}] with link [{exist_si.shop_link}] and wait for seconds')
-            Driver.get(exist_si.shop_link)
-            time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
             craw_taobao_shop_page_results(exist_si.shop_link, UPDATE_ID, v)
         except DoesNotExist:
             logger.error(f'ShopInfo item with shop_name=[{k}] do not exist, just ignore')

@@ -27,19 +27,16 @@ if __name__ == '__main__':
                                              ShopCrawlTask.update_ts > start_ts).order_by(
             ShopCrawlTask.update_ts)
         for task in tasks:
+            task.try_count = task.try_count + 1
+            update_task_status(task, TASK_STATUS_IN_PROGRESS)
             try:
-                task.try_count = task.try_count + 1
-                update_task_status(task, TASK_STATUS_IN_PROGRESS)
-                logger.info(f'navigate to shop [{task.shop_name}] with link {task.product_link} and wait for seconds')
-                Driver.get(task.product_link)
-                time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
                 craw_taobao_shop_page_results(task.product_link, UPDATE_ID)
-                update_task_status(task, TASK_STATUS_DONE)
             except Exception:
                 logger.error(
                     f'get unhandled exception while crawling shop [{task.shop_name}] with link {task.product_link} pages')
                 traceback.print_exc()
                 update_task_status(task, TASK_STATUS_ERROR)
                 continue
+            update_task_status(task, TASK_STATUS_DONE)
             time.sleep(SHOP_CRAWL_GAP_IN_SECONDS)
         time.sleep(SHOP_SCAN_NAP_IN_SECONDS)

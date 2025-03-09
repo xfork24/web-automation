@@ -1,12 +1,14 @@
 # coding: utf-8
 # !./bin/python
 
-from pydantic import constr, conlist, BaseModel
+import time
+from pydantic import constr, BaseModel
 from json import dumps
 from typing import List
 from groq import Groq
 
 from taobao.utils import get_logger
+from taobao.models import ProductInfo
 
 LLM_MODEL = 'deepseek-r1-distill-llama-70b'
 GROQ_KEY = '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'
@@ -32,15 +34,15 @@ GroqClient = Groq(api_key=GROQ_KEY, timeout=GROQ_TIMEOUT_IN_SECONDS)
 #    也是可以的，但只能提供一个关键字和一个类别。
 #
 # 综合考虑，我们选择 #3 的写法
-class ProductInfo(BaseModel):
+class ProductLLMInfo(BaseModel):
     id: str
     keyword: constr(min_length=1, max_length=KEYWORD_NAME_MAX_LENGTH)
     category: constr(min_length=1, max_length=CATEGORY_NAME_MAX_LENGTH)
     digital: bool
 
 
-class ProductInfoList(BaseModel):
-    infos: List[ProductInfo]
+class ProductLLMInfos(BaseModel):
+    infos: List[ProductLLMInfo]
 
 
 # Data model for LLM to parse
@@ -49,14 +51,14 @@ class Product(BaseModel):
     title: str
 
 
-def parse_product_by_dsr1_70b(product: Product) -> ProductInfo:
+def parse_product_by_dsr1_70b(product: Product) -> ProductLLMInfo:
     logger = get_logger()
     request = [
         {
             "role": "system",
             "content": "You are an e-commerce manager that outputs product in JSON.\n"
             # Pass the json schema to the model. Pretty printing improves results. We will fill if remove indent=2.
-                       f" The JSON object must use the schema: {dumps(ProductInfo.model_json_schema(), indent=2)}.\n"
+                       f" The JSON object must use the schema: {dumps(ProductLLMInfo.model_json_schema(), indent=2)}.\n"
                        f" Keyword should be one word and its length should be less than {KEYWORD_NAME_MAX_LENGTH} characters.\n"
                        f" Category should be one word and its length should be less than {CATEGORY_NAME_MAX_LENGTH} characters.\n"
                        " Set digital to true if the product is a digital product and is not a physical product.\n"
@@ -92,17 +94,17 @@ def parse_product_by_dsr1_70b(product: Product) -> ProductInfo:
     )
     response = chat_completion.choices[0].message.content
     logger.info(f'get response from LLM: \n{response}')
-    return ProductInfo.model_validate_json(response)
+    return ProductLLMInfo.model_validate_json(response)
 
 
-def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductInfoList:
+def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductLLMInfos:
     logger = get_logger()
     request = [
         {
             "role": "system",
             "content": "You are an e-commerce manager that outputs products in JSON.\n"
             # Pass the json schema to the model. Pretty printing improves results. We will fill if remove indent=2.
-                       f" The JSON object must use the schema: {dumps(ProductInfoList.model_json_schema(), indent=2)}.\n"
+                       f" The JSON object must use the schema: {dumps(ProductLLMInfos.model_json_schema(), indent=2)}.\n"
                        f" Keyword should be one word and its length should be less than {KEYWORD_NAME_MAX_LENGTH} characters.\n"
                        f" Category should be one word and its length should be less than {CATEGORY_NAME_MAX_LENGTH} characters.\n"
                        " Set digital to true if the product is a digital product and is not a physical product.\n"
@@ -138,4 +140,23 @@ def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductInfoList:
     )
     response = chat_completion.choices[0].message.content
     logger.info(f'get response from LLM: \n{response}')
-    return ProductInfoList.model_validate_json(response)
+    return ProductLLMInfos.model_validate_json(response)
+
+
+def update_product_llm_analysis_batch(products, update_id):
+    logger = get_logger()
+    response = parse_product_list_by_dsr1_70b(products)
+    ts = int(time.time())
+    for record in response.infos:
+        llm_analysis = {
+            'keyword': record.keyword,
+            'category': record.category,
+            'digital': record.digital,
+        }
+        logger.info(f'update product [{record.id}] with llm_analysis = {llm_analysis}')
+        exist_ci = ProductInfo.get(ProductInfo.product_id == record.id)
+        exist_ci.llm_analysis = llm_analysis
+        exist_ci.update_id = update_id
+        exist_ci.update_role = update_product_llm_analysis_batch.__name__
+        exist_ci.update_ts = ts
+        exist_ci.save()

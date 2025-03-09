@@ -15,11 +15,7 @@ if __name__ == '__main__':
     login_taobao()
     for product_id in PRODUCT_IDS:
         try:
-            product = ProductInfo.get(ProductInfo.product_id == product_id)
-            logger.info(f'navigate to product [{product.product_id}] link: {product.product_link}')
-            Driver.get(product.product_link)
-            logger.info('wait detail page for seconds')
-            time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
+            product = ProductLLMInfo.get(ProductLLMInfo.product_id == product_id)
             craw_taobao_detail_page_result(product.product_link, product.product_id, UPDATE_ID)
         except DoesNotExist:
             logger.error(f'can not find product [{product_id}] in database')

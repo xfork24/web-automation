@@ -1,7 +1,6 @@
 # coding: utf-8
 # !./bin/python
 
-import re
 import time
 from uuid import uuid4
 from peewee import *

@@ -11,32 +11,13 @@ LLM_QUERY_BATCH_SIZE = 10
 UPDATE_ID = 'tb_fix_llm_analysis'
 ForceUpdate = False
 
-
-def update_product_llm_analysis_batch(products, update_id):
-    response = parse_product_list_by_dsr1_70b(products)
-    ts = int(time.time())
-    for record in response.infos:
-        llm_analysis = {
-            'keyword': record.keyword,
-            'category': record.category,
-            'digital': record.digital,
-        }
-        logger.info(f'update product [{record.id}] with llm_analysis = {llm_analysis}')
-        exist_ci = ProductInfo.get(ProductInfo.product_id == record.id)
-        exist_ci.llm_analysis = llm_analysis
-        exist_ci.update_id = update_id
-        exist_ci.update_role = update_product_llm_analysis_batch.__name__
-        exist_ci.update_ts = ts
-        exist_ci.save()
-
-
 if __name__ == '__main__':
     # scan product_info table in update_ts order and update products within time period
     # only products with empty llm_analysis be updated
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
     start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
-    products = ProductInfo.select().where(ProductInfo.update_ts > start_ts).order_by(ProductInfo.update_ts)
+    products = ProductLLMInfo.select().where(ProductLLMInfo.update_ts > start_ts).order_by(ProductLLMInfo.update_ts)
     logger.info(f'get {len(products)} products to be updated by applying update_ts > {start_ts}')
     product_batch = []
     for product in products:

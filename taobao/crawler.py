@@ -1,8 +1,6 @@
 # coding: utf-8
 # !./bin/python
 
-import datetime
-import csv
 import traceback
 import uuid
 from enum import Enum
@@ -54,6 +52,7 @@ SHOP_SKU_CARD_PRICE_RE_EXP = re.compile('^price--\\w+')
 SHOP_SKU_CARD_SALE_RE_EXP = re.compile('^count--\\w+')
 SHOP_LOAD_MORE_FLAG_RE_EXP = re.compile('^loadmoreFlag--\\w+')
 SHOP_LOAD_STATUS_RE_EXP = re.compile('^loadStatus--\\w+')
+SHOP_LINK_RE_EXP = re.compile('^https://store.taobao.com/shop/view_shop.htm')
 
 
 class WebDriverType(Enum):
@@ -340,17 +339,15 @@ def save_taobao_search_result(product_id, sku_id, product_title, product_link, s
 
 
 def craw_taobao_detail_page(product_link, product_id, update_id):
-    logger = get_logger()
     login_taobao()
-    logger.info('navigate to product link')
-    Driver.get(product_link)
-    logger.info('wait detail page for seconds')
-    time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
     craw_taobao_detail_page_result(product_link, product_id, update_id)
 
 
 def craw_taobao_detail_page_result(product_link, product_id, update_id):
     logger = get_logger()
+    logger.info(f'navigate to product [{product_id}] with link: [{product_link}] and wait for seconds')
+    Driver.get(product_link)
+    time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
     # set zoom ratio
     logger.info('set detail page zoom ratio to %f' % TB_PAGE_DEFAULT_ZOOM_RATIO)
     zoom_content(TB_PAGE_DEFAULT_ZOOM_RATIO)
@@ -559,16 +556,15 @@ def craw_taobao_value_item_result(value_item):
 
 
 def craw_taobao_shop_page(shop_link, update_id, target_product_ids=None):
-    logger = get_logger()
     login_taobao()
-    logger.info('navigate to shop link and wait for seconds')
-    Driver.get(shop_link)
-    time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
     craw_taobao_shop_page_results(shop_link, update_id, target_product_ids)
 
 
 def craw_taobao_shop_page_results(shop_link, update_id, target_product_ids=None):
     logger = get_logger()
+    logger.info(f'navigate to shop link [{shop_link}] and wait for seconds')
+    Driver.get(shop_link)
+    time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
         load_more_flag_div = None
@@ -588,6 +584,7 @@ def craw_taobao_shop_page_results(shop_link, update_id, target_product_ids=None)
             break
         # 有些特殊店铺没有 load_more_flag_div, 这种店铺是完全定制的页面（非淘宝模板）
         # 我们暂时不支持这种店铺。参考：https://shop61333799.taobao.com/
+        # 这种店铺的商品仍然可以通过search或detail页面抓取来收录
         assert (load_more_flag_div is not None)
         scroll_windows_to_element(load_more_flag_div)
     shop_sku_divs = []
@@ -651,6 +648,53 @@ def craw_taobao_shop_sku_result(shop_sku_div, shop_name, update_id, target_produ
                         '', '', '', '',
                         update_id, update_role)
     add_product_sale(product_id, shop_name, price_unit, price_val, product_sale, update_id, update_role)
+
+
+def update_shop_link_by_search(shop_name, update_id):
+    login_taobao()
+    update_shop_link_by_search_results(shop_name, update_id)
+
+
+def update_shop_link_by_search_results(shop_name, update_id):
+    logger = get_logger()
+    logger.info('navigate to taobao shop search page')
+    Driver.get(TB_SEARCH_PAGE)
+    shop_tab_div = None
+    divs = Driver.find_elements(By.XPATH, '//div')
+    for div in divs:
+        title = div.text.strip()
+        if title == '店铺':
+            shop_tab_div = div
+            break
+    assert (shop_tab_div is not None)
+    shop_tab_div.click()
+    qbox = Driver.find_element(By.ID, 'q')
+    qbox.clear()
+    qbox.send_keys(shop_name)
+    qbox.send_keys(Keys.RETURN)
+    logger.info(f'wait for shop [{shop_name}] search result for seconds')
+    time.sleep(SEARCH_WAIT_IN_SECONDS)
+    shop_wrapper_div = Driver.find_element(By.ID, 'srp_shopLayout_shopContentWrapper')
+    assert (shop_wrapper_div is not None)
+    shop_link = None
+    for shop_a in shop_wrapper_div.find_elements(By.XPATH, 'a'):
+        title_div = None
+        shop_divs = shop_a.find_elements(By.XPATH, './/div')
+        for shop_div in shop_divs:
+            cls_name = shop_div.get_attribute('class')
+            if cls_name is None:
+                continue
+            if re.match(SHOP_TITLE_RE_EXP, cls_name):
+                title_div = shop_div
+                break
+        assert (title_div is not None)
+        name = title_div.text.strip()
+        if name == shop_name:
+            shop_link = shop_a.get_attribute('href')
+            break
+    if shop_link is not None:
+        logger.info(f'update shop [{shop_name}] link to {shop_link}')
+        update_shop_info(shop_name, shop_link, update_id, update_shop_link_by_search_results.__name__)
 
 
 def parse_price_span(price_span, product_id):
