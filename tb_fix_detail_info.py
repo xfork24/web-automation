@@ -15,7 +15,7 @@ if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
     start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
-    products = ProductLLMInfo.select().where(ProductLLMInfo.update_ts > start_ts).order_by(ProductLLMInfo.update_ts)
+    products = ProductInfo.select().where(ProductInfo.update_ts > start_ts).order_by(ProductInfo.update_ts)
     logger.info(f'get {len(products)} products to be updated by applying update_ts > {start_ts}')
     login_taobao()
     for product in products:
