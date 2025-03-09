@@ -48,7 +48,7 @@ if __name__ == '__main__':
             product_batch = []
             logger.info('wait LLM tokens ready for seconds')
             time.sleep(LLM_BATCH_WAIT_IN_SECONDS)
-        product_batch.append(Product(id=product.product_id, title=product.title))
+        product_batch.append(Product(id=product.product_id, title=product.product_title))
     # the last batch
     if len(product_batch) > 0:
         update_product_llm_analysis_batch(product_batch, UPDATE_ID)

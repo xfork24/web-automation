@@ -206,9 +206,13 @@ def parse_sale_in_detail(sale):
     return int(sale_num)
 
 
-def craw_taobao_search_page(qstring, num_of_pages, update_id):
-    logger = get_logger()
+def craw_taobao_search_page(qstring, num_of_pages, sale_order, update_id):
     login_taobao()
+    crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id)
+
+
+def crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id):
+    logger = get_logger()
     logger.info(f'navigate to taobao search page and enter search string: {qstring}')
     Driver.get(TB_SEARCH_PAGE)
     qbox = Driver.find_element(By.ID, 'q')
@@ -216,11 +220,6 @@ def craw_taobao_search_page(qstring, num_of_pages, update_id):
     qbox.send_keys(qstring)
     qbox.send_keys(Keys.RETURN)
     ids_set = set()
-    crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id)
-
-
-def crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id, sale_order=False):
-    logger = get_logger()
     for page in range(1, num_of_pages + 1):
         try:
             # TBD: 在这里检查是否有滑动验证弹窗，并解决 (<div class='nocaptcha>, XPATH 'div/div/div' .text)
@@ -250,7 +249,8 @@ def crawl_taobao_search_results(qstring, num_of_pages, ids_set, update_id, sale_
             logger.info(f'get search results for page {page + 1} by press next page')
             btn_list[1].click()
         except AssertionError:
-            logger.error('assertion failed in search result page, just stop crawling')
+            logger.error(
+                'assertion failed in search result page, just stop crawling, it is ok for single product search')
             traceback.print_exc()
             break
         except Exception:

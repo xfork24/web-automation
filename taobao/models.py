@@ -23,8 +23,6 @@ TASK_STATUS_IN_PROGRESS = 2
 TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
 
-SHOP_LINK_RE_EXP = re.compile('^https://store.taobao.com/shop/view_shop.htm')
-
 DB = MySQLDatabase(DB_NAME,
                    host=DB_HOST,
                    port=DB_PORT,
@@ -94,7 +92,19 @@ class ProductSale(BaseModel):
 
     class Meta:
         table_name = 'product_sale'
-        primary_key = CompositeKey('id', 'update_ts')
+        primary_key = CompositeKey('product_id', 'update_ts')
+
+
+class HotProduct(BaseModel):
+    product_id = CharField(max_length=32)
+    shop_name = CharField(max_length=128)
+    create_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
+    update_role = CharField(max_length=64)
+
+    class Meta:
+        table_name = 'hot_product'
+        primary_key = CompositeKey('product_id', 'create_ts')
 
 
 class OperationHistory(BaseModel):
@@ -133,7 +143,7 @@ class DetailCrawlTask(BaseModel):
 class ShopCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
     shop_name = CharField(max_length=128, index=True)
-    product_link = CharField(max_length=512)
+    shop_link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
     create_ts = IntegerField()

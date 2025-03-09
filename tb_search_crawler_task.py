@@ -8,6 +8,7 @@ LOG_FILE_NAME = './logs/tb_search_crawler_task.log'
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400
 SEARCH_CRAWL_GAP_IN_SECONDS = 10
 SEARCH_SCAN_NAP_IN_SECONDS = 60
+SALE_ORDER = False
 UPDATE_ID = 'tb_search_crawler_task'
 
 
@@ -32,12 +33,7 @@ if __name__ == '__main__':
             try:
                 task.try_count = task.try_count + 1
                 update_task_status(task, TASK_STATUS_IN_PROGRESS)
-                qbox = Driver.find_element(By.ID, 'q')
-                qbox.clear()
-                qbox.send_keys(task.search_key)
-                qbox.send_keys(Keys.RETURN)
-                ids_set = set()
-                crawl_taobao_search_results(task.search_key, task.num_of_pages, ids_set, UPDATE_ID)
+                crawl_taobao_search_results(task.search_key, task.num_of_pages, SALE_ORDER, UPDATE_ID)
                 update_task_status(task, TASK_STATUS_DONE)
             except Exception:
                 logger.error(

@@ -22,7 +22,7 @@ def analyze_and_add_search_crawl_tasks(search_key, num_of_pages, update_id):
         SearchCrawlTask.update_ts).limit(1)
     if query.count() > 0:
         logger.info(
-            f'search crawl task [{query[0].product_id}] already exist for search_key [{search_key}], just ignore')
+            f'search crawl task [{query[0].id}] already exist for search_key [{search_key}], just ignore')
         return
     add_search_crawl_task(search_key, num_of_pages, TASK_STATUS_NEW, update_id,
                           analyze_and_add_search_crawl_tasks.__name__)
@@ -48,11 +48,11 @@ def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
             ShopCrawlTask.update_ts).limit(1)
         if query.count() > 0:
             logger.info(
-                f'shop crawl task [{query[0].product_id}] already exist for shop_name [{q.shop_name}], just ignore')
+                f'shop crawl task [{query[0].id}] already exist for shop_name [{q.shop_name}], just ignore')
             continue
         try:
-            exist_si = ShopInfo.get(ShopInfo.name == q.shop_name)
-            add_shop_crawl_task(exist_si.name, exist_si.product_link, TASK_STATUS_NEW, update_id,
+            exist_si = ShopInfo.get(ShopInfo.shop_name == q.shop_name)
+            add_shop_crawl_task(exist_si.shop_name, exist_si.shop_link, TASK_STATUS_NEW, update_id,
                                 analyze_and_add_shop_crawl_tasks.__name__)
         except DoesNotExist:
             logger.error(f'ShopInfo item with shop_name=[{q.shop_name}] do not exist, just ignore')
@@ -76,7 +76,7 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
             DetailCrawlTask.update_ts).limit(1)
         if query.count() > 0:
             logger.info(
-                f'detail crawl task [{query[0].product_id}] already exist for product_id [{cf.product_id}], just ignore')
+                f'detail crawl task [{query[0].id}] already exist for product_id [{cf.product_id}], just ignore')
             continue
         add_detail_crawl_task(cf.product_id, cf.product_link, TASK_STATUS_NEW, update_id,
                               analyze_and_add_detail_crawl_tasks.__name__)

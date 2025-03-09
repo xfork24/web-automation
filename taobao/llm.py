@@ -64,7 +64,7 @@ def parse_product_by_dsr1_70b(product: Product) -> ProductInfo:
         },
         {
             "role": "user",
-            "content": f"id={product.id},title={product.product_title}\n",
+            "content": f"id={product.id},title={product.title}\n",
         },
     ]
     logger.info(f'send request to LLM: \n{request}')
@@ -110,7 +110,7 @@ def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductInfoList:
         },
         {
             "role": "user",
-            "content": ''.join([f'id=\"{product.id}\",title=\"{product.product_title}\"\n' for product in products]),
+            "content": ''.join([f'id=\"{product.id}\",title=\"{product.title}\"\n' for product in products]),
         },
     ]
     logger.info(f'send request to LLM: \n{request}')

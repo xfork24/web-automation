@@ -5,6 +5,7 @@
 from taobao import *
 
 LOG_FILE_NAME = './logs/tb_fix_shop_link.log'
+SHOP_LINK_RE_EXP = re.compile('^https://store.taobao.com/shop/view_shop.htm')
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400
 UPDATE_ID = 'tb_fix_shop_link'
 
