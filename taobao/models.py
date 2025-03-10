@@ -253,7 +253,7 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
         new_pi.title_imgs = title_imgs
         new_pi.page_imgs = page_imgs
         new_pi.details = details
-        new_pi.additional_properties = additional_properties if additional_properties != '' else new_pi.additional_properties
+        new_pi.additional_properties = additional_properties
         new_pi.create_ts = ts
         new_pi.update_ts = ts
         new_pi.update_id = update_id
@@ -282,7 +282,7 @@ def update_shop_info(shop_name, shop_link, additional_properties, update_id, upd
         new_si = ShopInfo()
         new_si.shop_name = shop_name
         new_si.shop_link = shop_link
-        new_si.additional_properties = additional_properties if additional_properties != '' else new_si.additional_properties
+        new_si.additional_properties = additional_properties
         new_si.create_ts = ts
         new_si.update_ts = ts
         new_si.update_id = update_id

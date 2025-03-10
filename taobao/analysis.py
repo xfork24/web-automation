@@ -7,6 +7,8 @@ from taobao.models import *
 TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
+TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
+TB_
 TB_SHOP_REVENUE_TOPN = 10
 TB_SHOP_REVENUE_THRESHOLD = 10000
 TB_SKU_REVENUE_TOPN = 50
@@ -90,22 +92,61 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
 # 1. display_sale和estimated_revenue为-1，表示我们目前没获取到这些信息
 # 2. 缺失大模型分析结果，默认所有商品信息都没有这个信息
 # 通过生成对应task的方式来获取这些信息
-def analyze_and_generate_fix_tasks(start_ts, update_id):
+def analyze_and_generate_fix_tasks(batch_ts, update_id):
     update_role = analyze_and_generate_fix_tasks.__name__
+    ts = int(time.time())
     # 处理可能的店铺问题
-    si_query = ShopInfo.select().where(ShopInfo.update_ts > start_ts).order_by(ShopInfo.update_ts)
+    shop_search_start_ts = ts - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+    si_query = ShopInfo.select().where(ShopInfo.update_ts > batch_ts).order_by(ShopInfo.update_ts)
     for si in si_query:
         if not re.match(SHOP_LINK_RE_EXP, si.shop_link):
-            add_shop_search_crawl_task(si.shop_name, '', update_id, update_role)
+            task = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == si.shop_name,
+                                                      ShopSearchCrawlTask.update_ts > shop_search_start_ts).order_by(
+                ShopSearchCrawlTask.update_ts).limit(1)
+            if task.count() == 0:
+                add_shop_search_crawl_task(si.shop_name, '', update_id, update_role)
     # 处理可能的商品问题
-    pi_query = ProductInfo.select().where(ProductInfo.update_ts > start_ts).order_by(
+    search_start_ts = ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+    shop_start_ts = ts - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
+    pi_query = ProductInfo.select().where(ProductInfo.update_ts > batch_ts).order_by(
         ProductInfo.update_ts)
     product_batch = []
     for pi in pi_query:
+        # 处理无销售数量问题，同时添加搜索任务和店铺任务
         if pi.display_sale == -1 or pi.estimated_revenue == -1:
-            # 无销售信息，同时添加搜索任务和店铺任务
-            add_search_crawl_task(pi.prduct_title, 1, [pi.product_id], '', update_id, update_role)
-            add_shop_crawl_task(pi.shop_name, [pi.product_id], '', update_id, update_role)
+            # 添加搜索任务
+            tasks = SearchCrawlTask.select().where(SearchCrawlTask.shop_name == pi.product_title,
+                                                   SearchCrawlTask.update_ts > search_start_ts).order_by(
+                ShopSearchCrawlTask.update_ts)
+            task_existed = False
+            for task in tasks:
+                if task.target_product_ids == '':
+                    task_existed = True
+                    break
+                else:
+                    ids = loads(task.target_product_ids)
+                    if pi.product_id in ids:
+                        task_existed = True
+                        break
+            if not task_existed:
+                add_search_crawl_task(pi.prduct_title, 1, [pi.product_id], '', update_id, update_role)
+            # 同时也添加店铺搜索任务
+            tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
+                                                 ShopCrawlTask.update_ts > shop_start_ts).order_by(
+                ShopCrawlTask.update_ts)
+            task_existed = False
+            for task in tasks:
+                if task.target_product_ids == '':
+                    task_existed = True
+                    break
+                else:
+                    ids = loads(task.target_product_ids)
+                    if pi.product_id in ids:
+                        task_existed = True
+                        break
+            if not task_existed:
+                add_shop_crawl_task(pi.shop_name, [pi.product_id], '', update_id, update_role)
+        # 处理llm_analysis缺失问题
         additional_properties = pi.additional_properties
         if additional_properties != '':
             additional_properties = loads(additional_properties)
