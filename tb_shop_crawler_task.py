@@ -5,16 +5,9 @@
 from taobao import *
 
 LOG_FILE_NAME = './logs/tb_shop_crawler_task.log'
-UPDATE_TIME_PERIOD_IN_SECONDS = 86400
 SHOP_CRAWL_GAP_IN_SECONDS = 10
 SHOP_SCAN_NAP_IN_SECONDS = 60
 UPDATE_ID = 'tb_shop_crawler_task'
-
-
-def update_task_status(crawl_task, status):
-    crawl_task.status = status
-    crawl_task.save()
-
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
@@ -22,7 +15,7 @@ if __name__ == '__main__':
     login_taobao()
     while True:
         # scan search_crawl_task and get all unfinished tasks
-        start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
+        start_ts = int(time.time()) - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
         tasks = ShopCrawlTask.select().where(ShopCrawlTask.status != TASK_STATUS_DONE,
                                              ShopCrawlTask.update_ts > start_ts).order_by(
             ShopCrawlTask.update_ts)
@@ -32,7 +25,7 @@ if __name__ == '__main__':
             try:
                 logger.info(f'handling shop crawl task [{task.id}] with shop_name [{task.shop_name}]')
                 shop = ShopInfo.get(ShopInfo.shop_name == task.shop_name)
-                target_product_ids = None if task.target_product_ids == '' else loads(task.target_product_ids)
+                target_product_ids = json_loads(task.target_product_ids)
                 craw_taobao_shop_page_results(shop.shop_link, UPDATE_ID, target_product_ids)
             except DoesNotExist:
                 logger.error(f'shop_info record with shop_name [{task.shop_name}] does not exist, just ignore')

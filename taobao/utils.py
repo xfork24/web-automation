@@ -5,6 +5,7 @@ import sys
 import logging
 import easyocr
 import pytesseract
+from json import dumps, loads
 from PIL import Image
 from taobao.exceptions import PriceOCRError
 
@@ -61,3 +62,11 @@ def par_price_ocr(image_file_path):
         return parse_price_ocr_by_pyocr(image_file_path)
     except PriceOCRError:
         return parse_price_ocr_by_pytesseract(image_file_path)
+
+
+def json_dumps(content):
+    return dumps(content, ensure_ascii=False)
+
+
+def json_loads(content):
+    return loads(content)

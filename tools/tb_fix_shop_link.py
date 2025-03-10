@@ -17,4 +17,4 @@ if __name__ == '__main__':
     shops = ShopInfo.select().where(ShopInfo.update_ts > start_ts).order_by(ShopInfo.update_ts)
     for shop in shops:
         if not re.match(SHOP_LINK_RE_EXP, shop.shop_link):
-            update_shop_link_by_search_results(shop.shop_name, UPDATE_ID)
+            crawl_shop_link_by_search_results(shop.shop_name, UPDATE_ID)

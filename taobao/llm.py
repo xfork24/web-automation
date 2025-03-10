@@ -3,11 +3,10 @@
 
 import time
 from pydantic import constr, BaseModel
-from json import dumps, loads
 from typing import List
 from groq import Groq
 
-from taobao.utils import get_logger
+from taobao.utils import *
 from taobao.models import ProductInfo
 
 LLM_MODEL = 'deepseek-r1-distill-llama-70b'
@@ -156,14 +155,9 @@ def update_product_llm_analysis_batch(products, update_id):
         }
         logger.info(f'update product [{record.id}] with llm_analysis = {llm_analysis}')
         exist_pi = ProductInfo.get(ProductInfo.product_id == record.id)
-        if exist_pi.additional_properties == '':
-            exist_pi.additional_properties = {
-                LLM_ANALYSIS_KEY: llm_analysis
-            }
-        else:
-            additional_properties = loads(exist_pi.additional_properties)
-            additional_properties[LLM_ANALYSIS_KEY] = llm_analysis
-            exist_pi.additional_properties = additional_properties
+        additional_properties = json_loads(exist_pi.additional_properties)
+        additional_properties[LLM_ANALYSIS_KEY] = llm_analysis
+        exist_pi.additional_properties = additional_properties
         exist_pi.update_id = update_id
         exist_pi.update_role = update_product_llm_analysis_batch.__name__
         exist_pi.update_ts = ts

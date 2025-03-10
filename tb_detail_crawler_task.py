@@ -5,16 +5,9 @@
 from taobao import *
 
 LOG_FILE_NAME = './logs/tb_detail_crawler_task.log'
-UPDATE_TIME_PERIOD_IN_SECONDS = 86400
 DETAIL_CRAWL_GAP_IN_SECONDS = 10
 DETAIL_SCAN_NAP_IN_SECONDS = 60
 UPDATE_ID = 'tb_detail_crawler_task'
-
-
-def update_task_status(crawl_task, status):
-    crawl_task.status = status
-    crawl_task.save()
-
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
@@ -22,7 +15,7 @@ if __name__ == '__main__':
     login_taobao()
     while True:
         # scan detail_crawl_task and get all unfinished tasks
-        start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
+        start_ts = int(time.time()) - TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS
         tasks = DetailCrawlTask.select().where(DetailCrawlTask.status != TASK_STATUS_DONE,
                                                DetailCrawlTask.update_ts > start_ts).order_by(
             DetailCrawlTask.update_ts)

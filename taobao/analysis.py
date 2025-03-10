@@ -8,7 +8,7 @@ TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
-TB_
+TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 604800
 TB_SHOP_REVENUE_TOPN = 10
 TB_SHOP_REVENUE_THRESHOLD = 10000
 TB_SKU_REVENUE_TOPN = 50
@@ -28,7 +28,7 @@ def analyze_and_add_search_crawl_tasks(search_key, num_of_pages, update_id):
         logger.info(
             f'search crawl task [{query[0].id}] already exist for search_key [{search_key}], just ignore')
         return
-    add_search_crawl_task(search_key, num_of_pages, '', '', update_id,
+    add_search_crawl_task(search_key, num_of_pages, [], {}, update_id,
                           analyze_and_add_search_crawl_tasks.__name__)
 
 
@@ -56,7 +56,7 @@ def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
             continue
         try:
             exist_si = ShopInfo.get(ShopInfo.shop_name == pi.shop_name)
-            add_shop_crawl_task(exist_si.shop_name, None, '', update_id,
+            add_shop_crawl_task(exist_si.shop_name, [], {}, update_id,
                                 analyze_and_add_shop_crawl_tasks.__name__)
         except DoesNotExist:
             logger.error(f'ShopInfo item with shop_name=[{pi.shop_name}] do not exist, just ignore')
@@ -82,7 +82,7 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
             logger.info(
                 f'detail crawl task [{query[0].id}] already exist for product_id [{pi.product_id}], just ignore')
             continue
-        add_detail_crawl_task(pi.product_id, pi.product_link, '', update_id,
+        add_detail_crawl_task(pi.product_id, pi.product_link, {}, update_id,
                               analyze_and_add_detail_crawl_tasks.__name__)
 
 
@@ -104,7 +104,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id):
                                                       ShopSearchCrawlTask.update_ts > shop_search_start_ts).order_by(
                 ShopSearchCrawlTask.update_ts).limit(1)
             if task.count() == 0:
-                add_shop_search_crawl_task(si.shop_name, '', update_id, update_role)
+                add_shop_search_crawl_task(si.shop_name, {}, update_id, update_role)
     # 处理可能的商品问题
     search_start_ts = ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
     shop_start_ts = ts - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
@@ -115,50 +115,45 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id):
         # 处理无销售数量问题，同时添加搜索任务和店铺任务
         if pi.display_sale == -1 or pi.estimated_revenue == -1:
             # 添加搜索任务
-            tasks = SearchCrawlTask.select().where(SearchCrawlTask.shop_name == pi.product_title,
+            tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == pi.product_title,
                                                    SearchCrawlTask.update_ts > search_start_ts).order_by(
-                ShopSearchCrawlTask.update_ts)
+                SearchCrawlTask.update_ts)
             task_existed = False
             for task in tasks:
-                if task.target_product_ids == '':
+                target_product_ids = json_loads(task.target_product_ids)
+                if len(target_product_ids) == 0:
                     task_existed = True
                     break
                 else:
-                    ids = loads(task.target_product_ids)
-                    if pi.product_id in ids:
+                    if pi.product_id in target_product_ids:
                         task_existed = True
                         break
             if not task_existed:
-                add_search_crawl_task(pi.prduct_title, 1, [pi.product_id], '', update_id, update_role)
+                add_search_crawl_task(pi.product_title, 1, [pi.product_id], {}, update_id, update_role)
             # 同时也添加店铺搜索任务
             tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
                                                  ShopCrawlTask.update_ts > shop_start_ts).order_by(
                 ShopCrawlTask.update_ts)
             task_existed = False
             for task in tasks:
-                if task.target_product_ids == '':
+                target_product_ids = json_loads(task.target_product_ids)
+                if len(target_product_ids) == 0:
                     task_existed = True
                     break
                 else:
-                    ids = loads(task.target_product_ids)
-                    if pi.product_id in ids:
+                    if pi.product_id in target_product_ids:
                         task_existed = True
                         break
             if not task_existed:
-                add_shop_crawl_task(pi.shop_name, [pi.product_id], '', update_id, update_role)
+                add_shop_crawl_task(pi.shop_name, [pi.product_id], {}, update_id, update_role)
         # 处理llm_analysis缺失问题
-        additional_properties = pi.additional_properties
-        if additional_properties != '':
-            additional_properties = loads(additional_properties)
-            if LLM_ANALYSIS_KEY not in additional_properties.keys():
-                product_batch.append(Product(id=pi.product_id, title=pi.product_title))
-        else:
+        if LLM_ANALYSIS_KEY not in json_loads(pi.additional_properties):
             product_batch.append(Product(id=pi.product_id, title=pi.product_title))
         if len(product_batch) == LLM_QUERY_BATCH_SIZE:
-            add_llm_analyze_task(product_batch, '', update_id, update_role)
+            add_llm_analyze_task(product_batch, {}, update_id, update_role)
             product_batch = []
     if len(product_batch) > 0:
-        add_llm_analyze_task(product_batch, '', update_id, update_role)
+        add_llm_analyze_task(product_batch, {}, update_id, update_role)
 
 
 # 这里假设商品相关信息已经抓取并更新到product_info表中了，否则不继续进行

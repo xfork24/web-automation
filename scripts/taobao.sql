@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS shop_crawl_task
 CREATE TABLE IF NOT EXISTS search_crawl_task
 (
     id                    varchar(32)   NOT NULL,
-    search_key            varchar(32)   NOT NULL,
+    search_key            varchar(128)   NOT NULL,
     num_of_pages          int           NOT NULL,
     status                tinyint       NOT NULL,
     try_count             int           NOT NULL,
