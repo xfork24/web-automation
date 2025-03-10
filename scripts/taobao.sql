@@ -12,23 +12,23 @@ USE taobao;
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS product_info
 (
-    product_id        varchar(32)   NOT NULL,
-    sku_id            varchar(32)   NOT NULL,
-    product_title     varchar(128)  NOT NULL,
-    product_link      varchar(512)  NOT NULL,
-    shop_name         varchar(128)  NOT NULL,
-    price_unit        varchar(3)    NOT NULL,
-    display_price     int           NOT NULL,
-    display_sale      int           NOT NULL,
-    estimated_revenue int           NOT NULL,
-    title_imgs        varchar(4096) NULL,
-    page_imgs         varchar(4096) NULL,
-    details           varchar(4096) NULL,
-    llm_analysis      varchar(1024) NULL,
-    create_ts         int           NOT NULL,
-    update_ts         int           NOT NULL,
-    update_id         varchar(32)   NOT NULL,
-    update_role       varchar(64)   NOT NULL,
+    product_id            varchar(32)   NOT NULL,
+    sku_id                varchar(32)   NOT NULL,
+    product_title         varchar(128)  NOT NULL,
+    product_link          varchar(512)  NOT NULL,
+    shop_name             varchar(128)  NOT NULL,
+    price_unit            varchar(3)    NOT NULL,
+    display_price         int           NOT NULL,
+    display_sale          int           NOT NULL,
+    estimated_revenue     int           NOT NULL,
+    title_imgs            varchar(2048) NOT NULL,
+    page_imgs             varchar(4096) NOT NULL,
+    details               varchar(4096) NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    create_ts             int           NOT NULL,
+    update_ts             int           NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
     PRIMARY KEY (product_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -38,12 +38,13 @@ CREATE TABLE IF NOT EXISTS product_info
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS shop_info
 (
-    shop_name   varchar(128) NOT NULL,
-    shop_link   varchar(512) NOT NULL,
-    create_ts   int          NOT NULL,
-    update_ts   int          NOT NULL,
-    update_id   varchar(32)  NOT NULL,
-    update_role varchar(64)  NOT NULL,
+    shop_name             varchar(128)  NOT NULL,
+    shop_link             varchar(512)  NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    create_ts             int           NOT NULL,
+    update_ts             int           NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
     PRIMARY KEY (shop_name)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -53,16 +54,17 @@ CREATE TABLE IF NOT EXISTS shop_info
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS product_sale
 (
-    product_id        varchar(32)  NOT NULL,
-    shop_name         varchar(128) NOT NULL,
-    price_unit        varchar(3)   NOT NULL,
-    display_price     int          NOT NULL,
-    display_sale      int          NOT NULL,
-    estimated_revenue int          NOT NULL,
-    create_ts         int          NOT NULL,
-    update_ts         int          NOT NULL,
-    update_id         varchar(32)  NOT NULL,
-    update_role       varchar(64)  NOT NULL,
+    product_id            varchar(32)   NOT NULL,
+    shop_name             varchar(128)  NOT NULL,
+    price_unit            varchar(3)    NOT NULL,
+    display_price         int           NOT NULL,
+    display_sale          int           NOT NULL,
+    estimated_revenue     int           NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    create_ts             int           NOT NULL,
+    update_ts             int           NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
     PRIMARY KEY (product_id, update_ts)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -72,11 +74,12 @@ CREATE TABLE IF NOT EXISTS product_sale
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS hot_product
 (
-    product_id  varchar(32)  NOT NULL,
-    shop_name   varchar(128) NOT NULL,
-    create_ts   int          NOT NULL,
-    update_id   varchar(32)  NOT NULL,
-    update_role varchar(64)  NOT NULL,
+    product_id            varchar(32)   NOT NULL,
+    shop_name             varchar(128)  NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    create_ts             int           NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
     PRIMARY KEY (product_id, create_ts)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -86,14 +89,15 @@ CREATE TABLE IF NOT EXISTS hot_product
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS operation_history
 (
-    id           int          NOT NULL AUTO_INCREMENT,
-    pk           varchar(128) NOT NULL,
-    table_name   varchar(32)  NOT NULL,
-    update_id    varchar(32)  NOT NULL,
-    update_role  varchar(64)  NOT NULL,
-    operation_ts int          NOT NULL,
-    operation    int          NOT NULL,
-    create_ts    int          NOT NULL,
+    id                    int           NOT NULL AUTO_INCREMENT,
+    pk                    varchar(128)  NOT NULL,
+    table_name            varchar(32)   NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
+    operation_ts          int           NOT NULL,
+    operation             int           NOT NULL,
+    create_ts             int           NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -103,15 +107,16 @@ CREATE TABLE IF NOT EXISTS operation_history
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS detail_crawl_task
 (
-    id           varchar(32)  NOT NULL,
-    product_id   varchar(32)  NOT NULL,
-    product_link varchar(512) NOT NULL,
-    status       tinyint      NOT NULL,
-    try_count    int          NOT NULL,
-    create_ts    int          NOT NULL,
-    update_ts    int          NOT NULL,
-    update_id    varchar(32)  NOT NULL,
-    update_role  varchar(64)  NOT NULL,
+    id                    varchar(32)   NOT NULL,
+    product_id            varchar(32)   NOT NULL,
+    product_link          varchar(512)  NOT NULL,
+    status                tinyint       NOT NULL,
+    try_count             int           NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    create_ts             int           NOT NULL,
+    update_ts             int           NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -121,15 +126,16 @@ CREATE TABLE IF NOT EXISTS detail_crawl_task
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS shop_crawl_task
 (
-    id          varchar(32)  NOT NULL,
-    shop_name   varchar(128) NOT NULL,
-    shop_link   varchar(512) NOT NULL,
-    status      tinyint      NOT NULL,
-    try_count   int          NOT NULL,
-    create_ts   int          NOT NULL,
-    update_ts   int          NOT NULL,
-    update_id   varchar(32)  NOT NULL,
-    update_role varchar(64)  NOT NULL,
+    id                    varchar(32)   NOT NULL,
+    shop_name             varchar(128)  NOT NULL,
+    target_product_ids    varchar(1024) NOT NULL,
+    status                tinyint       NOT NULL,
+    try_count             int           NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    create_ts             int           NOT NULL,
+    update_ts             int           NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -139,15 +145,53 @@ CREATE TABLE IF NOT EXISTS shop_crawl_task
 -- --------------------------------
 CREATE TABLE IF NOT EXISTS search_crawl_task
 (
-    id           varchar(32) NOT NULL,
-    search_key   varchar(32) NOT NULL,
-    num_of_pages int         NOT NULL,
-    status       tinyint     NOT NULL,
-    try_count    int         NOT NULL,
-    create_ts    int         NOT NULL,
-    update_ts    int         NOT NULL,
-    update_id    varchar(32) NOT NULL,
-    update_role  varchar(64) NOT NULL,
+    id                    varchar(32)   NOT NULL,
+    search_key            varchar(32)   NOT NULL,
+    num_of_pages          int           NOT NULL,
+    status                tinyint       NOT NULL,
+    try_count             int           NOT NULL,
+    target_product_ids    varchar(1024) NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    create_ts             int           NOT NULL,
+    update_ts             int           NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
+    PRIMARY KEY (id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+-- -------------------------------------
+-- Create shop_search_crawl_task Table
+-- -------------------------------------
+CREATE TABLE IF NOT EXISTS shop_search_crawl_task
+(
+    id                    varchar(32)   NOT NULL,
+    shop_name             varchar(128)  NOT NULL,
+    status                tinyint       NOT NULL,
+    try_count             int           NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    create_ts             int           NOT NULL,
+    update_ts             int           NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
+    PRIMARY KEY (id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+-- --------------------------------
+-- Create llm_analyze_task Table
+-- --------------------------------
+CREATE TABLE IF NOT EXISTS llm_analyze_task
+(
+    id                    varchar(32)   NOT NULL,
+    products              varchar(4096) NOT NULL,
+    status                tinyint       NOT NULL,
+    try_count             int           NOT NULL,
+    additional_properties varchar(2048) NOT NULL,
+    create_ts             int           NOT NULL,
+    update_ts             int           NOT NULL,
+    update_id             varchar(32)   NOT NULL,
+    update_role           varchar(64)   NOT NULL,
     PRIMARY KEY (id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
@@ -225,6 +269,22 @@ ALTER TABLE search_crawl_task
 ALTER TABLE search_crawl_task
     ADD INDEX idx_update_id (update_id);
 
+ALTER TABLE llm_analyze_task
+    ADD INDEX idx_status (status);
+ALTER TABLE llm_analyze_task
+    ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE llm_analyze_task
+    ADD INDEX idx_update_id (update_id);
+
+ALTER TABLE shop_search_crawl_task
+    ADD INDEX idx_shop_name (shop_name);
+ALTER TABLE shop_search_crawl_task
+    ADD INDEX idx_status (status);
+ALTER TABLE shop_search_crawl_task
+    ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE shop_search_crawl_task
+    ADD INDEX idx_update_id (update_id);
+
 ALTER TABLE product_info
     ADD CONSTRAINT fk_product_info_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
 ALTER TABLE product_sale
@@ -239,6 +299,8 @@ ALTER TABLE detail_crawl_task
     ADD CONSTRAINT fk_detail_crawl_task_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
 ALTER TABLE shop_crawl_task
     ADD CONSTRAINT fk_shop_crawl_task_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
+ALTER TABLE shop_search_crawl_task
+    ADD CONSTRAINT fk_shop_search_crawl_task_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
 
 -- --------------------------------------------
 -- Create User taobao And Grant Permissions

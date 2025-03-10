@@ -23,7 +23,8 @@ if __name__ == '__main__':
     login_taobao()
     while True:
         # scan search_crawl_task and get all unfinished tasks
-        start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
+        now_ts = int(time.time())
+        start_ts = now_ts - UPDATE_TIME_PERIOD_IN_SECONDS
         tasks = SearchCrawlTask.select().where(SearchCrawlTask.status != TASK_STATUS_DONE,
                                                SearchCrawlTask.update_ts > start_ts).order_by(
             SearchCrawlTask.update_ts)
@@ -31,7 +32,9 @@ if __name__ == '__main__':
             task.try_count = task.try_count + 1
             update_task_status(task, TASK_STATUS_IN_PROGRESS)
             try:
-                crawl_taobao_search_results(task.search_key, task.num_of_pages, SALE_ORDER, UPDATE_ID)
+                target_product_ids = None if task.target_product_ids == '' else loads(task.target_product_ids)
+                crawl_taobao_search_results(task.search_key, task.num_of_pages, SALE_ORDER, UPDATE_ID,
+                                            target_product_ids)
             except Exception:
                 logger.error(
                     f'get unhandled exception while crawling search key [{task.search_key}] for {task.num_of_pages} pages')
@@ -40,4 +43,5 @@ if __name__ == '__main__':
                 continue
             update_task_status(task, TASK_STATUS_DONE)
             time.sleep(SEARCH_CRAWL_GAP_IN_SECONDS)
+        analyze_and_generate_fix_tasks(now_ts, UPDATE_ID)
         time.sleep(SEARCH_SCAN_NAP_IN_SECONDS)

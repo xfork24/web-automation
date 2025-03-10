@@ -3,7 +3,7 @@
 
 import time
 from pydantic import constr, BaseModel
-from json import dumps
+from json import dumps, loads
 from typing import List
 from groq import Groq
 
@@ -13,6 +13,7 @@ from taobao.models import ProductInfo
 LLM_MODEL = 'deepseek-r1-distill-llama-70b'
 GROQ_KEY = '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'
 GROQ_TIMEOUT_IN_SECONDS = 60
+LLM_ANALYSIS_KEY = 'llm_analysis'
 MAX_KEYWORD_SIZE = 1
 MAX_CATEGORY_SIZE = 1
 KEYWORD_NAME_MAX_LENGTH = 32  # 这里给出足够的长度，因为有可能有长英文，大模型并不总会强制应用字符限制
@@ -149,14 +150,21 @@ def update_product_llm_analysis_batch(products, update_id):
     ts = int(time.time())
     for record in response.infos:
         llm_analysis = {
-            'keyword': record.keyword,
-            'category': record.category,
-            'digital': record.digital,
+            "keyword": record.keyword,
+            "category": record.category,
+            "digital": record.digital,
         }
         logger.info(f'update product [{record.id}] with llm_analysis = {llm_analysis}')
-        exist_ci = ProductInfo.get(ProductInfo.product_id == record.id)
-        exist_ci.llm_analysis = llm_analysis
-        exist_ci.update_id = update_id
-        exist_ci.update_role = update_product_llm_analysis_batch.__name__
-        exist_ci.update_ts = ts
-        exist_ci.save()
+        exist_pi = ProductInfo.get(ProductInfo.product_id == record.id)
+        if exist_pi.additional_properties == '':
+            exist_pi.additional_properties = {
+                LLM_ANALYSIS_KEY: llm_analysis
+            }
+        else:
+            additional_properties = loads(exist_pi.additional_properties)
+            additional_properties[LLM_ANALYSIS_KEY] = llm_analysis
+            exist_pi.additional_properties = additional_properties
+        exist_pi.update_id = update_id
+        exist_pi.update_role = update_product_llm_analysis_batch.__name__
+        exist_pi.update_ts = ts
+        exist_pi.save()

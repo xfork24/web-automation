@@ -53,7 +53,6 @@ SHOP_SKU_CARD_PRICE_RE_EXP = re.compile('^price--\\w+')
 SHOP_SKU_CARD_SALE_RE_EXP = re.compile('^count--\\w+')
 SHOP_LOAD_MORE_FLAG_RE_EXP = re.compile('^loadmoreFlag--\\w+')
 SHOP_LOAD_STATUS_RE_EXP = re.compile('^loadStatus--\\w+')
-SHOP_LINK_RE_EXP = re.compile('^https://store.taobao.com/shop/view_shop.htm')
 
 
 class WebDriverType(Enum):
@@ -211,7 +210,7 @@ def craw_taobao_search_page(qstring, num_of_pages, sale_order, update_id):
     crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id)
 
 
-def crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id):
+def crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id, target_product_ids=None):
     logger = get_logger()
     logger.info(f'navigate to taobao search page and enter search string: {qstring}')
     Driver.get(TB_SEARCH_PAGE)
@@ -241,7 +240,7 @@ def crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id):
             search_results = search_result_wrapper.find_elements(By.XPATH, 'div/a')
             logger.info(f'find {len(search_results)} search results')
             for search_result in search_results:
-                parse_taobao_search_result(search_result, ids_set, update_id)
+                parse_taobao_search_result(search_result, ids_set, update_id, target_product_ids)
             btn_pages = Driver.find_elements(By.CLASS_NAME, 'next-pagination-pages')
             assert (len(btn_pages) >= 1)  # 至少下面会有一个导航栏
             btn_list = btn_pages[-1].find_elements(By.XPATH, 'button')
@@ -259,12 +258,17 @@ def crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id):
             break
 
 
-def parse_taobao_search_result(search_result, ids_set, update_id):
+def parse_taobao_search_result(search_result, ids_set, update_id, target_product_ids=None):
     logger = get_logger()
     try:
         logger.info(f'parsing search result: {search_result.accessible_name}')
         item_id = search_result.get_attribute('id')
+        product_id = parse_product_id_from_item(item_id)
+        if target_product_ids is not None and product_id not in target_product_ids:
+            logger.info(f'product_id [{product_id}] not in target_product_ids {target_product_ids}, just ignore')
+            return
         product_link = search_result.get_attribute('href')
+        sku_id = parse_sku_id_from_product_link(product_link) or '0'
         product_items = search_result.find_elements(By.XPATH, 'div/div')
         assert (len(product_items) == 3)
         sku_summary = None
@@ -303,8 +307,6 @@ def parse_taobao_search_result(search_result, ids_set, update_id):
         shop_link = shop_link if shop_link is not None else ''
         shop_name_wrapper = shop_info.find_elements(By.XPATH, 'div/span')
         shop_name = shop_name_wrapper[-1].text
-        product_id = parse_product_id_from_item(item_id)
-        sku_id = parse_sku_id_from_product_link(product_link) or '0'
         if product_id not in ids_set:
             save_taobao_search_result(product_id, sku_id, product_title, product_link,
                                       shop_name, shop_link,
@@ -325,7 +327,7 @@ def save_taobao_search_result(product_id, sku_id, product_title, product_link, s
     # save shop info
     update_role = save_taobao_search_result.__name__
     # save shop info
-    update_shop_info(shop_name, shop_link, update_id, update_role)
+    update_shop_info(shop_name, shop_link, '', update_id, update_role)
     # save product info
     update_product_info(product_id, sku_id, product_title, product_link, shop_name,
                         price_unit, display_price, display_sale,
@@ -335,7 +337,7 @@ def save_taobao_search_result(product_id, sku_id, product_title, product_link, s
     # remember there can be same product in different search pages,
     # we only add one sale record for same product in one search process.
     add_product_sale(product_id, shop_name,
-                     price_unit, display_price, display_sale,
+                     price_unit, display_price, display_sale, '',
                      update_id, update_role)
 
 
@@ -476,8 +478,8 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
                             title_images, main_images, product_details, '',
                             update_id, update_role)
         if update_sale:
-            add_product_sale(product_id, shop_name, price_unit, lowest_price, sale_val, update_id, update_role)
-        update_shop_info(shop_name, shop_link, update_id, update_role)
+            add_product_sale(product_id, shop_name, price_unit, lowest_price, sale_val, '', update_id, update_role)
+        update_shop_info(shop_name, shop_link, '', update_id, update_role)
 
 
 def craw_taobao_sku_prices(value_items_divs, sku_price_div):
@@ -601,7 +603,7 @@ def craw_taobao_shop_page_results(shop_link, update_id, target_product_ids=None)
             shop_name_div = div
     assert (shop_name_div is not None)
     shop_name = shop_name_div.find_element(By.XPATH, 'span').text
-    update_shop_info(shop_name, shop_link, update_id, craw_taobao_shop_page_results.__name__)
+    update_shop_info(shop_name, shop_link, '', update_id, craw_taobao_shop_page_results.__name__)
     for shop_sku_div in shop_sku_divs:
         try:
             craw_taobao_shop_sku_result(shop_sku_div, shop_name, update_id, target_product_ids)
@@ -648,7 +650,7 @@ def craw_taobao_shop_sku_result(shop_sku_div, shop_name, update_id, target_produ
                         price_unit, price_val, product_sale,
                         '', '', '', '',
                         update_id, update_role)
-    add_product_sale(product_id, shop_name, price_unit, price_val, product_sale, update_id, update_role)
+    add_product_sale(product_id, shop_name, price_unit, price_val, product_sale, '', update_id, update_role)
 
 
 def update_shop_link_by_search(shop_name, update_id):
@@ -695,7 +697,7 @@ def update_shop_link_by_search_results(shop_name, update_id):
             break
     if shop_link is not None:
         logger.info(f'update shop [{shop_name}] link to {shop_link}')
-        update_shop_info(shop_name, shop_link, update_id, update_shop_link_by_search_results.__name__)
+        update_shop_info(shop_name, shop_link, '', update_id, update_shop_link_by_search_results.__name__)
 
 
 def parse_price_span(price_span, product_id):

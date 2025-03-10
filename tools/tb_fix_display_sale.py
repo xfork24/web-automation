@@ -20,10 +20,10 @@ if __name__ == '__main__':
     # 先用搜索法
     query = ProductInfo.select().where(ProductInfo.display_sale == -1,
                                        ProductInfo.update_ts > start_ts).order_by(ProductInfo.update_ts)
-    ill_product_titles = [ci.product_title for ci in query]
-    for ill_product_title in ill_product_titles:
+    ill_product_titles = [(ci.product_id, ci.product_title) for ci in query]
+    for ill_product_id, ill_product_title in ill_product_titles:
         try:
-            crawl_taobao_search_results(ill_product_title, 1, SALE_ORDER, UPDATE_ID)
+            crawl_taobao_search_results(ill_product_title, 1, SALE_ORDER, UPDATE_ID, [ill_product_id])
         except Exception:
             logger.error(
                 f'get unhandled exception while crawling search key [{ill_product_title}]')

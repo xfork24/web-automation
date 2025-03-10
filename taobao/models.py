@@ -1,6 +1,7 @@
 # coding: utf-8
 # !./bin/python
 
+import re
 import time
 from uuid import uuid4
 from peewee import *
@@ -21,6 +22,8 @@ TASK_STATUS_NEW = 1
 TASK_STATUS_IN_PROGRESS = 2
 TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
+
+SHOP_LINK_RE_EXP = re.compile('^https://store.taobao.com/shop/view_shop.htm')
 
 DB = MySQLDatabase(DB_NAME,
                    host=DB_HOST,
@@ -55,7 +58,7 @@ class ProductInfo(BaseModel):
     title_imgs = CharField(max_length=4096)
     page_imgs = CharField(max_length=4096)
     details = CharField(max_length=4096)
-    llm_analysis = CharField(max_length=1024)
+    additional_properties = CharField(max_length=2048)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -68,6 +71,7 @@ class ProductInfo(BaseModel):
 class ShopInfo(BaseModel):
     shop_name = CharField(max_length=128, primary_key=True)
     shop_link = CharField(max_length=512)
+    additional_properties = CharField(max_length=2048)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -84,6 +88,7 @@ class ProductSale(BaseModel):
     display_price = IntegerField()
     display_sale = IntegerField(index=True)
     estimated_revenue = IntegerField(index=True)
+    additional_properties = CharField(max_length=2048)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -97,6 +102,7 @@ class ProductSale(BaseModel):
 class HotProduct(BaseModel):
     product_id = CharField(max_length=32)
     shop_name = CharField(max_length=128)
+    additional_properties = CharField(max_length=2048)
     create_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
@@ -110,6 +116,7 @@ class OperationHistory(BaseModel):
     id = CharField(max_length=32)
     pk = CharField(max_length=128)
     table_name = CharField(max_length=32)
+    additional_properties = CharField(max_length=2048)
     update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
     operation_ts = IntegerField()
@@ -130,6 +137,7 @@ class DetailCrawlTask(BaseModel):
     product_link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
+    additional_properties = CharField(max_length=2048)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -142,9 +150,10 @@ class DetailCrawlTask(BaseModel):
 class ShopCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
     shop_name = CharField(max_length=128, index=True)
-    shop_link = CharField(max_length=512)
+    target_product_ids = CharField(max_length=1024)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
+    additional_properties = CharField(max_length=2048)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -158,8 +167,10 @@ class SearchCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
     search_key = CharField(max_length=32, index=True)
     num_of_pages = IntegerField()
+    target_product_ids = CharField(max_length=1024)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
+    additional_properties = CharField(max_length=2048)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -169,9 +180,39 @@ class SearchCrawlTask(BaseModel):
         table_name = 'search_crawl_task'
 
 
+class LLMAnalyzeTask(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    products = CharField(max_length=4096)
+    status = SmallIntegerField(index=True)
+    try_count = IntegerField()
+    additional_properties = CharField(max_length=2048)
+    create_ts = IntegerField()
+    update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
+    update_role = CharField(max_length=64)
+
+    class Meta:
+        table_name = 'llm_analyze_task'
+
+
+class ShopSearchCrawlTask(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    shop_name = CharField(max_length=128, index=True)
+    status = SmallIntegerField(index=True)
+    try_count = IntegerField()
+    additional_properties = CharField(max_length=2048)
+    create_ts = IntegerField()
+    update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
+    update_role = CharField(max_length=64)
+
+    class Meta:
+        table_name = 'shop_search_crawl_task'
+
+
 def update_product_info(product_id, sku_id, product_title, product_link, shop_name,
                         price_unit, display_price, display_sale,
-                        title_imgs, page_imgs, details, llm_analysis, update_id, update_role):
+                        title_imgs, page_imgs, details, additional_properties, update_id, update_role):
     # update product_info table
     logger = get_logger()
     ts = int(time.time())
@@ -179,50 +220,50 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
     estimated_revenue = -1 if estimated_revenue < 0 else estimated_revenue
     try:
         # if record already exists, update only if value is valid
-        exist_ci = ProductInfo.get(ProductInfo.product_id == product_id)
-        exist_ci.sku_id = sku_id if sku_id != '' else exist_ci.sku_id
-        exist_ci.product_title = product_title if product_id != '' else exist_ci.product_title
-        exist_ci.product_link = product_link if product_link != '' else exist_ci.product_link
-        exist_ci.shop_name = shop_name if shop_name != '' else exist_ci.shop_name
-        exist_ci.price_unit = price_unit if price_unit != '' else exist_ci.price_unit
-        exist_ci.display_price = display_price if display_price != -1 else exist_ci.display_price
-        exist_ci.display_sale = display_sale if display_sale != -1 else exist_ci.display_sale
-        exist_ci.estimated_revenue = estimated_revenue if estimated_revenue != -1 else exist_ci.estimated_revenue
-        exist_ci.title_imgs = title_imgs if title_imgs != '' else exist_ci.title_imgs
-        exist_ci.page_imgs = page_imgs if page_imgs != '' else exist_ci.page_imgs
-        exist_ci.details = details if details != '' else exist_ci.details
-        exist_ci.llm_analysis = llm_analysis if llm_analysis != '' else exist_ci.llm_analysis
-        exist_ci.update_ts = ts
-        exist_ci.update_id = update_id
-        exist_ci.update_role = update_role
-        exist_ci.save()
-        logger.info(f'exist product info record updated: {exist_ci.to_dict()}')
-        add_operation_history(product_id, exist_ci.table_name(), update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
+        exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
+        exist_pi.sku_id = sku_id if sku_id != '' else exist_pi.sku_id
+        exist_pi.product_title = product_title if product_id != '' else exist_pi.product_title
+        exist_pi.product_link = product_link if product_link != '' else exist_pi.product_link
+        exist_pi.shop_name = shop_name if shop_name != '' else exist_pi.shop_name
+        exist_pi.price_unit = price_unit if price_unit != '' else exist_pi.price_unit
+        exist_pi.display_price = display_price if display_price != -1 else exist_pi.display_price
+        exist_pi.display_sale = display_sale if display_sale != -1 else exist_pi.display_sale
+        exist_pi.estimated_revenue = estimated_revenue if estimated_revenue != -1 else exist_pi.estimated_revenue
+        exist_pi.title_imgs = title_imgs if title_imgs != '' else exist_pi.title_imgs
+        exist_pi.page_imgs = page_imgs if page_imgs != '' else exist_pi.page_imgs
+        exist_pi.details = details if details != '' else exist_pi.details
+        exist_pi.additional_properties = additional_properties if additional_properties != '' else exist_pi.additional_properties
+        exist_pi.update_ts = ts
+        exist_pi.update_id = update_id
+        exist_pi.update_role = update_role
+        exist_pi.save()
+        logger.info(f'exist product info record updated: {exist_pi.to_dict()}')
+        add_operation_history(product_id, exist_pi.table_name(), '', update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
-        new_ci = ProductInfo()
-        new_ci.product_id = product_id
-        new_ci.sku_id = sku_id
-        new_ci.product_title = product_title
-        new_ci.product_link = product_link
-        new_ci.shop_name = shop_name
-        new_ci.price_unit = price_unit
-        new_ci.display_price = display_price
-        new_ci.display_sale = display_sale
-        new_ci.estimated_revenue = estimated_revenue
-        new_ci.title_imgs = title_imgs
-        new_ci.page_imgs = page_imgs
-        new_ci.details = details
-        new_ci.llm_analysis = llm_analysis
-        new_ci.create_ts = ts
-        new_ci.update_ts = ts
-        new_ci.update_id = update_id
-        new_ci.update_role = update_role
-        new_ci.save(force_insert=True)
-        logger.info(f'new product info record inserted: {new_ci.to_dict()}')
-        add_operation_history(product_id, new_ci.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
+        new_pi = ProductInfo()
+        new_pi.product_id = product_id
+        new_pi.sku_id = sku_id
+        new_pi.product_title = product_title
+        new_pi.product_link = product_link
+        new_pi.shop_name = shop_name
+        new_pi.price_unit = price_unit
+        new_pi.display_price = display_price
+        new_pi.display_sale = display_sale
+        new_pi.estimated_revenue = estimated_revenue
+        new_pi.title_imgs = title_imgs
+        new_pi.page_imgs = page_imgs
+        new_pi.details = details
+        new_pi.additional_properties = additional_properties if additional_properties != '' else new_pi.additional_properties
+        new_pi.create_ts = ts
+        new_pi.update_ts = ts
+        new_pi.update_id = update_id
+        new_pi.update_role = update_role
+        new_pi.save(force_insert=True)
+        logger.info(f'new product info record inserted: {new_pi.to_dict()}')
+        add_operation_history(product_id, new_pi.table_name(), '', update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_shop_info(shop_name, shop_link, update_id, update_role):
+def update_shop_info(shop_name, shop_link, additional_properties, update_id, update_role):
     # update shop_info table
     logger = get_logger()
     ts = int(time.time())
@@ -230,28 +271,30 @@ def update_shop_info(shop_name, shop_link, update_id, update_role):
         # update only when value is valid
         exist_si = ShopInfo.get(ShopInfo.shop_name == shop_name)
         exist_si.shop_link = shop_link if shop_link != '' else exist_si.shop_link
+        exist_si.additional_properties = additional_properties if additional_properties != '' else exist_si.additional_properties
         exist_si.update_ts = ts
         exist_si.update_id = update_id
         exist_si.update_role = update_role
         exist_si.save()
         logger.info(f'exist shop info record updated: {exist_si.to_dict()}')
-        add_operation_history(shop_name, exist_si.table_name(), update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
+        add_operation_history(shop_name, exist_si.table_name(), '', update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_si = ShopInfo()
         new_si.shop_name = shop_name
         new_si.shop_link = shop_link
+        new_si.additional_properties = additional_properties if additional_properties != '' else new_si.additional_properties
         new_si.create_ts = ts
         new_si.update_ts = ts
         new_si.update_id = update_id
         new_si.update_role = update_role
         new_si.save(force_insert=True)
         logger.info(f'new shop info record inserted: {new_si.to_dict()}')
-        add_operation_history(shop_name, new_si.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
+        add_operation_history(shop_name, new_si.table_name(), '', update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def add_product_sale(product_id, shop_name,
                      price_unit, display_price, display_sale,
-                     update_id, update_role):
+                     additional_properties, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     estimated_revenue = display_price * display_sale
@@ -261,28 +304,30 @@ def add_product_sale(product_id, shop_name,
         ProductSale.get(ProductSale.product_id == product_id, ProductSale.update_ts == ts)
         logger.error(f'product sale record already exist, id = {product_id} and update_ts = {ts}, just ignore')
     except DoesNotExist:
-        new_cs = ProductSale()
-        new_cs.product_id = product_id
-        new_cs.shop_name = shop_name
-        new_cs.price_unit = price_unit
-        new_cs.display_price = display_price
-        new_cs.display_sale = display_sale
-        new_cs.estimated_revenue = estimated_revenue
-        new_cs.create_ts = ts
-        new_cs.update_ts = ts
-        new_cs.update_id = update_id
-        new_cs.update_role = update_role
-        new_cs.save(force_insert=True)
-        logger.info(f'new product sale record inserted: {new_cs.to_dict()}')
-        add_operation_history(f'{product_id},{ts}', new_cs.table_name(), update_id, update_role, ts,
+        new_ps = ProductSale()
+        new_ps.product_id = product_id
+        new_ps.shop_name = shop_name
+        new_ps.price_unit = price_unit
+        new_ps.display_price = display_price
+        new_ps.display_sale = display_sale
+        new_ps.estimated_revenue = estimated_revenue
+        new_ps.additional_properties = additional_properties
+        new_ps.create_ts = ts
+        new_ps.update_ts = ts
+        new_ps.update_id = update_id
+        new_ps.update_role = update_role
+        new_ps.save(force_insert=True)
+        logger.info(f'new product sale record inserted: {new_ps.to_dict()}')
+        add_operation_history(f'{product_id},{ts}', new_ps.table_name(), '', update_id, update_role, ts,
                               DB_OPS_CREATE_NEW)
 
 
-def add_operation_history(pk, table_name, update_id, update_role, operation_ts, operation):
+def add_operation_history(pk, table_name, additional_properties, update_id, update_role, operation_ts, operation):
     logger = get_logger()
     new_oh = OperationHistory()
     new_oh.pk = pk
     new_oh.table_name = table_name
+    new_oh.additional_properties = additional_properties
     new_oh.update_id = update_id
     new_oh.update_role = update_role
     new_oh.operation_ts = operation_ts
@@ -292,7 +337,7 @@ def add_operation_history(pk, table_name, update_id, update_role, operation_ts, 
     logger.info(f'new operation history record inserted: {new_oh.to_dict()}')
 
 
-def add_detail_crawl_task(product_id, link, status, update_id, update_role):
+def add_detail_crawl_task(product_id, link, additional_properties, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     pk = uuid4().hex
@@ -300,37 +345,40 @@ def add_detail_crawl_task(product_id, link, status, update_id, update_role):
     new_dct.id = pk
     new_dct.product_id = product_id
     new_dct.product_link = link
-    new_dct.status = status
+    new_dct.status = TASK_STATUS_NEW
     new_dct.try_count = 0
+    new_dct.additional_properties = additional_properties
     new_dct.create_ts = ts
     new_dct.update_ts = ts
     new_dct.update_id = update_id
     new_dct.update_role = update_role
     new_dct.save(force_insert=True)
     logger.info(f'new detail crawl task record inserted: {new_dct.to_dict()}')
-    add_operation_history(pk, new_dct.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_dct.table_name(), '', update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def add_shop_crawl_task(shop_name, shop_link, status, update_id, update_role):
+def add_shop_crawl_task(shop_name, target_product_ids, additional_properties, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     pk = uuid4().hex
     new_sct = ShopCrawlTask()
     new_sct.id = pk
     new_sct.shop_name = shop_name
-    new_sct.product_link = shop_link
-    new_sct.status = status
+    new_sct.target_product_ids = target_product_ids
+    new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
+    new_sct.additional_properties = additional_properties
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id
     new_sct.update_role = update_role
     new_sct.save(force_insert=True)
     logger.info(f'new shop crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_sct.table_name(), '', update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def add_search_crawl_task(search_key, num_of_pages, status, update_id, update_role):
+def add_search_crawl_task(search_key, num_of_pages, target_product_ids, additional_properties, update_id,
+                          update_role):
     logger = get_logger()
     ts = int(time.time())
     pk = uuid4().hex
@@ -338,12 +386,52 @@ def add_search_crawl_task(search_key, num_of_pages, status, update_id, update_ro
     new_sct.id = pk
     new_sct.search_key = search_key
     new_sct.num_of_pages = num_of_pages
-    new_sct.status = status
+    new_sct.target_product_ids = target_product_ids
+    new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
+    new_sct.additional_properties = additional_properties
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id
     new_sct.update_role = update_role
     new_sct.save(force_insert=True)
     logger.info(f'new search crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_sct.table_name(), '', update_id, update_role, ts, DB_OPS_CREATE_NEW)
+
+
+def add_llm_analyze_task(products, additional_properties, update_id, update_role):
+    logger = get_logger()
+    ts = int(time.time())
+    pk = uuid4().hex
+    new_lat = LLMAnalyzeTask()
+    new_lat.id = pk
+    new_lat.products = products
+    new_lat.status = TASK_STATUS_NEW
+    new_lat.try_count = 0
+    new_lat.additional_properties = additional_properties
+    new_lat.create_ts = ts
+    new_lat.update_ts = ts
+    new_lat.update_id = update_id
+    new_lat.update_role = update_role
+    new_lat.save(force_insert=True)
+    logger.info(f'new llm analyze task record inserted: {new_lat.to_dict()}')
+    add_operation_history(pk, new_lat.table_name(), '', update_id, update_role, ts, DB_OPS_CREATE_NEW)
+
+
+def add_shop_search_crawl_task(shop_name, additional_properties, update_id, update_role):
+    logger = get_logger()
+    ts = int(time.time())
+    pk = uuid4().hex
+    new_sct = ShopSearchCrawlTask()
+    new_sct.id = pk
+    new_sct.shop_name = shop_name
+    new_sct.status = TASK_STATUS_NEW
+    new_sct.try_count = 0
+    new_sct.additional_properties = additional_properties
+    new_sct.create_ts = ts
+    new_sct.update_ts = ts
+    new_sct.update_id = update_id
+    new_sct.update_role = update_role
+    new_sct.save(force_insert=True)
+    logger.info(f'new shop search crawl task record inserted: {new_sct.to_dict()}')
+    add_operation_history(pk, new_sct.table_name(), '', update_id, update_role, ts, DB_OPS_CREATE_NEW)
