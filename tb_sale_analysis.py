@@ -6,12 +6,11 @@ from taobao import *
 
 LOG_FILE_NAME = './logs/tb_sales_analysis.log'
 UPDATE_ID = 'tb_sale_analysis'
-# DEFAULT_SEARCH_KEYS = [('教程', 5),
-#                        ('影视', 5),
-#                        ('音乐', 5),
-#                        ('素材', 5),
-#                        ('自动发货', 5), ]
-DEFAULT_SEARCH_KEYS = [('教程', 5)]
+DEFAULT_SEARCH_KEYS = [('教程', 5),
+                       ('影视', 5),
+                       ('音乐', 5),
+                       ('素材', 5),
+                       ('自动发货', 5), ]
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)

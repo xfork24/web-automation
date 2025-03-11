@@ -32,6 +32,8 @@ MAX_SKU_ITEMS_NUM = 5
 TB_GO_LOGIN_RE_EXP = re.compile('^GoLoginInfo--\\w+')
 SEARCH_SHOP_TAB_RE_EXP = re.compile('^baseStyle--\\w+')
 SKU_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
+SKU_SEARCH_UNIT_RE_EXP = re.compile('^unit--\\w+')
+SKU_SEARCH_SALE_RE_EXP = re.compile('^realSales--\\w+')
 SKU_SHOP_INFO_RE_EXP = re.compile('^shopInfo--\\w+')
 SKU_ITEMS_RE_EXP = re.compile('^skuItem--\\w+')
 SKU_INNER_ITEMS_RE_EXP = re.compile('^content--\\w+')
@@ -241,12 +243,13 @@ def crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id, ta
             logger.info(f'find {len(search_results)} search results')
             for search_result in search_results:
                 parse_taobao_search_result(search_result, ids_set, update_id, target_product_ids)
-            btn_pages = Driver.find_elements(By.CLASS_NAME, 'next-pagination-pages')
-            assert (len(btn_pages) >= 1)  # 至少下面会有一个导航栏
-            btn_list = btn_pages[-1].find_elements(By.XPATH, 'button')
-            assert (len(btn_list) == 3)  # 下面导航栏里直属三个按钮：上一页，下一页，确定
-            logger.info(f'get search results for page {page + 1} by press next page')
-            btn_list[1].click()
+            if page < num_of_pages:
+                btn_pages = Driver.find_elements(By.CLASS_NAME, 'next-pagination-pages')
+                assert (len(btn_pages) >= 1)  # 至少下面会有一个导航栏
+                btn_list = btn_pages[-1].find_elements(By.XPATH, 'button')
+                assert (len(btn_list) == 3)  # 下面导航栏里直属三个按钮：上一页，下一页，确定
+                logger.info(f'get search [{qstring}] results for page {page + 1} by press next page')
+                btn_list[1].click()
         except AssertionError:
             logger.error(
                 'assertion failed in search result page, just stop crawling, it is ok for single product search')
@@ -292,13 +295,22 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
         sku_title_inner = sku_title_wrapper.find_element(By.XPATH, 'div/span')
         product_title = sku_title_inner.text
         price_spans = price_wrapper.find_elements(By.XPATH, 'div/span')
-        assert (len(price_spans) == 2)
+        assert (len(price_spans) >= 2)
+        price_unit_span = None
+        display_sale_span = None
+        for span in price_spans:
+            cls_name = span.get_attribute('class')
+            if cls_name is None:
+                continue
+            elif re.match(SKU_SEARCH_UNIT_RE_EXP, cls_name):
+                price_unit_span = span
+            elif re.match(SKU_SEARCH_SALE_RE_EXP, cls_name):
+                display_sale_span = span
+        assert (price_unit_span is not None and display_sale_span is not None)
+        price_unit = parse_price_unit(price_unit_span.text)
+        display_sale = parse_sale_in_search(display_sale_span.text)
         price_divs_wrapper = price_wrapper.find_elements(By.XPATH, 'div/div')
         assert (len(price_divs_wrapper) >= 2)
-        price_unit = price_spans[0].text
-        price_unit = parse_price_unit(price_unit)
-        display_sale = price_spans[1].text
-        display_sale = parse_sale_in_search(display_sale)
         price_divs_inner = price_divs_wrapper[0].find_elements(By.XPATH, 'div')
         assert (len(price_divs_inner) == 2)
         display_price = '%s%s' % (price_divs_inner[0].text, price_divs_inner[1].text)

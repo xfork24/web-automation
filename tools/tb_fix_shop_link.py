@@ -16,5 +16,5 @@ if __name__ == '__main__':
     start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
     shops = ShopInfo.select().where(ShopInfo.update_ts > start_ts).order_by(ShopInfo.update_ts)
     for shop in shops:
-        if not re.match(SHOP_LINK_RE_EXP, shop.shop_link):
+        if not re.match(SHOP_LINK_RE_EXP_LIST, shop.shop_link):
             crawl_shop_link_by_search_results(shop.shop_name, UPDATE_ID)

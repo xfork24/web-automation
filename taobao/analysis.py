@@ -98,7 +98,12 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id):
     shop_search_start_ts = ts - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
     si_query = ShopInfo.select().where(ShopInfo.update_ts > batch_ts).order_by(ShopInfo.update_ts)
     for si in si_query:
-        if not re.match(SHOP_LINK_RE_EXP, si.shop_link):
+        shop_link_match = False
+        for reg_exp in SHOP_LINK_RE_EXP_LIST:
+            if re.match(reg_exp, si.shop_link):
+                shop_link_match = True
+                break
+        if not shop_link_match:
             task = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == si.shop_name,
                                                       ShopSearchCrawlTask.update_ts > shop_search_start_ts).order_by(
                 ShopSearchCrawlTask.update_ts).limit(1)
@@ -109,7 +114,6 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id):
     shop_start_ts = ts - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
     pi_query = ProductInfo.select().where(ProductInfo.update_ts > batch_ts).order_by(
         ProductInfo.update_ts)
-    product_batch = []
     for pi in pi_query:
         # 处理无销售数量问题，同时添加搜索任务和店铺任务
         if pi.display_sale == -1 or pi.estimated_revenue == -1:
