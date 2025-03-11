@@ -147,7 +147,10 @@ def update_product_llm_analysis_batch(products, update_id):
     logger = get_logger()
     response = parse_product_list_by_dsr1_70b(products)
     ts = int(time.time())
+    # 神奇的LLM有时并不会处理所有记录
+    id_set = set()
     for record in response.infos:
+        id_set.add(record.id)
         llm_analysis = {
             "keyword": record.keyword,
             "category": record.category,
@@ -162,3 +165,4 @@ def update_product_llm_analysis_batch(products, update_id):
         exist_pi.update_role = update_product_llm_analysis_batch.__name__
         exist_pi.update_ts = ts
         exist_pi.save()
+    return id_set

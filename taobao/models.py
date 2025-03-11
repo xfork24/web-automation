@@ -231,12 +231,16 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
         exist_pi.price_unit = price_unit if price_unit != '' else exist_pi.price_unit
         exist_pi.display_price = display_price if display_price != -1 else exist_pi.display_price
         exist_pi.display_sale = display_sale if display_sale != -1 else exist_pi.display_sale
-        exist_pi.estimated_revenue = estimated_revenue if estimated_revenue != -1 else exist_pi.estimated_revenue
-        exist_pi.title_imgs = json_dumps(title_imgs) if title_imgs is not None else exist_pi.title_imgs
-        exist_pi.page_imgs = json_dumps(page_imgs) if page_imgs is not None else exist_pi.page_imgs
-        exist_pi.details = json_dumps(details) if details is not None else exist_pi.details
-        exist_pi.additional_properties = json_dumps(
-            additional_properties) if additional_properties is not None else exist_pi.additional_properties
+        if estimated_revenue != -1:
+            exist_pi.estimated_revenue = estimated_revenue
+        if title_imgs is not None:
+            exist_pi.title_imgs = json_dumps(title_imgs)
+        if page_imgs is not None:
+            exist_pi.page_imgs = json_dumps(page_imgs)
+        if details is not None:
+            exist_pi.details = json_dumps(details)
+        if additional_properties is not None:
+            exist_pi.additional_properties = json_dumps(additional_properties)
         exist_pi.update_ts = ts
         exist_pi.update_id = update_id
         exist_pi.update_role = update_role
@@ -254,11 +258,22 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
         new_pi.display_price = display_price
         new_pi.display_sale = display_sale
         new_pi.estimated_revenue = estimated_revenue
-        new_pi.title_imgs = json_dumps(title_imgs) if title_imgs is not None else json_dumps({})
-        new_pi.page_imgs = json_dumps(page_imgs) if page_imgs is not None else json_dumps({})
-        new_pi.details = json_dumps(details) if details is not None else json_dumps({})
-        new_pi.additional_properties = json_dumps(
-            additional_properties) if additional_properties is not None else json_dumps({})
+        if title_imgs is not None:
+            new_pi.title_imgs = json_dumps(title_imgs)
+        else:
+            new_pi.title_imgs = json_dumps({})
+        if page_imgs is not None:
+            new_pi.page_imgs = json_dumps(page_imgs)
+        else:
+            new_pi.page_imgs = json_dumps({})
+        if details is not None:
+            new_pi.details = json_dumps(details)
+        else:
+            new_pi.details = json_dumps({})
+        if additional_properties is not None:
+            new_pi.additional_properties = json_dumps(additional_properties)
+        else:
+            new_pi.additional_properties = json_dumps({})
         new_pi.create_ts = ts
         new_pi.update_ts = ts
         new_pi.update_id = update_id
@@ -276,8 +291,8 @@ def update_shop_info(shop_name, shop_link, additional_properties, update_id, upd
         # update only when value is valid
         exist_si = ShopInfo.get(ShopInfo.shop_name == shop_name)
         exist_si.shop_link = shop_link if shop_link != '' else exist_si.shop_link
-        exist_si.additional_properties = json_dumps(
-            additional_properties) if additional_properties is not None else exist_si.additional_properties
+        if additional_properties is not None:
+            exist_si.additional_properties = json_dumps(additional_properties)
         exist_si.update_ts = ts
         exist_si.update_id = update_id
         exist_si.update_role = update_role
@@ -288,8 +303,10 @@ def update_shop_info(shop_name, shop_link, additional_properties, update_id, upd
         new_si = ShopInfo()
         new_si.shop_name = shop_name
         new_si.shop_link = shop_link
-        new_si.additional_properties = json_dumps(
-            additional_properties) if additional_properties is not None else json_dumps({})
+        if additional_properties is not None:
+            new_si.additional_properties = json_dumps(additional_properties)
+        else:
+            new_si.additional_properties = json_dumps({})
         new_si.create_ts = ts
         new_si.update_ts = ts
         new_si.update_id = update_id
@@ -318,8 +335,10 @@ def add_product_sale(product_id, shop_name,
         new_ps.display_price = display_price
         new_ps.display_sale = display_sale
         new_ps.estimated_revenue = estimated_revenue
-        new_ps.additional_properties = json_dumps(
-            additional_properties) if additional_properties is not None else json_dumps({})
+        if additional_properties is not None:
+            new_ps.additional_properties = json_dumps(additional_properties)
+        else:
+            new_ps.additional_properties = json_dumps({})
         new_ps.create_ts = ts
         new_ps.update_ts = ts
         new_ps.update_id = update_id
@@ -335,8 +354,10 @@ def add_operation_history(pk, table_name, additional_properties, update_id, upda
     new_oh = OperationHistory()
     new_oh.pk = pk
     new_oh.table_name = table_name
-    new_oh.additional_properties = json_dumps(
-        additional_properties) if additional_properties is not None else json_dumps({})
+    if additional_properties is not None:
+        new_oh.additional_properties = json_dumps(additional_properties)
+    else:
+        new_oh.additional_properties = json_dumps({})
     new_oh.update_id = update_id
     new_oh.update_role = update_role
     new_oh.operation_ts = operation_ts
@@ -356,8 +377,10 @@ def add_detail_crawl_task(product_id, link, additional_properties, update_id, up
     new_dct.product_link = link
     new_dct.status = TASK_STATUS_NEW
     new_dct.try_count = 0
-    new_dct.additional_properties = json_dumps(
-        additional_properties) if additional_properties is not None else json_dumps({})
+    if additional_properties is not None:
+        new_dct.additional_properties = json_dumps(additional_properties)
+    else:
+        new_dct.additional_properties = json_dumps({})
     new_dct.create_ts = ts
     new_dct.update_ts = ts
     new_dct.update_id = update_id
@@ -377,8 +400,10 @@ def add_shop_crawl_task(shop_name, target_product_ids, additional_properties, up
     new_sct.target_product_ids = json_dumps(target_product_ids) if target_product_ids is not None else json_dumps({})
     new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
-    new_sct.additional_properties = json_dumps(
-        additional_properties) if additional_properties is not None else json_dumps({})
+    if additional_properties is not None:
+        new_sct.additional_properties = json_dumps(additional_properties)
+    else:
+        new_sct.additional_properties = json_dumps({})
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id
@@ -397,11 +422,16 @@ def add_search_crawl_task(search_key, num_of_pages, target_product_ids, addition
     new_sct.id = pk
     new_sct.search_key = search_key
     new_sct.num_of_pages = num_of_pages
-    new_sct.target_product_ids = json_dumps(target_product_ids) if target_product_ids is not None else json_dumps({})
+    if target_product_ids is not None:
+        new_sct.target_product_ids = json_dumps(target_product_ids)
+    else:
+        new_sct.target_product_ids = json_dumps({})
     new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
-    new_sct.additional_properties = json_dumps(
-        additional_properties) if additional_properties is not None else json_dumps({})
+    if additional_properties is not None:
+        new_sct.additional_properties = json_dumps(additional_properties)
+    else:
+        new_sct.additional_properties = json_dumps({})
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id
@@ -421,8 +451,10 @@ def add_llm_analyze_task(product_id, product_title, additional_properties, updat
     new_lat.product_title = product_title
     new_lat.status = TASK_STATUS_NEW
     new_lat.try_count = 0
-    new_lat.additional_properties = json_dumps(
-        additional_properties) if additional_properties is not None else json_dumps({})
+    if additional_properties is not None:
+        new_lat.additional_properties = json_dumps(additional_properties)
+    else:
+        new_lat.additional_properties = json_dumps({})
     new_lat.create_ts = ts
     new_lat.update_ts = ts
     new_lat.update_id = update_id
@@ -441,8 +473,10 @@ def add_shop_search_crawl_task(shop_name, additional_properties, update_id, upda
     new_sct.shop_name = shop_name
     new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
-    new_sct.additional_properties = json_dumps(
-        additional_properties) if additional_properties is not None else json_dumps({})
+    if additional_properties is not None:
+        new_sct.additional_properties = json_dumps(additional_properties)
+    else:
+        new_sct.additional_properties = json_dumps({})
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id

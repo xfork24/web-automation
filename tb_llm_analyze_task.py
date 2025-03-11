@@ -32,8 +32,12 @@ if __name__ == '__main__':
             update_task_status(task, TASK_STATUS_IN_PROGRESS, UPDATE_ID, UPDATE_ROLE)
             try:
                 if len(product_task_batch) >= LLM_TASK_BATCH_SIZE:
-                    update_product_llm_analysis_batch([p for p, t in product_task_batch], UPDATE_ID)
-                    batch_update_task_status(product_task_batch, TASK_STATUS_DONE, UPDATE_ID, UPDATE_ROLE)
+                    id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], UPDATE_ID)
+                    for p, t in product_task_batch:
+                        if p.id in id_set:
+                            update_task_status(t, TASK_STATUS_DONE, UPDATE_ID, UPDATE_ROLE)
+                        else:
+                            update_task_status(t, TASK_STATUS_ERROR, UPDATE_ID, UPDATE_ROLE)
                     product_task_batch = []
                     time.sleep(LLM_ANALYZE_GAP_IN_SECONDS)
                 product_task_batch.append((Product(id=task.product_id, title=task.product_title), task))
@@ -47,8 +51,12 @@ if __name__ == '__main__':
         # handle last batch
         if len(product_task_batch) > 0:
             try:
-                update_product_llm_analysis_batch([p for p, t in product_task_batch], UPDATE_ID)
-                batch_update_task_status(product_task_batch, TASK_STATUS_DONE, UPDATE_ID, UPDATE_ROLE)
+                id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], UPDATE_ID)
+                for p, t in product_task_batch:
+                    if p.id in id_set:
+                        update_task_status(t, TASK_STATUS_DONE, UPDATE_ID, UPDATE_ROLE)
+                    else:
+                        update_task_status(t, TASK_STATUS_ERROR, UPDATE_ID, UPDATE_ROLE)
                 product_task_batch = []
                 time.sleep(LLM_ANALYZE_GAP_IN_SECONDS)
             except Exception:
