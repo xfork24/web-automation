@@ -183,7 +183,8 @@ class SearchCrawlTask(BaseModel):
 
 class LLMAnalyzeTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    products = CharField(max_length=4096)
+    product_id = CharField(max_length=32, index=True)
+    product_title = CharField(max_length=128)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
     additional_properties = CharField(max_length=2048)
@@ -240,7 +241,7 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
         exist_pi.update_role = update_role
         exist_pi.save()
         logger.info(f'exist product info record updated: {exist_pi.to_dict()}')
-        add_operation_history(product_id, exist_pi.table_name(), {}, update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
+        add_operation_history(product_id, exist_pi.table_name(), None, update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_pi = ProductInfo()
         new_pi.product_id = product_id
@@ -252,17 +253,18 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
         new_pi.display_price = display_price
         new_pi.display_sale = display_sale
         new_pi.estimated_revenue = estimated_revenue
-        new_pi.title_imgs = title_imgs
-        new_pi.page_imgs = page_imgs
-        new_pi.details = details
-        new_pi.additional_properties = additional_properties
+        new_pi.title_imgs = json_dumps(title_imgs) if title_imgs is not None else json_dumps({})
+        new_pi.page_imgs = json_dumps(page_imgs) if page_imgs is not None else json_dumps({})
+        new_pi.details = json_dumps(details) if details is not None else json_dumps({})
+        new_pi.additional_properties = json_dumps(
+            additional_properties) if additional_properties is not None else json_dumps({})
         new_pi.create_ts = ts
         new_pi.update_ts = ts
         new_pi.update_id = update_id
         new_pi.update_role = update_role
         new_pi.save(force_insert=True)
         logger.info(f'new product info record inserted: {new_pi.to_dict()}')
-        add_operation_history(product_id, new_pi.table_name(), {}, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+        add_operation_history(product_id, new_pi.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def update_shop_info(shop_name, shop_link, additional_properties, update_id, update_role):
@@ -280,19 +282,20 @@ def update_shop_info(shop_name, shop_link, additional_properties, update_id, upd
         exist_si.update_role = update_role
         exist_si.save()
         logger.info(f'exist shop info record updated: {exist_si.to_dict()}')
-        add_operation_history(shop_name, exist_si.table_name(), {}, update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
+        add_operation_history(shop_name, exist_si.table_name(), None, update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_si = ShopInfo()
         new_si.shop_name = shop_name
         new_si.shop_link = shop_link
-        new_si.additional_properties = json_dumps(additional_properties)
+        new_si.additional_properties = json_dumps(
+            additional_properties) if additional_properties is not None else json_dumps({})
         new_si.create_ts = ts
         new_si.update_ts = ts
         new_si.update_id = update_id
         new_si.update_role = update_role
         new_si.save(force_insert=True)
         logger.info(f'new shop info record inserted: {new_si.to_dict()}')
-        add_operation_history(shop_name, new_si.table_name(), {}, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+        add_operation_history(shop_name, new_si.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def add_product_sale(product_id, shop_name,
@@ -314,14 +317,15 @@ def add_product_sale(product_id, shop_name,
         new_ps.display_price = display_price
         new_ps.display_sale = display_sale
         new_ps.estimated_revenue = estimated_revenue
-        new_ps.additional_properties = json_dumps(additional_properties)
+        new_ps.additional_properties = json_dumps(
+            additional_properties) if additional_properties is not None else json_dumps({})
         new_ps.create_ts = ts
         new_ps.update_ts = ts
         new_ps.update_id = update_id
         new_ps.update_role = update_role
         new_ps.save(force_insert=True)
         logger.info(f'new product sale record inserted: {new_ps.to_dict()}')
-        add_operation_history(f'{product_id},{ts}', new_ps.table_name(), {}, update_id, update_role, ts,
+        add_operation_history(f'{product_id},{ts}', new_ps.table_name(), None, update_id, update_role, ts,
                               DB_OPS_CREATE_NEW)
 
 
@@ -330,7 +334,8 @@ def add_operation_history(pk, table_name, additional_properties, update_id, upda
     new_oh = OperationHistory()
     new_oh.pk = pk
     new_oh.table_name = table_name
-    new_oh.additional_properties = json_dumps(additional_properties)
+    new_oh.additional_properties = json_dumps(
+        additional_properties) if additional_properties is not None else json_dumps({})
     new_oh.update_id = update_id
     new_oh.update_role = update_role
     new_oh.operation_ts = operation_ts
@@ -350,14 +355,15 @@ def add_detail_crawl_task(product_id, link, additional_properties, update_id, up
     new_dct.product_link = link
     new_dct.status = TASK_STATUS_NEW
     new_dct.try_count = 0
-    new_dct.additional_properties = json_dumps(additional_properties)
+    new_dct.additional_properties = json_dumps(
+        additional_properties) if additional_properties is not None else json_dumps({})
     new_dct.create_ts = ts
     new_dct.update_ts = ts
     new_dct.update_id = update_id
     new_dct.update_role = update_role
     new_dct.save(force_insert=True)
     logger.info(f'new detail crawl task record inserted: {new_dct.to_dict()}')
-    add_operation_history(pk, new_dct.table_name(), {}, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_dct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def add_shop_crawl_task(shop_name, target_product_ids, additional_properties, update_id, update_role):
@@ -367,17 +373,18 @@ def add_shop_crawl_task(shop_name, target_product_ids, additional_properties, up
     new_sct = ShopCrawlTask()
     new_sct.id = pk
     new_sct.shop_name = shop_name
-    new_sct.target_product_ids = json_dumps(target_product_ids)
+    new_sct.target_product_ids = json_dumps(target_product_ids) if target_product_ids is not None else json_dumps({})
     new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
-    new_sct.additional_properties = json_dumps(additional_properties)
+    new_sct.additional_properties = json_dumps(
+        additional_properties) if additional_properties is not None else json_dumps({})
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id
     new_sct.update_role = update_role
     new_sct.save(force_insert=True)
     logger.info(f'new shop crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), {}, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def add_search_crawl_task(search_key, num_of_pages, target_product_ids, additional_properties, update_id,
@@ -389,36 +396,39 @@ def add_search_crawl_task(search_key, num_of_pages, target_product_ids, addition
     new_sct.id = pk
     new_sct.search_key = search_key
     new_sct.num_of_pages = num_of_pages
-    new_sct.target_product_ids = json_dumps(target_product_ids)
+    new_sct.target_product_ids = json_dumps(target_product_ids) if target_product_ids is not None else json_dumps({})
     new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
-    new_sct.additional_properties = json_dumps(additional_properties)
+    new_sct.additional_properties = json_dumps(
+        additional_properties) if additional_properties is not None else json_dumps({})
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id
     new_sct.update_role = update_role
     new_sct.save(force_insert=True)
     logger.info(f'new search crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), {}, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def add_llm_analyze_task(products, additional_properties, update_id, update_role):
+def add_llm_analyze_task(product_id, product_title, additional_properties, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     pk = uuid4().hex
     new_lat = LLMAnalyzeTask()
     new_lat.id = pk
-    new_lat.products = products
+    new_lat.product_id = product_id
+    new_lat.product_title = product_title
     new_lat.status = TASK_STATUS_NEW
     new_lat.try_count = 0
-    new_lat.additional_properties = json_dumps(additional_properties)
+    new_lat.additional_properties = json_dumps(
+        additional_properties) if additional_properties is not None else json_dumps({})
     new_lat.create_ts = ts
     new_lat.update_ts = ts
     new_lat.update_id = update_id
     new_lat.update_role = update_role
     new_lat.save(force_insert=True)
     logger.info(f'new llm analyze task record inserted: {new_lat.to_dict()}')
-    add_operation_history(pk, new_lat.table_name(), {}, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_lat.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def add_shop_search_crawl_task(shop_name, additional_properties, update_id, update_role):
@@ -430,16 +440,19 @@ def add_shop_search_crawl_task(shop_name, additional_properties, update_id, upda
     new_sct.shop_name = shop_name
     new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
-    new_sct.additional_properties = json_dumps(additional_properties)
+    new_sct.additional_properties = json_dumps(
+        additional_properties) if additional_properties is not None else json_dumps({})
     new_sct.create_ts = ts
     new_sct.update_ts = ts
     new_sct.update_id = update_id
     new_sct.update_role = update_role
     new_sct.save(force_insert=True)
     logger.info(f'new shop search crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), {}, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_task_status(task, status):
+def update_task_status(task, status, update_id, update_role):
+    task.update_id = update_id
+    task.update_role = update_role
     task.status = status
     task.save()

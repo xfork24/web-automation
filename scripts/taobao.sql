@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS shop_crawl_task
 CREATE TABLE IF NOT EXISTS search_crawl_task
 (
     id                    varchar(32)   NOT NULL,
-    search_key            varchar(128)   NOT NULL,
+    search_key            varchar(128)  NOT NULL,
     num_of_pages          int           NOT NULL,
     status                tinyint       NOT NULL,
     try_count             int           NOT NULL,
@@ -184,7 +184,8 @@ CREATE TABLE IF NOT EXISTS shop_search_crawl_task
 CREATE TABLE IF NOT EXISTS llm_analyze_task
 (
     id                    varchar(32)   NOT NULL,
-    products              varchar(4096) NOT NULL,
+    product_id            varchar(32)   NOT NULL,
+    product_title         varchar(128)  NOT NULL,
     status                tinyint       NOT NULL,
     try_count             int           NOT NULL,
     additional_properties varchar(2048) NOT NULL,
@@ -301,6 +302,8 @@ ALTER TABLE shop_crawl_task
     ADD CONSTRAINT fk_shop_crawl_task_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
 ALTER TABLE shop_search_crawl_task
     ADD CONSTRAINT fk_shop_search_crawl_task_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
+ALTER TABLE llm_analyze_task
+    ADD CONSTRAINT fk_llm_analyze_task_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
 
 -- --------------------------------------------
 -- Create User taobao And Grant Permissions

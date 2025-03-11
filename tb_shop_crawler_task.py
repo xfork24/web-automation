@@ -8,6 +8,7 @@ LOG_FILE_NAME = './logs/tb_shop_crawler_task.log'
 SHOP_CRAWL_GAP_IN_SECONDS = 10
 SHOP_SCAN_NAP_IN_SECONDS = 60
 UPDATE_ID = 'tb_shop_crawler_task'
+UPDATE_ROLE = 'tb_shop_crawler_task'
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
@@ -21,7 +22,7 @@ if __name__ == '__main__':
             ShopCrawlTask.update_ts)
         for task in tasks:
             task.try_count = task.try_count + 1
-            update_task_status(task, TASK_STATUS_IN_PROGRESS)
+            update_task_status(task, TASK_STATUS_IN_PROGRESS, UPDATE_ID, UPDATE_ROLE)
             try:
                 logger.info(f'handling shop crawl task [{task.id}] with shop_name [{task.shop_name}]')
                 shop = ShopInfo.get(ShopInfo.shop_name == task.shop_name)
@@ -34,8 +35,8 @@ if __name__ == '__main__':
                 logger.error(
                     f'get unhandled exception while crawling shop [{task.shop_name}] with link {task.product_link} pages')
                 traceback.print_exc()
-                update_task_status(task, TASK_STATUS_ERROR)
+                update_task_status(task, TASK_STATUS_ERROR, UPDATE_ID, UPDATE_ROLE)
                 continue
-            update_task_status(task, TASK_STATUS_DONE)
+            update_task_status(task, TASK_STATUS_DONE, UPDATE_ID, UPDATE_ROLE)
             time.sleep(SHOP_CRAWL_GAP_IN_SECONDS)
         time.sleep(SHOP_SCAN_NAP_IN_SECONDS)

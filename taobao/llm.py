@@ -157,7 +157,7 @@ def update_product_llm_analysis_batch(products, update_id):
         exist_pi = ProductInfo.get(ProductInfo.product_id == record.id)
         additional_properties = json_loads(exist_pi.additional_properties)
         additional_properties[LLM_ANALYSIS_KEY] = llm_analysis
-        exist_pi.additional_properties = additional_properties
+        exist_pi.additional_properties = json_dumps(additional_properties)
         exist_pi.update_id = update_id
         exist_pi.update_role = update_product_llm_analysis_batch.__name__
         exist_pi.update_ts = ts
