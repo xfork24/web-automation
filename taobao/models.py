@@ -213,6 +213,25 @@ class ShopSearchCrawlTask(BaseModel):
         table_name = 'shop_search_crawl_task'
 
 
+def add_hot_product(product_id, shop_name, additional_properties, update_id, update_role):
+    logger = get_logger()
+    ts = int(time.time())
+    new_hp = HotProduct()
+    new_hp.product_id = product_id
+    new_hp.shop_name = shop_name
+    if additional_properties is not None:
+        new_hp.additional_properties = json_dumps(additional_properties)
+    else:
+        new_hp.additional_properties = json_dumps({})
+    new_hp.create_ts = ts
+    new_hp.update_id = update_id
+    new_hp.update_role = update_role
+    new_hp.save(force_insert=True)
+    logger.info(f'new hot product record inserted: {new_hp.to_dict()}')
+    add_operation_history(f'{product_id},{ts}', new_hp.table_name(), None, update_id, update_role, ts,
+                          DB_OPS_CREATE_NEW)
+
+
 def update_product_info(product_id, sku_id, product_title, product_link, shop_name,
                         price_unit, display_price, display_sale,
                         title_imgs, page_imgs, details, additional_properties, update_id, update_role):

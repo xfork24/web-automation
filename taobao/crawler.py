@@ -1,7 +1,6 @@
 # coding: utf-8
 # !./bin/python
 
-import re
 import traceback
 import uuid
 from enum import Enum
@@ -55,6 +54,7 @@ SHOP_SKU_CARD_PRICE_RE_EXP = re.compile('^price--\\w+')
 SHOP_SKU_CARD_SALE_RE_EXP = re.compile('^count--\\w+')
 SHOP_LOAD_MORE_FLAG_RE_EXP = re.compile('^loadmoreFlag--\\w+')
 SHOP_LOAD_STATUS_RE_EXP = re.compile('^loadStatus--\\w+')
+SKU_DETAIL_IMG_LINK_RE_EXP = re.compile('^https://\\w+')
 
 
 class WebDriverType(Enum):
@@ -69,12 +69,8 @@ def init_webdriver(webdriver_type: WebDriverType):
         # TBD: handle hiding selenium from chrome, remove 'chrome is controlled by automated test software'
         driver_service = ChromeDriverService('/Users/hengliu/Path/chromedriver')
         options = webdriver.ChromeOptions()
-        # options.add_experimental_option("excludeSwitches", ['enable_automation'])
-        # options.add_argument("--disable-infobars")
-        # options.add_argument("--disable-notification")
-        options.add_argument('--disable-blink-features=AutomationControlled')
-        # options.add_argument('--disable-blink-features=AutomationControlled')
-        # options.add_argument('--disable-gpu')  # 禁用GPU加速
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
         driver = webdriver.Chrome(options=options, service=driver_service)
     elif webdriver_type == WebDriverType.SafariDriver:
         options = webdriver.SafariOptions()
@@ -465,10 +461,12 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
             # we only get pic links and ignore other format
             try:
                 data_src = main_img.find_element(By.XPATH, 'img').get_attribute('data-src')
-                if data_src is not None:
+                if data_src is not None and re.match(SKU_DETAIL_IMG_LINK_RE_EXP, data_src):
                     main_images.append(data_src)
                 else:
-                    main_images.append(main_img.find_element(By.XPATH, 'img').get_attribute('src'))
+                    src = main_img.find_element(By.XPATH, 'img').get_attribute('src')
+                    if re.match(SKU_DETAIL_IMG_LINK_RE_EXP, src):
+                        main_images.append(src)
             except NoSuchElementException:
                 logger.info('detail page material is not an image, ignore')
         elif re.match(SKU_MAIN_IMGS_RICHTEXT_RE_EXP, cls_name):
@@ -477,7 +475,10 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
                 for img_element in main_img.find_elements(By.XPATH, 'p/img'):
                     scroll_window_to_element(img_element)  # the resource is lazy loaded
                 img_elements = main_img.find_elements(By.XPATH, 'p/img')
-                main_images += [img_element.get_attribute('src') for img_element in img_elements]
+                for img_element in img_elements:
+                    src = img_element.get_attribute('src')
+                    if re.match(SKU_DETAIL_IMG_LINK_RE_EXP, src):
+                        main_images.append(src)
             except NoSuchElementException:
                 logger.info('detail page material is not an image, ignore')
     logger.info('get main image list: %s' % main_images)

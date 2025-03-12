@@ -11,5 +11,6 @@ DB_CHARSET = 'utf8mb4'
 LOGGING_FORMAT = '%(asctime)s %(message)s'
 OUTPUT_DIR = './output'
 IMAGE_DIR = './images'
+PRODUCT_DIR = './products'
 
 DEBUG = True

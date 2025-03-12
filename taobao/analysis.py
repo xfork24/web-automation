@@ -1,18 +1,27 @@
 # coding: utf-8
 # !./bin/python
 
+import shutil
+import requests
+from pathlib import Path
+from taobao.config import PRODUCT_DIR
 from taobao.llm import *
 from taobao.models import *
+from taobao.crawler import *
 
 TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 604800
+TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 604800
 TB_SHOP_REVENUE_TOPN = 10
 TB_SHOP_REVENUE_THRESHOLD = 50000
 TB_SKU_REVENUE_TOPN = 50
 TB_SKU_REVENUE_THRESHOLD = 10000
+TB_HOT_PRODUCT_REVENUE_TOPN = 50
+TB_HOT_PRODUCT_REVENUE_THRESHOLD = 10000
+TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS = 3
 
 
 # 对于预定义搜索词，如果一段时间内没有存在的任务，则添加搜索任务
@@ -160,5 +169,97 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id):
 
 
 # 这里假设商品相关信息已经抓取并更新到product_info表中了，否则不继续进行
-def analyze_and_add_hot_products():
-    pass
+def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
+                                 revenue_threshold=TB_HOT_PRODUCT_REVENUE_THRESHOLD,
+                                 force_download=False):
+    logger = get_logger()
+    start_ts = int(time.time()) - TB_HOT_PRODUCT_PERIOD_IN_SECONDS
+    pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
+    idx = 0
+    for pi in pi_query:
+        if idx > top_n and pi.estimated_revenue < revenue_threshold * 100:
+            # 我们暂时不分析商品销量历史数据，因为这逻辑上相当于年度均线，且淘宝给出的信息很含糊
+            break
+        idx += 1
+        query = HotProduct.select().where(HotProduct.product_id == pi.product_id,
+                                          HotProduct.create_ts > start_ts).order_by(
+            HotProduct.create_ts).limit(1)
+        if query.count() > 0:
+            logger.info(
+                f'hot product [{pi.product_id}] already added, just ignore')
+            continue
+        add_hot_product(pi.product_id, pi.shop_name, None, update_id,
+                        analyze_and_add_hot_products.__name__)
+    # 下载hot product页面素材
+    hp_query = HotProduct.select().where(HotProduct.create_ts > start_ts).order_by(HotProduct.create_ts)
+    for hp in hp_query:
+        product_root_dir = f'{PRODUCT_DIR}/{hp.product_id}/{hp.create_ts}'
+        product_path = Path(product_root_dir)
+        if product_path.exists():
+            if force_download:
+                shutil.rmtree(product_root_dir, ignore_errors=True)
+            else:
+                continue
+        product_path.mkdir(parents=True, exist_ok=True)
+        try:
+            exist_pi = ProductInfo.get(ProductInfo.product_id == hp.product_id)
+        except DoesNotExist:
+            logger.error(f'No product info found for product_id [{hp.product_id}], just ignore')
+            continue
+        # download title images
+        title_imgs = json_loads(exist_pi.title_imgs)
+        if len(title_imgs) > 0:
+            Path(f'{product_root_dir}/title_images').mkdir()
+        for title_img in title_imgs:
+            try:
+                Driver.get(title_img)
+                time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
+                img = Driver.find_element(By.XPATH, '//img')
+                assert (img is not None)
+                img.click()
+                rect = img.rect
+                set_window_size((rect['width'], rect['height']))
+                with open(f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}', 'wb') as f:
+                    f.write(img.screenshot_as_png)
+            except Exception:
+                logger.error(f'get unhandled exception while get page image [{page_img}], just ignore')
+                traceback.print_exc()
+                continue
+            # response = requests.get(title_img)
+            # if response.ok:
+            #     with open(f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}', 'wb') as f:
+            #         f.write(response.content)
+            # else:
+            #     logger.error(
+            #         f'failed to download image [{title_img}] with code={response.status_code} and reason={response.reason}')
+            # time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
+        # download page images
+        page_imgs = json_loads(exist_pi.page_imgs)
+        if len(page_imgs) > 0:
+            Path(f'{product_root_dir}/page_images').mkdir()
+        for page_img in page_imgs:
+            try:
+                Driver.get(page_img)
+                time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
+                img = Driver.find_element(By.XPATH, '//img')
+                assert (img is not None)
+                img.click()
+                rect = img.rect
+                set_window_size((rect['width'], rect['height']))
+                with open(f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}', 'wb') as f:
+                    f.write(img.screenshot_as_png)
+            except Exception:
+                logger.error(f'get unhandled exception while get page image [{page_img}], just ignore')
+                traceback.print_exc()
+                continue
+            # response = requests.get(page_img)
+            # if response.ok:
+            #     with open(f'{product_root_dir}/title_images/{page_img[page_img.rfind("/") + 1:]}', 'wb') as f:
+            #         f.write(response.content)
+            # else:
+            #     logger.error(
+            #         f'failed to download image [{page_img}] with code={response.status_code} and reason={response.reason}')
+            # time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
+        # analyze offer details
+        details = json_loads(exist_pi.details)
+        additional_properties = json_loads(exist_pi.additional_properties)
