@@ -9,7 +9,7 @@ from urllib.parse import urlparse, parse_qs
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeDriverService
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from taobao.config import *
@@ -138,7 +138,7 @@ def set_window_size(size=None):
     time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
 
 
-def scroll_windows_to_element(element):
+def scroll_window_to_element(element):
     logger = get_logger()
     script = 'arguments[0].scrollIntoView();'
     logger.info(f'executing script {script} to element location ({element.location["x"]},{element.location["y"]}) '
@@ -475,7 +475,7 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
             # we only get pic links and ignore other format
             try:
                 for img_element in main_img.find_elements(By.XPATH, 'p/img'):
-                    scroll_windows_to_element(img_element)
+                    scroll_window_to_element(img_element)  # the resource is lazy loaded
                 img_elements = main_img.find_elements(By.XPATH, 'p/img')
                 main_images += [img_element.get_attribute('src') for img_element in img_elements]
             except NoSuchElementException:
@@ -510,7 +510,11 @@ def craw_taobao_sku_prices(value_items_divs, sku_price_div):
                 break
             span = value_item.find_element(By.XPATH, 'span')
             offer.append(span.text)
-            value_item.click()
+            try:
+                value_item.click()
+            except ElementClickInterceptedException:
+                scroll_window_to_element(value_item)
+                value_item.click()
         if not valid:
             continue
         price_spans = sku_price_div.find_elements(By.XPATH, 'span')
@@ -602,7 +606,7 @@ def craw_taobao_shop_page_results(shop_link, update_id, target_product_ids=None)
         # 我们暂时不支持这种店铺。参考：https://shop61333799.taobao.com/
         # 这种店铺的商品仍然可以通过search或detail页面抓取来收录
         assert (load_more_flag_div is not None)
-        scroll_windows_to_element(load_more_flag_div)
+        scroll_window_to_element(load_more_flag_div)
     shop_sku_divs = []
     shop_name_div = None
     divs = Driver.find_elements(By.XPATH, '//div')

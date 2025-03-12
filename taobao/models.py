@@ -290,7 +290,15 @@ def update_shop_info(shop_name, shop_link, additional_properties, update_id, upd
     try:
         # update only when value is valid
         exist_si = ShopInfo.get(ShopInfo.shop_name == shop_name)
-        exist_si.shop_link = shop_link if shop_link != '' else exist_si.shop_link
+        shop_link_match = False
+        for reg_exp in SHOP_LINK_RE_EXP_LIST:
+            if re.match(reg_exp, shop_link):
+                shop_link_match = True
+                break
+        if shop_link_match:
+            exist_si.shop_link = shop_link
+        else:
+            logger.info(f'illegal shop [{shop_name}] with link [{shop_link}] not updated')
         if additional_properties is not None:
             exist_si.additional_properties = json_dumps(additional_properties)
         exist_si.update_ts = ts
