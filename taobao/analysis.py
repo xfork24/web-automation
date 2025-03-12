@@ -225,14 +225,6 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 logger.error(f'get unhandled exception while get page image [{page_img}], just ignore')
                 traceback.print_exc()
                 continue
-            # response = requests.get(title_img)
-            # if response.ok:
-            #     with open(f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}', 'wb') as f:
-            #         f.write(response.content)
-            # else:
-            #     logger.error(
-            #         f'failed to download image [{title_img}] with code={response.status_code} and reason={response.reason}')
-            # time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
         # download page images
         page_imgs = json_loads(exist_pi.page_imgs)
         if len(page_imgs) > 0:
@@ -252,14 +244,7 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 logger.error(f'get unhandled exception while get page image [{page_img}], just ignore')
                 traceback.print_exc()
                 continue
-            # response = requests.get(page_img)
-            # if response.ok:
-            #     with open(f'{product_root_dir}/title_images/{page_img[page_img.rfind("/") + 1:]}', 'wb') as f:
-            #         f.write(response.content)
-            # else:
-            #     logger.error(
-            #         f'failed to download image [{page_img}] with code={response.status_code} and reason={response.reason}')
-            # time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
         # analyze offer details
-        details = json_loads(exist_pi.details)
-        additional_properties = json_loads(exist_pi.additional_properties)
+        # details = json_loads(exist_pi.details)
+        # analyze additional properties
+        # additional_properties = json_loads(exist_pi.additional_properties)

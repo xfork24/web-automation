@@ -70,6 +70,7 @@ def init_webdriver(webdriver_type: WebDriverType):
         driver_service = ChromeDriverService('/Users/hengliu/Path/chromedriver')
         options = webdriver.ChromeOptions()
         options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
+        options.add_argument('--disable-blink-features=AutomationControlled')
         # options.add_argument('--headless')
         options.add_argument('--disable-gpu')
         driver = webdriver.Chrome(options=options, service=driver_service)
@@ -205,7 +206,7 @@ def parse_sale_in_detail(sale):
 
 
 def is_valid_image_link(link):
-    if link == 'https://g.alicdn.com/s.gif':
+    if link[link.rfind('/') + 1:] == 's.gif':
         return False
     elif re.match(SKU_DETAIL_IMG_LINK_RE_EXP, link):
         return True
