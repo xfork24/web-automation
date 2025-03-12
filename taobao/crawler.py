@@ -69,7 +69,8 @@ def init_webdriver(webdriver_type: WebDriverType):
         # TBD: handle hiding selenium from chrome, remove 'chrome is controlled by automated test software'
         driver_service = ChromeDriverService('/Users/hengliu/Path/chromedriver')
         options = webdriver.ChromeOptions()
-        options.add_argument('--headless')
+        options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
+        # options.add_argument('--headless')
         options.add_argument('--disable-gpu')
         driver = webdriver.Chrome(options=options, service=driver_service)
     elif webdriver_type == WebDriverType.SafariDriver:
@@ -201,6 +202,13 @@ def parse_sale_in_detail(sale):
     if sale_num[-1] == '万':
         sale_num = sale_num[:-1] + '0000'
     return int(sale_num)
+
+
+def is_valid_image_link(link):
+    if link == 'https://g.alicdn.com/s.gif':
+        return False
+    elif re.match(SKU_DETAIL_IMG_LINK_RE_EXP, link):
+        return True
 
 
 def craw_taobao_search_page(qstring, num_of_pages, sale_order, update_id):
@@ -461,11 +469,11 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
             # we only get pic links and ignore other format
             try:
                 data_src = main_img.find_element(By.XPATH, 'img').get_attribute('data-src')
-                if data_src is not None and re.match(SKU_DETAIL_IMG_LINK_RE_EXP, data_src):
+                if data_src is not None and is_valid_image_link(data_src):
                     main_images.append(data_src)
                 else:
                     src = main_img.find_element(By.XPATH, 'img').get_attribute('src')
-                    if re.match(SKU_DETAIL_IMG_LINK_RE_EXP, src):
+                    if is_valid_image_link(src):
                         main_images.append(src)
             except NoSuchElementException:
                 logger.info('detail page material is not an image, ignore')
@@ -477,7 +485,7 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
                 img_elements = main_img.find_elements(By.XPATH, 'p/img')
                 for img_element in img_elements:
                     src = img_element.get_attribute('src')
-                    if re.match(SKU_DETAIL_IMG_LINK_RE_EXP, src):
+                    if is_valid_image_link(src):
                         main_images.append(src)
             except NoSuchElementException:
                 logger.info('detail page material is not an image, ignore')
