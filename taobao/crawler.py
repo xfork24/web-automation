@@ -67,7 +67,7 @@ def init_webdriver(webdriver_type: WebDriverType):
     driver = None
     if webdriver_type == WebDriverType.ChromDriver:
         # TBD: handle hiding selenium from chrome, remove 'chrome is controlled by automated test software'
-        driver_service = ChromeDriverService('/Users/hengliu/Path/chromedriver')
+        driver_service = ChromeDriverService('./chromedriver')
         options = webdriver.ChromeOptions()
         options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
         options.add_argument('--disable-blink-features=AutomationControlled')
