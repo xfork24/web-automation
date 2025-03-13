@@ -191,6 +191,7 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
         add_hot_product(pi.product_id, pi.shop_name, None, update_id,
                         analyze_and_add_hot_products.__name__)
     # 下载hot product页面素材
+    set_window_size()
     hp_query = HotProduct.select().where(HotProduct.create_ts > start_ts).order_by(HotProduct.create_ts)
     for hp in hp_query:
         product_root_dir = f'{PRODUCT_DIR}/{hp.product_id}/{hp.create_ts}'
@@ -216,11 +217,8 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
                 img = Driver.find_element(By.XPATH, '//img')
                 assert (img is not None)
-                img.click()
-                rect = img.rect
-                set_window_size((rect['width'], rect['height']))
-                with open(f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}', 'wb') as f:
-                    f.write(img.screenshot_as_png)
+                create_element_screenshot(img,
+                                          f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}')
             except Exception:
                 logger.error(f'get unhandled exception while get page image [{page_img}], just ignore')
                 traceback.print_exc()
@@ -235,11 +233,8 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
                 img = Driver.find_element(By.XPATH, '//img')
                 assert (img is not None)
-                img.click()
-                rect = img.rect
-                set_window_size((rect['width'], rect['height']))
-                with open(f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}', 'wb') as f:
-                    f.write(img.screenshot_as_png)
+                create_element_screenshot(img,
+                                          f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}')
             except Exception:
                 logger.error(f'get unhandled exception while get page image [{page_img}], just ignore')
                 traceback.print_exc()

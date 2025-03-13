@@ -23,7 +23,6 @@ LOGIN_CHECK_WAIT_IN_SECONDS = 5
 SEARCH_WAIT_IN_SECONDS = 5
 DETAIL_PAGE_WAIT_IN_SECONDS = 5
 SHOP_PAGE_WAIT_IN_SECONDS = 5
-SHOP_PAGE_SKU_LOAD_WAIT_IN_SECONDS = 5
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 MAX_SKU_ITEMS_NUM = 5
@@ -71,7 +70,7 @@ def init_webdriver(webdriver_type: WebDriverType):
         options = webdriver.ChromeOptions()
         options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
         options.add_argument('--disable-blink-features=AutomationControlled')
-        # options.add_argument('--headless')
+        options.add_argument('--headless')
         options.add_argument('--disable-gpu')
         driver = webdriver.Chrome(options=options, service=driver_service)
     elif webdriver_type == WebDriverType.SafariDriver:
@@ -84,15 +83,23 @@ def init_webdriver(webdriver_type: WebDriverType):
 
 def login_taobao():
     logger = get_logger()
-    logger.info('navigate to taobao login page')
+    logger.info('navigate to taobao login page and wait in seconds')
     Driver.get(TB_LOGIN_PAGE)
+    time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
     while True:
         try:
-            logger.info('check taobao login status and wait in seconds')
-            Driver.find_element(By.ID, 'login')
-            time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
+            user_input = Driver.find_element(By.ID, 'fm-login-id')
+            passwd_input = Driver.find_element(By.ID, 'fm-login-password')
+            login_button = Driver.find_element(By.CLASS_NAME, 'fm-btn').find_element(By.XPATH, 'button')
+            assert (user_input is not None and passwd_input is not None and login_button is not None)
+            user_input.clear()
+            user_input.send_keys(TB_USERNAME)
+            passwd_input.clear()
+            passwd_input.send_keys(TB_PASSWORD)
+            element_click(login_button)
+            break
         except NoSuchElementException:
-            logger.info('can not find login form, you should already logged in and in taobao/personal homepage')
+            logger.info('can not find login form, you should log in and navigate to taobao/personal homepage')
             break
     logger.info('check if we are in taobao/personal homepage')
     while True:
@@ -142,7 +149,7 @@ def scroll_window_to_element(element):
     logger.info(f'executing script {script} to element location ({element.location["x"]},{element.location["y"]}) '
                 'and wait for seconds')
     Driver.execute_script('arguments[0].scrollIntoView();', element)
-    time.sleep(SHOP_PAGE_SKU_LOAD_WAIT_IN_SECONDS)
+    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
 
 
 def create_element_screenshot(element, file_path):
@@ -150,6 +157,13 @@ def create_element_screenshot(element, file_path):
     logger.info(f'take screenshot for element location ({element.location["x"]},{element.location["y"]}) '
                 f'to file {file_path} and wait for seconds')
     element.screenshot(file_path)
+    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+
+def element_click(element):
+    logger = get_logger()
+    logger.info(f'element [{element.accessible_name}] clicked and wait for seconds')
+    element.click()
     time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
 
 
@@ -240,7 +254,7 @@ def crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id, ta
                         sale_order_div = div
                         break
                 assert (sale_order_div is not None)
-                sale_order_div.click()
+                element_click(sale_order_div)
                 logger.info('wait search results ready for seconds')
                 time.sleep(SEARCH_WAIT_IN_SECONDS)
             search_result_wrapper = Driver.find_element(By.ID, 'content_items_wrapper')
@@ -254,7 +268,7 @@ def crawl_taobao_search_results(qstring, num_of_pages, sale_order, update_id, ta
                 btn_list = btn_pages[-1].find_elements(By.XPATH, 'button')
                 assert (len(btn_list) == 3)  # 下面导航栏里直属三个按钮：上一页，下一页，确定
                 logger.info(f'get search [{qstring}] results for page {page + 1} by press next page')
-                btn_list[1].click()
+                element_click(btn_list[1])
         except AssertionError:
             logger.error(
                 'assertion failed in search result page, just stop crawling, it is ok for single product search')
@@ -521,10 +535,10 @@ def craw_taobao_sku_prices(value_items_divs, sku_price_div):
             span = value_item.find_element(By.XPATH, 'span')
             offer.append(span.text)
             try:
-                value_item.click()
+                element_click(value_item)
             except ElementClickInterceptedException:
                 scroll_window_to_element(value_item)
-                value_item.click()
+                element_click(value_item)
         if not valid:
             continue
         price_spans = sku_price_div.find_elements(By.XPATH, 'span')
@@ -698,7 +712,7 @@ def crawl_shop_link_by_search_results(shop_name, update_id):
             shop_tab_div = div
             break
     assert (shop_tab_div is not None)
-    shop_tab_div.click()
+    element_click(shop_tab_div)
     qbox = Driver.find_element(By.ID, 'q')
     qbox.clear()
     qbox.send_keys(shop_name)
