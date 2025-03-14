@@ -12,4 +12,5 @@ LOG_FILE_NAME = './logs/tb_search_crawler.log'
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
-    craw_taobao_search_page(QUERY_STRING, NUM_OF_PAGES_TO_PARSE, SALE_ORDER, UPDATE_ID)
+    login_taobao()
+    crawl_taobao_search_results(QUERY_STRING, NUM_OF_PAGES_TO_PARSE, SALE_ORDER, UPDATE_ID)

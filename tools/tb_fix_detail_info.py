@@ -24,7 +24,7 @@ if __name__ == '__main__':
             continue
         logger.info(f'update product [{product.product_id}] with link [{product.product_link}]')
         try:
-            craw_taobao_detail_page_result(product.product_link, product.product_id, UPDATE_ID)
+            craw_taobao_detail_page(product.product_link, product.product_id, UPDATE_ID)
         except Exception:
             logger.error('get unhandled exception while crawling product, just print error and continue')
             traceback.print_exc()

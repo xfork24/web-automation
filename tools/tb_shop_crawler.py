@@ -12,4 +12,5 @@ LOG_FILE_NAME = './logs/tb_shop_crawler.log'
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
+    login_taobao()
     craw_taobao_shop_page(SHOP_LINK, UPDATE_ID, PRODUCT_IDS)

@@ -28,7 +28,7 @@ if __name__ == '__main__':
                 logger.info(f'handling shop crawl task id={task.id} with shop_name={task.shop_name}, target_product_ids={task.target_product_ids}')
                 shop = ShopInfo.get(ShopInfo.shop_name == task.shop_name)
                 target_product_ids = json_loads(task.target_product_ids)
-                craw_taobao_shop_page_results(shop.shop_link, UPDATE_ID, target_product_ids)
+                craw_taobao_shop_page(shop.shop_link, UPDATE_ID, target_product_ids)
             except DoesNotExist:
                 logger.error(f'shop_info record with shop_name={task.shop_name} does not exist, just ignore')
                 continue

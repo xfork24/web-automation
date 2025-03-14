@@ -16,6 +16,6 @@ if __name__ == '__main__':
     for product_id in PRODUCT_IDS:
         try:
             product = ProductInfo.get(ProductInfo.product_id == product_id)
-            craw_taobao_detail_page_result(product.product_link, product.product_id, UPDATE_ID)
+            craw_taobao_detail_page(product.product_link, product.product_id, UPDATE_ID)
         except DoesNotExist:
             logger.error(f'can not find product [{product_id}] in database')

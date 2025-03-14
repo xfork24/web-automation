@@ -41,7 +41,7 @@ if __name__ == '__main__':
     for k, v in ill_products.items():
         try:
             exist_si = ShopInfo.get(ShopInfo.shop_name == k)
-            craw_taobao_shop_page_results(exist_si.shop_link, UPDATE_ID, v)
+            craw_taobao_shop_page(exist_si.shop_link, UPDATE_ID, v)
         except DoesNotExist:
             logger.error(f'ShopInfo item with shop_name=[{k}] do not exist, just ignore')
             continue
