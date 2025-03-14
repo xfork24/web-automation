@@ -20,6 +20,7 @@ if __name__ == '__main__':
         now_ts = int(time.time())
         start_ts = now_ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
         tasks = SearchCrawlTask.select().where(SearchCrawlTask.status != TASK_STATUS_DONE,
+                                               SearchCrawlTask.status != TASK_STATUS_ARCHIVED,
                                                SearchCrawlTask.update_ts > start_ts).order_by(
             SearchCrawlTask.update_ts)
         for task in tasks:

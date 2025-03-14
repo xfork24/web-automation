@@ -18,6 +18,7 @@ if __name__ == '__main__':
         # scan detail_crawl_task and get all unfinished tasks
         start_ts = int(time.time()) - TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS
         tasks = DetailCrawlTask.select().where(DetailCrawlTask.status != TASK_STATUS_DONE,
+                                               DetailCrawlTask.status != TASK_STATUS_ARCHIVED,
                                                DetailCrawlTask.update_ts > start_ts).order_by(
             DetailCrawlTask.update_ts)
         for task in tasks:

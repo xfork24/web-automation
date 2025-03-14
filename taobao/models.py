@@ -23,6 +23,7 @@ TASK_STATUS_NEW = 1
 TASK_STATUS_IN_PROGRESS = 2
 TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
+TASK_STATUS_ARCHIVED = 5
 
 SHOP_LINK_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
                          re.compile('^https://shop\\w+.taobao.com/')]

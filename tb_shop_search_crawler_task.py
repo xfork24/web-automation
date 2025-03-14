@@ -18,6 +18,7 @@ if __name__ == '__main__':
         # scan shop_search_crawl_task and get all unfinished tasks
         start_ts = int(time.time()) - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
         tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.status != TASK_STATUS_DONE,
+                                                   ShopSearchCrawlTask.status != TASK_STATUS_ARCHIVED,
                                                    ShopSearchCrawlTask.update_ts > start_ts).order_by(
             ShopSearchCrawlTask.update_ts)
         for task in tasks:

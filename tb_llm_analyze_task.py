@@ -25,6 +25,7 @@ if __name__ == '__main__':
         # scan llm_analyze_task and get all unfinished tasks
         start_ts = int(time.time()) - TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS
         tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.status != TASK_STATUS_DONE,
+                                              LLMAnalyzeTask.status != TASK_STATUS_ARCHIVED,
                                               LLMAnalyzeTask.update_ts > start_ts).order_by(
             LLMAnalyzeTask.update_ts)
         for task in tasks:
