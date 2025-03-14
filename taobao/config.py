@@ -8,7 +8,7 @@ DB_PASSWORD = 'taobao'
 DB_PORT = 3306
 DB_CHARSET = 'utf8mb4'
 
-TB_USERNAME = '18610168897'
+TB_USERNAME = '13393248812'
 TB_PASSWORD = 'agnes880204'
 LOGGING_FORMAT = '%(asctime)s %(message)s'
 OUTPUT_DIR = './output'

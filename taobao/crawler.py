@@ -19,6 +19,7 @@ TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
+TB_LOGIN_AUTH_TITLE_NAME = '登录-身份验证'
 LOGIN_CHECK_WAIT_IN_SECONDS = 5
 SEARCH_WAIT_IN_SECONDS = 5
 DETAIL_PAGE_WAIT_IN_SECONDS = 5
@@ -40,7 +41,8 @@ SKU_PRICE_UNIT_RE_EXP = re.compile('^symbol--\\w+')
 SKU_PRICE_VAL_RE_EXP = re.compile('^text--\\w+')
 SKU_SALE_RE_EXP = re.compile('^salesDesc--\\w+')
 SKU_TITLE_IMGS_RE_EXP = re.compile('^thumbnailsWrap--\\w+')
-SKU_MAIN_IMGS_RE_EXP = re.compile('^descV8-container$')
+SKU_MAIN_IMGS_V8_RE_EXP = re.compile('^descV8-container$')
+SKU_MAIN_IMGS_V6_RE_EXP = re.compile('^descV6-container$')
 SKU_MAIN_IMGS_SINGLE_IMG_RE_EXP = re.compile('^descV8-singleImage$')
 SKU_MAIN_IMGS_RICHTEXT_RE_EXP = re.compile('^descV8-richtext$')
 SKU_SHOP_HEADER_RE_EXP = re.compile('^shopHeader--\\w+')
@@ -70,7 +72,7 @@ def init_webdriver(webdriver_type: WebDriverType):
         options = webdriver.ChromeOptions()
         options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
         options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_argument('--headless')
+        # options.add_argument('--headless')
         options.add_argument('--disable-gpu')
         driver = webdriver.Chrome(options=options, service=driver_service)
     elif webdriver_type == WebDriverType.SafariDriver:
@@ -106,6 +108,23 @@ def login_taobao():
         if Driver.title == TB_PERSONAL_HOMEPAGE_TITLE_NAME or Driver.title == TB_HOMEPAGE_TITLE_NAME:
             logger.info('we are already in taobao/personal homepage, now perform following crawling')
             break
+        elif Driver.title == TB_LOGIN_AUTH_TITLE_NAME:
+            logger.info('we are in login auth page, use SMS to get auth code')
+            try:
+                time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
+                iframe = Driver.find_element(By.XPATH, '//*[@id="content"]/div/div[1]/iframe')
+                Driver.switch_to.frame(iframe)
+                code_input = Driver.find_element(By.ID, 'J_Phone_Checkcode')
+                sms_btn = Driver.find_element(By.ID, 'J_GetCode')
+                confirm_btn = Driver.find_element(By.ID, 'submitBtn')
+                sms_btn.click()
+                sms_code = input(f'Please input SMS verification code for [{TB_USERNAME}]: ')
+                code_input.send_keys(sms_code)
+                confirm_btn.click()
+                break
+            except NoSuchElementException:
+                logger.error('taobao login verification form not found, will try again...')
+                traceback.print_exc()
         else:
             logger.info(
                 'we are not in taobao/personal homepage, '
@@ -391,7 +410,8 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
     sku_price_div = None
     sku_sale_div = None
     title_image_div = None
-    page_image_div = None
+    page_image_v6_div = None
+    page_image_v8_div = None
     shop_info_div = None
     sku_title_div = None
     while True:
@@ -412,8 +432,10 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
                 sku_sale_div = div
             elif re.match(SKU_TITLE_IMGS_RE_EXP, cls_name):
                 title_image_div = div
-            elif re.match(SKU_MAIN_IMGS_RE_EXP, cls_name):
-                page_image_div = div
+            elif re.match(SKU_MAIN_IMGS_V8_RE_EXP, cls_name):
+                page_image_v8_div = div
+            elif re.match(SKU_MAIN_IMGS_V6_RE_EXP, cls_name):
+                page_image_v6_div = div
             elif re.match(SKU_SHOP_HEADER_RE_EXP, cls_name):
                 shop_info_div = div
             elif re.match(SKU_TITLE_RE_EXP, cls_name):
@@ -428,7 +450,7 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
             time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
     assert (len(sku_items_divs) < MAX_SKU_ITEMS_NUM)
     assert (sku_price_div is not None)
-    assert (page_image_div is not None)
+    assert (page_image_v8_div is not None or page_image_v6_div is not None)
     update_sale = sku_sale_div is not None
     # parse all sku items
     value_items_divs = []
@@ -475,7 +497,29 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
     logger.info('get title image list: %s' % title_images)
     # parse main images, descV8-richtext or descV8-singleImage
     main_images = []
-    main_imgs = page_image_div.find_elements(By.XPATH, './/div')
+    if page_image_v8_div is not None:
+        main_images = crawl_detail_main_images_v8(page_image_v8_div)
+    elif page_image_v6_div is not None:
+        main_images = crawl_detail_main_images_v6(page_image_v6_div)
+    logger.info('get main image list: %s' % main_images)
+    # update product info in DB
+    product_id = product_id or parse_product_id_from_product_link(product_link)
+    sku_id = parse_sku_id_from_product_link(product_link) or '0'
+    update_role = craw_taobao_detail_page_result.__name__
+    if product_id is not None:
+        update_product_info(product_id, sku_id, product_title, product_link, shop_name,
+                            price_unit, lowest_price, sale_val,
+                            title_images, main_images, product_details, None,
+                            update_id, update_role)
+        if update_sale:
+            add_product_sale(product_id, shop_name, price_unit, lowest_price, sale_val, None, update_id, update_role)
+        update_shop_info(shop_name, shop_link, None, update_id, update_role)
+
+
+def crawl_detail_main_images_v8(page_image_v8_div):
+    logger = get_logger()
+    main_images = []
+    main_imgs = page_image_v8_div.find_elements(By.XPATH, './/div')
     for main_img in main_imgs:
         cls_name = main_img.get_attribute('class')
         if cls_name is None:
@@ -504,19 +548,20 @@ def craw_taobao_detail_page_result(product_link, product_id, update_id):
                         main_images.append(src)
             except NoSuchElementException:
                 logger.info('detail page material is not an image, ignore')
+    return main_images
+
+
+def crawl_detail_main_images_v6(page_image_v6_div):
+    logger = get_logger()
+    main_images = []
+    for img_element in page_image_v6_div.find_elements(By.XPATH, 'div/div/img'):
+        scroll_window_to_element(img_element)  # the resource is lazy loaded
+    for img_element in page_image_v6_div.find_elements(By.XPATH, 'div/div/img'):
+        src = img_element.get_attribute('src')
+        if is_valid_image_link(src):
+            main_images.append(src)
     logger.info('get main image list: %s' % main_images)
-    # update product info in DB
-    product_id = product_id or parse_product_id_from_product_link(product_link)
-    sku_id = parse_sku_id_from_product_link(product_link) or '0'
-    update_role = craw_taobao_detail_page_result.__name__
-    if product_id is not None:
-        update_product_info(product_id, sku_id, product_title, product_link, shop_name,
-                            price_unit, lowest_price, sale_val,
-                            title_images, main_images, product_details, None,
-                            update_id, update_role)
-        if update_sale:
-            add_product_sale(product_id, shop_name, price_unit, lowest_price, sale_val, None, update_id, update_role)
-        update_shop_info(shop_name, shop_link, None, update_id, update_role)
+    return main_images
 
 
 def craw_taobao_sku_prices(value_items_divs, sku_price_div):
