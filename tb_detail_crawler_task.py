@@ -25,9 +25,10 @@ if __name__ == '__main__':
             task.try_count = task.try_count + 1
             update_task_status(task, TASK_STATUS_IN_PROGRESS, UPDATE_ID, UPDATE_ROLE)
             try:
+                logger.info(f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
                 craw_taobao_detail_page_result(task.product_link, task.product_id, UPDATE_ID)
             except Exception:
-                logger.error(f'get unhandled exception while crawling product [{task.product_id}]')
+                logger.error(f'get unhandled exception while crawling task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
                 traceback.print_exc()
                 update_task_status(task, TASK_STATUS_ERROR, UPDATE_ID, UPDATE_ROLE)
                 continue

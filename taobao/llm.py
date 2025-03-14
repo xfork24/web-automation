@@ -156,7 +156,7 @@ def update_product_llm_analysis_batch(products, update_id):
             "category": record.category,
             "digital": record.digital,
         }
-        logger.info(f'update product [{record.id}] with llm_analysis = {llm_analysis}')
+        logger.info(f'update product_id={record.id} with llm_analysis = {llm_analysis}')
         exist_pi = ProductInfo.get(ProductInfo.product_id == record.id)
         additional_properties = json_loads(exist_pi.additional_properties)
         additional_properties[LLM_ANALYSIS_KEY] = llm_analysis

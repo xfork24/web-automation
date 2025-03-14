@@ -9,18 +9,23 @@ from taobao.llm import *
 from taobao.models import *
 from taobao.crawler import *
 
+# 各任务的去重检查周期
 TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 604800
 TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 604800
+
+# 几个统计任务的统计标准
 TB_SHOP_REVENUE_TOPN = 10
 TB_SHOP_REVENUE_THRESHOLD = 50000
 TB_SKU_REVENUE_TOPN = 50
 TB_SKU_REVENUE_THRESHOLD = 10000
 TB_HOT_PRODUCT_REVENUE_TOPN = 50
 TB_HOT_PRODUCT_REVENUE_THRESHOLD = 10000
+
+# 资源下载任务相关
 TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS = 3
 
 
@@ -34,7 +39,7 @@ def analyze_and_add_search_crawl_tasks(search_key, num_of_pages, update_id):
         SearchCrawlTask.update_ts).limit(1)
     if query.count() > 0:
         logger.info(
-            f'search crawl task [{query[0].id}] already exist for search_key [{search_key}], just ignore')
+            f'search crawl task id={query[0].id} already exist for search_key={search_key}, just ignore')
         return
     add_search_crawl_task(search_key, num_of_pages, None, None, update_id,
                           analyze_and_add_search_crawl_tasks.__name__)
@@ -60,14 +65,14 @@ def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
             ShopCrawlTask.update_ts).limit(1)
         if query.count() > 0:
             logger.info(
-                f'shop crawl task [{query[0].id}] already exist for shop_name [{pi.shop_name}], just ignore')
+                f'shop crawl task id={query[0].id} already exist for shop_name={pi.shop_name}, just ignore')
             continue
         try:
             exist_si = ShopInfo.get(ShopInfo.shop_name == pi.shop_name)
             add_shop_crawl_task(exist_si.shop_name, None, None, update_id,
                                 analyze_and_add_shop_crawl_tasks.__name__)
         except DoesNotExist:
-            logger.error(f'ShopInfo item with shop_name=[{pi.shop_name}] do not exist, just ignore')
+            logger.error(f'ShopInfo item with shop_name={pi.shop_name} do not exist, just ignore')
             continue
 
 
@@ -88,7 +93,7 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
             DetailCrawlTask.update_ts).limit(1)
         if query.count() > 0:
             logger.info(
-                f'detail crawl task [{query[0].id}] already exist for product_id [{pi.product_id}], just ignore')
+                f'detail crawl task id={query[0].id} already exist for product_id={pi.product_id}, just ignore')
             continue
         add_detail_crawl_task(pi.product_id, pi.product_link, None, update_id,
                               analyze_and_add_detail_crawl_tasks.__name__)
@@ -101,14 +106,16 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
 # 2. 缺失大模型分析结果，默认所有商品信息都没有这个信息
 # 通过生成对应task的方式来获取这些信息
 def analyze_and_generate_fix_tasks(batch_ts, update_id):
+    logger = get_logger()
     update_role = analyze_and_generate_fix_tasks.__name__
     ts = int(time.time())
     # 处理可能的店铺问题
+    logger.info('handling shop issues with invalid link ...')
     shop_search_start_ts = ts - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
     si_query = ShopInfo.select().where(ShopInfo.update_ts > batch_ts).order_by(ShopInfo.update_ts)
     for si in si_query:
         shop_link_match = False
-        for reg_exp in SHOP_LINK_RE_EXP_LIST:
+        for reg_exp in SHOP_LINK_KNOWN_RE_EXP_LIST:
             if re.match(reg_exp, si.shop_link):
                 shop_link_match = True
                 break
@@ -119,6 +126,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id):
             if task.count() == 0:
                 add_shop_search_crawl_task(si.shop_name, None, update_id, update_role)
     # 处理可能的商品问题
+    logger.info('handling product issues with display_sale==-1 or estimated_revenue=-1 ...')
     search_start_ts = ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
     shop_start_ts = ts - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
     pi_query = ProductInfo.select().where(ProductInfo.update_ts > batch_ts).order_by(
@@ -159,6 +167,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id):
             if not task_existed:
                 add_shop_crawl_task(pi.shop_name, [pi.product_id], None, update_id, update_role)
         # 处理llm_analysis缺失问题，我们不用batch的方式，便于检查任务是否存在，在执行任务时进行batch
+        logger.info('handling product issues with empty LLM analysis ...')
         llm_start_ts = ts - TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS
         if LLM_ANALYSIS_KEY not in json_loads(pi.additional_properties):
             tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == pi.product_id,
@@ -186,11 +195,12 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
             HotProduct.create_ts).limit(1)
         if query.count() > 0:
             logger.info(
-                f'hot product [{pi.product_id}] already added, just ignore')
+                f'hot product product_id={pi.product_id} already added, just ignore')
             continue
         add_hot_product(pi.product_id, pi.shop_name, None, update_id,
                         analyze_and_add_hot_products.__name__)
     # 下载hot product页面素材
+    logger.info('download hot product page resources ...')
     set_window_size()
     hp_query = HotProduct.select().where(HotProduct.create_ts > start_ts).order_by(HotProduct.create_ts)
     for hp in hp_query:
@@ -198,16 +208,23 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
         product_path = Path(product_root_dir)
         if product_path.exists():
             if force_download:
+                logger.info(
+                    f'product path already exist with root_dir={product_root_dir}, will force clean it and redownload')
                 shutil.rmtree(product_root_dir, ignore_errors=True)
             else:
+                logger.info(
+                    f'product path already exist with root_dir={product_root_dir}, just ignore')
                 continue
+        logger.info(f'create product_root_dir={product_root_dir}')
         product_path.mkdir(parents=True, exist_ok=True)
         try:
             exist_pi = ProductInfo.get(ProductInfo.product_id == hp.product_id)
         except DoesNotExist:
-            logger.error(f'No product info found for product_id [{hp.product_id}], just ignore')
+            logger.error(f'No product info found for product_id={hp.product_id}, just ignore')
             continue
         # download title images
+        logger.info(
+            f'download product title images with product_id={exist_pi.product_id} and title_imgs={exist_pi.title_imgs}')
         title_imgs = json_loads(exist_pi.title_imgs)
         if len(title_imgs) > 0:
             Path(f'{product_root_dir}/title_images').mkdir()
@@ -217,13 +234,16 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
                 img = Driver.find_element(By.XPATH, '//img')
                 assert (img is not None)
+                logger.info(f'download product title_image={title_img}')
                 create_element_screenshot(img,
                                           f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}')
             except Exception:
-                logger.error(f'get unhandled exception while get page image [{page_img}], just ignore')
+                logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
                 traceback.print_exc()
                 continue
         # download page images
+        logger.info(
+            f'download product title images with product_id={exist_pi.product_id} and title_imgs={exist_pi.page_imgs}')
         page_imgs = json_loads(exist_pi.page_imgs)
         if len(page_imgs) > 0:
             Path(f'{product_root_dir}/page_images').mkdir()
@@ -233,10 +253,11 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
                 img = Driver.find_element(By.XPATH, '//img')
                 assert (img is not None)
+                logger.info(f'download product page_image={page_img}')
                 create_element_screenshot(img,
                                           f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}')
             except Exception:
-                logger.error(f'get unhandled exception while get page image [{page_img}], just ignore')
+                logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
                 traceback.print_exc()
                 continue
         # analyze offer details

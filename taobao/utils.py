@@ -20,6 +20,7 @@ def init_logger(log_format, file, level, debug):
         logging.basicConfig(format=log_format, stream=sys.stdout, level=level)
     else:
         logging.basicConfig(format=log_format, filename=file, level=level)
+    logging.info(f'logger inited with format={log_format}, file={file}, level={level}, debug = {debug}')
 
 
 def get_logger(module_name=__name__):
@@ -38,22 +39,30 @@ def parse_price(price):
 
 
 def parse_price_ocr_by_pytesseract(image_file_path, config=TESSERACT_PRICE_OCR_CONFIG):
-    price = pytesseract.image_to_string(Image.open(image_file_path), config=config).strip(' \t\r\n')
-    price = 0 if price == '' else int(float(price) * 100)
+    logger = get_logger()
+    price_raw = pytesseract.image_to_string(Image.open(image_file_path), config=config).strip(' \t\r\n')
+    price = 0 if price_raw == '' else int(float(price_raw) * 100)
     if price == 0:
+        logger.error(
+            f'parse_price_ocr_by_pytesseract failed with price_raw={price_raw} while handling file={image_file_path}, config={config}')
         raise PriceOCRError()
+    logger.info(
+        f'parse_price_ocr_by_pytesseract parsed price_raw={price_raw}, price={price} while handling file={image_file_path}, config={config}')
     return price
 
 
-def parse_price_ocr_by_pyocr(image_file_path):
-    result = EasyOcrReader.readtext(image_file_path, allowlist=PYOCR_PRICE_ALLOW_LIST)
-    result_size = len(result)
-    if result_size == 0 or result_size > 1:
+def parse_price_ocr_by_pyocr(image_file_path, allowlist=PYOCR_PRICE_ALLOW_LIST):
+    logger = get_logger()
+    result = EasyOcrReader.readtext(image_file_path, allowlist)
+    if len(result) != 1:
+        logger.error(f'parse_price_ocr_by_pyocr failed with result={result} while parsing {image_file_path}, allowlist={allowlist}')
         raise PriceOCRError()
-    price = result[0][1].strip(' \t\r\n')
-    price = 0 if price == '' else int(float(price) * 100)
+    price_raw = result[0][1].strip(' \t\r\n')
+    price = 0 if price_raw == '' else int(float(price_raw) * 100)
     if price == 0:
+        logger.error(f'parse_price_ocr_by_pyocr failed with result={result}, price_raw={price_raw} while parsing {image_file_path}, allowlist={allowlist}')
         raise PriceOCRError()
+    logger.info(f'parse_price_ocr_by_pyocr parsed result={result}, price_raw={price_raw}, price={price} while parsing {image_file_path}, allowlist={allowlist}')
     return price
 
 

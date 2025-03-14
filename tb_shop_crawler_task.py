@@ -25,16 +25,16 @@ if __name__ == '__main__':
             task.try_count = task.try_count + 1
             update_task_status(task, TASK_STATUS_IN_PROGRESS, UPDATE_ID, UPDATE_ROLE)
             try:
-                logger.info(f'handling shop crawl task [{task.id}] with shop_name [{task.shop_name}]')
+                logger.info(f'handling shop crawl task id={task.id} with shop_name={task.shop_name}, target_product_ids={task.target_product_ids}')
                 shop = ShopInfo.get(ShopInfo.shop_name == task.shop_name)
                 target_product_ids = json_loads(task.target_product_ids)
                 craw_taobao_shop_page_results(shop.shop_link, UPDATE_ID, target_product_ids)
             except DoesNotExist:
-                logger.error(f'shop_info record with shop_name [{task.shop_name}] does not exist, just ignore')
+                logger.error(f'shop_info record with shop_name={task.shop_name} does not exist, just ignore')
                 continue
             except Exception:
                 logger.error(
-                    f'get unhandled exception while crawling shop [{task.shop_name}] with link {task.product_link} pages')
+                    f'get unhandled exception while handling task id={task.id} with shop_name={shop.shop_name}, shop_link={shop.shop_link}')
                 traceback.print_exc()
                 update_task_status(task, TASK_STATUS_ERROR, UPDATE_ID, UPDATE_ROLE)
                 continue

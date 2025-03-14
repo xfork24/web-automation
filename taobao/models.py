@@ -25,8 +25,8 @@ TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
 TASK_STATUS_ARCHIVED = 5
 
-SHOP_LINK_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
-                         re.compile('^https://shop\\w+.taobao.com/')]
+SHOP_LINK_KNOWN_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
+                               re.compile('^https://shop\\w+.taobao.com/')]
 
 DB = MySQLDatabase(DB_NAME,
                    host=DB_HOST,
@@ -311,14 +311,14 @@ def update_shop_info(shop_name, shop_link, additional_properties, update_id, upd
         # update only when value is valid
         exist_si = ShopInfo.get(ShopInfo.shop_name == shop_name)
         shop_link_match = False
-        for reg_exp in SHOP_LINK_RE_EXP_LIST:
+        for reg_exp in SHOP_LINK_KNOWN_RE_EXP_LIST:
             if re.match(reg_exp, shop_link):
                 shop_link_match = True
                 break
         if shop_link_match:
             exist_si.shop_link = shop_link
         else:
-            logger.info(f'illegal shop [{shop_name}] with link [{shop_link}] not updated')
+            logger.info(f'find shop_name={shop_name} with unknown link={shop_link}, exist record not updated')
         if additional_properties is not None:
             exist_si.additional_properties = json_dumps(additional_properties)
         exist_si.update_ts = ts
@@ -515,7 +515,9 @@ def add_shop_search_crawl_task(shop_name, additional_properties, update_id, upda
 
 
 def update_task_status(task, status, update_id, update_role):
+    logger = get_logger()
     task.update_id = update_id
     task.update_role = update_role
     task.status = status
     task.save()
+    logger.info(f'update task id={task.id} status to {status}')
