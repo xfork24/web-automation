@@ -19,12 +19,12 @@ if __name__ == '__main__':
     logger.info(f'get {len(products)} products to be updated by applying update_ts > {start_ts}')
     login_taobao()
     for product in products:
-        if product.title_imgs != '' and product.page_imgs != '' and product.details != '' and not ForceUpdate:
+        if product.title_imgs != '' and product.page_imgs != '' and product.offer_details != '' and not ForceUpdate:
             logger.info(f'product [{product.product_id}] information already updated, just ignore')
             continue
         logger.info(f'update product [{product.product_id}] with link [{product.product_link}]')
         try:
-            craw_taobao_detail_page(product.product_link, product.product_id, UPDATE_ID)
+            craw_taobao_detail_page(product.product_id, product.product_link, UPDATE_ID)
         except Exception:
             logger.error('get unhandled exception while crawling product, just print error and continue')
             traceback.print_exc()

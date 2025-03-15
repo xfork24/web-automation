@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS product_info
     estimated_revenue     int           NOT NULL,
     title_imgs            text          NOT NULL,
     page_imgs             text          NOT NULL,
-    details               text          NOT NULL,
+    offer_details         text          NOT NULL,
     additional_properties varchar(4096) NOT NULL,
     create_ts             int           NOT NULL,
     update_ts             int           NOT NULL,

@@ -3,3 +3,6 @@
 
 class PriceOCRError(RuntimeError):
     pass
+
+class NotStandardShop(RuntimeError):
+    pass

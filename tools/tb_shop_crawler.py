@@ -7,7 +7,7 @@ from taobao import *
 
 SHOP_LINK = 'https://shop436316857.taobao.com/?spm=pc_detail.29232929.shop_block.dshopinfo.510e7dd6F8xYxA'
 UPDATE_ID = 'tb_shop_crawler'
-PRODUCT_IDS = ['850288018462']
+PRODUCT_IDS = ['858551205874']
 LOG_FILE_NAME = './logs/tb_shop_crawler.log'
 
 if __name__ == '__main__':

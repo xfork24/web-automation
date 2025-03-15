@@ -8,9 +8,10 @@ DB_PASSWORD = 'taobao'
 DB_PORT = 3306
 DB_CHARSET = 'utf8mb4'
 
-TB_USERNAME = '13393248812'
-TB_PASSWORD = 'agnes880204'
+TB_USERNAME = '18133691894'
+TB_PASSWORD = 'agnes2725213'
 LOGGING_FORMAT = '%(asctime)s %(message)s'
+DEBUG_ROOT_DIR = '/Users/hengliu/workspace/web-automation'
 OUTPUT_DIR = './output'
 IMAGE_DIR = './images'
 PRODUCT_DIR = './products'

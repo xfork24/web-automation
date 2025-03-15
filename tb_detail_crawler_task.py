@@ -26,7 +26,7 @@ if __name__ == '__main__':
             update_task_status(task, TASK_STATUS_IN_PROGRESS, UPDATE_ID, UPDATE_ROLE)
             try:
                 logger.info(f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
-                craw_taobao_detail_page(task.product_link, task.product_id, UPDATE_ID)
+                craw_taobao_detail_page(task.product_id, task.product_link, UPDATE_ID)
             except Exception:
                 logger.error(f'get unhandled exception while crawling task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
                 traceback.print_exc()

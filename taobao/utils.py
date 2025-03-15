@@ -44,9 +44,9 @@ def parse_price_ocr_by_pytesseract(image_file_path, config=TESSERACT_PRICE_OCR_C
     price_raw = pytesseract.image_to_string(Image.open(image_file_path), config=config).strip(' \t\r\n')
     price = 0 if price_raw == '' else int(float(price_raw) * 100)
     if price == 0:
-        logger.error(
-            f'parse_price_ocr_by_pytesseract failed with price_raw={price_raw} while handling file={image_file_path}, config={config}')
-        raise PriceOCRError()
+        msg = f'parse_price_ocr_by_pytesseract failed with price_raw={price_raw} while handling file={image_file_path}, config={config}'
+        logger.error(msg)
+        raise PriceOCRError(msg)
     logger.info(
         f'parse_price_ocr_by_pytesseract parsed price_raw={price_raw}, price={price} while handling file={image_file_path}, config={config}')
     return price
@@ -56,15 +56,15 @@ def parse_price_ocr_by_pyocr(image_file_path, allowlist=PYOCR_PRICE_ALLOW_LIST):
     logger = get_logger()
     result = EasyOcrReader.readtext(image_file_path, allowlist)
     if len(result) != 1:
-        logger.error(
-            f'parse_price_ocr_by_pyocr failed with result={result} while parsing {image_file_path}, allowlist={allowlist}')
-        raise PriceOCRError()
+        msg = f'parse_price_ocr_by_pyocr failed with result={result} while parsing {image_file_path}, allowlist={allowlist}'
+        logger.error(msg)
+        raise PriceOCRError(msg)
     price_raw = result[0][1].strip(' \t\r\n')
     price = 0 if price_raw == '' else int(float(price_raw) * 100)
     if price == 0:
-        logger.error(
-            f'parse_price_ocr_by_pyocr failed with result={result}, price_raw={price_raw} while parsing {image_file_path}, allowlist={allowlist}')
-        raise PriceOCRError()
+        msg = f'parse_price_ocr_by_pyocr failed with result={result}, price_raw={price_raw} while parsing {image_file_path}, allowlist={allowlist}'
+        logger.error(msg)
+        raise PriceOCRError(msg)
     logger.info(
         f'parse_price_ocr_by_pyocr parsed result={result}, price_raw={price_raw}, price={price} while parsing {image_file_path}, allowlist={allowlist}')
     return price

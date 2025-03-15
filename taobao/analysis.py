@@ -235,7 +235,7 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 img = Driver.find_element(By.XPATH, '//img')
                 assert (img is not None)
                 logger.info(f'download product title_image={title_img}')
-                create_element_screenshot(img,
+                element_screenshot(img,
                                           f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}')
             except Exception:
                 logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
@@ -254,13 +254,13 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 img = Driver.find_element(By.XPATH, '//img')
                 assert (img is not None)
                 logger.info(f'download product page_image={page_img}')
-                create_element_screenshot(img,
+                element_screenshot(img,
                                           f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}')
             except Exception:
                 logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
                 traceback.print_exc()
                 continue
         # analyze offer details
-        # details = json_loads(exist_pi.details)
+        # offer_details = json_loads(exist_pi.offer_details)
         # analyze additional properties
         # additional_properties = json_loads(exist_pi.additional_properties)

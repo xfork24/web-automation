@@ -60,7 +60,7 @@ class ProductInfo(BaseModel):
     estimated_revenue = IntegerField(index=True)
     title_imgs = TextField()
     page_imgs = TextField()
-    details = TextField()
+    offer_details = TextField()
     additional_properties = CharField(max_length=4096)
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
@@ -235,7 +235,7 @@ def add_hot_product(product_id, shop_name, additional_properties, update_id, upd
 
 def update_product_info(product_id, sku_id, product_title, product_link, shop_name,
                         price_unit, display_price, display_sale,
-                        title_imgs, page_imgs, details, additional_properties, update_id, update_role):
+                        title_imgs, page_imgs, offer_details, additional_properties, update_id, update_role):
     # update product_info table
     logger = get_logger()
     ts = int(time.time())
@@ -257,8 +257,8 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
             exist_pi.title_imgs = json_dumps(title_imgs)
         if page_imgs is not None:
             exist_pi.page_imgs = json_dumps(page_imgs)
-        if details is not None:
-            exist_pi.details = json_dumps(details)
+        if offer_details is not None:
+            exist_pi.offer_details = json_dumps(offer_details)
         if additional_properties is not None:
             exist_pi.additional_properties = json_dumps(additional_properties)
         exist_pi.update_ts = ts
@@ -286,10 +286,10 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
             new_pi.page_imgs = json_dumps(page_imgs)
         else:
             new_pi.page_imgs = json_dumps({})
-        if details is not None:
-            new_pi.details = json_dumps(details)
+        if offer_details is not None:
+            new_pi.offer_details = json_dumps(offer_details)
         else:
-            new_pi.details = json_dumps({})
+            new_pi.offer_details = json_dumps({})
         if additional_properties is not None:
             new_pi.additional_properties = json_dumps(additional_properties)
         else:
