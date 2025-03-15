@@ -12,14 +12,14 @@ UPDATE_ID = 'tb_sale_analysis'
 #                        ('素材', 5),
 #                        ('自动发货', 5), ]
 
-DEFAULT_SEARCH_KEYS = [('音乐', 5),
-                       ('素材', 5), ]
+DEFAULT_SEARCH_KEYS = [('自动发货', 5),
+                       ('美剧', 5), ]
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
 
-    # for search_key, num_of_pages in DEFAULT_SEARCH_KEYS:
-    #     analyze_and_add_search_crawl_tasks(search_key, num_of_pages, UPDATE_ID)
+    for search_key, num_of_pages in DEFAULT_SEARCH_KEYS:
+        analyze_and_add_search_crawl_tasks(search_key, num_of_pages, UPDATE_ID)
 
     # 暂时不执行店铺的统计抓取任务，因为最主要的，用户是通过搜索页面进入
     # analyze_and_add_shop_crawl_tasks(UPDATE_ID)
