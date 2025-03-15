@@ -14,6 +14,21 @@ TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
 TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 604800
 TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 604800
 
+# 各任务的等待配置
+ALL_IN_ONE_SCAN_NAP_IN_SECONDS = 60
+SEARCH_CRAWL_GAP_IN_SECONDS = 10
+SEARCH_SCAN_NAP_IN_SECONDS = 60
+SALE_ORDER = False
+SHOP_CRAWL_GAP_IN_SECONDS = 10
+SHOP_SCAN_NAP_IN_SECONDS = 60
+SHOP_SEARCH_CRAWL_GAP_IN_SECONDS = 10
+SHOP_SEARCH_CRAWL_NAP_IN_SECONDS = 60
+DETAIL_CRAWL_GAP_IN_SECONDS = 10
+DETAIL_SCAN_NAP_IN_SECONDS = 60
+LLM_ANALYZE_GAP_IN_SECONDS = 10
+LLM_TASK_SCAN_NAP_IN_SECONDS = 60
+LLM_TASK_BATCH_SIZE = 10
+
 # 几个统计任务的统计标准
 TB_SHOP_REVENUE_TOPN = 10
 TB_SHOP_REVENUE_THRESHOLD = 50000
@@ -176,8 +191,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id):
 
 # 这里假设商品相关信息已经抓取并更新到product_info表中了，否则不继续进行
 def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
-                                 revenue_threshold=TB_HOT_PRODUCT_REVENUE_THRESHOLD,
-                                 force_download=False):
+                                 revenue_threshold=TB_HOT_PRODUCT_REVENUE_THRESHOLD):
     logger = get_logger()
     start_ts = int(time.time()) - TB_HOT_PRODUCT_PERIOD_IN_SECONDS
     pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
@@ -196,6 +210,11 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
             continue
         add_hot_product(pi.product_id, pi.shop_name, None, update_id,
                         analyze_and_add_hot_products.__name__)
+
+
+def download_hot_product_resources(force_download=False):
+    logger = get_logger()
+    start_ts = int(time.time()) - TB_HOT_PRODUCT_PERIOD_IN_SECONDS
     # 下载hot product页面素材
     logger.info('download hot product page resources ...')
     set_window_size()
@@ -233,7 +252,7 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 assert (img is not None)
                 logger.info(f'download product title_image={title_img}')
                 element_screenshot(img,
-                                          f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}')
+                                   f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}')
             except Exception:
                 logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
                 traceback.print_exc()
@@ -252,7 +271,7 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                 assert (img is not None)
                 logger.info(f'download product page_image={page_img}')
                 element_screenshot(img,
-                                          f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}')
+                                   f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}')
             except Exception:
                 logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
                 traceback.print_exc()
@@ -261,3 +280,170 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
         # offer_details = json_loads(exist_pi.offer_details)
         # analyze additional properties
         # additional_properties = json_loads(exist_pi.additional_properties)
+
+
+def run_all_in_one_crawler_task(update_id):
+    task_ts = run_search_crawler_task(update_id)
+    analyze_and_generate_fix_tasks(task_ts, update_id)
+    run_shop_search_crawler_task(update_id)
+    run_shop_crawler_tasks(update_id)
+    run_llm_analyze_tasks(update_id)
+
+
+def run_search_crawler_task(update_id):
+    logger = get_logger()
+    now_ts = int(time.time())
+    start_ts = now_ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+    logger.info(f'run search crawler tasks with now_ts={now_ts}, start_ts={start_ts}')
+    tasks = SearchCrawlTask.select().where(SearchCrawlTask.status != TASK_STATUS_DONE,
+                                           SearchCrawlTask.status != TASK_STATUS_ARCHIVED,
+                                           SearchCrawlTask.update_ts > start_ts).order_by(
+        SearchCrawlTask.update_ts)
+    for task in tasks:
+        task.try_count = task.try_count + 1
+        update_task_status(task, TASK_STATUS_IN_PROGRESS, update_id)
+        try:
+            logger.info(
+                f'handling search crawl task id={task.id} with search_key={task.search_key}, num_of_pages={task.num_of_pages}, target_product_ids={task.target_product_ids}')
+            target_product_ids = json_loads(task.target_product_ids)
+            crawl_taobao_search_results(task.search_key, task.num_of_pages, SALE_ORDER, update_id,
+                                        target_product_ids)
+        except Exception:
+            logger.error(
+                f'get unhandled exception while handling task id={task.id} with search_key={task.search_key}, num_of_pages={task.num_of_pages}, target_product_ids={task.target_product_ids}')
+            traceback.print_exc()
+            update_task_status(task, TASK_STATUS_ERROR, update_id)
+            continue
+        update_task_status(task, TASK_STATUS_DONE, update_id)
+        time.sleep(SEARCH_CRAWL_GAP_IN_SECONDS)
+    return now_ts
+
+
+def run_shop_crawler_tasks(update_id):
+    logger = get_logger()
+    start_ts = int(time.time()) - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
+    logger.info(f'run shop crawler tasks with start_ts={start_ts}')
+    tasks = ShopCrawlTask.select().where(ShopCrawlTask.status != TASK_STATUS_DONE,
+                                         ShopCrawlTask.status != TASK_STATUS_ARCHIVED,
+                                         ShopCrawlTask.update_ts > start_ts).order_by(
+        ShopCrawlTask.update_ts)
+    for task in tasks:
+        task.try_count = task.try_count + 1
+        update_task_status(task, TASK_STATUS_IN_PROGRESS, update_id)
+        try:
+            logger.info(
+                f'handling shop crawl task id={task.id} with shop_name={task.shop_name}, target_product_ids={task.target_product_ids}')
+            shop = ShopInfo.get(ShopInfo.shop_name == task.shop_name)
+            target_product_ids = json_loads(task.target_product_ids)
+            craw_taobao_shop_page(shop.shop_link, update_id, target_product_ids)
+        except DoesNotExist:
+            logger.error(f'shop_info record with shop_name={task.shop_name} does not exist, just ignore')
+            continue
+        except Exception:
+            logger.error(
+                f'get unhandled exception while handling task id={task.id} with shop_name={task.shop_name}, shop_link={shop.shop_link}')
+            traceback.print_exc()
+            update_task_status(task, TASK_STATUS_ERROR, update_id)
+            continue
+        update_task_status(task, TASK_STATUS_DONE, update_id)
+        time.sleep(SHOP_CRAWL_GAP_IN_SECONDS)
+    return
+
+
+def run_shop_search_crawler_task(update_id):
+    logger = get_logger()
+    start_ts = int(time.time()) - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+    logger.info(f'run shop search crawler tasks with start_ts={start_ts}')
+    tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.status != TASK_STATUS_DONE,
+                                               ShopSearchCrawlTask.status != TASK_STATUS_ARCHIVED,
+                                               ShopSearchCrawlTask.update_ts > start_ts).order_by(
+        ShopSearchCrawlTask.update_ts)
+    for task in tasks:
+        task.try_count = task.try_count + 1
+        update_task_status(task, TASK_STATUS_IN_PROGRESS, update_id)
+        try:
+            logger.info(f'handling shop search crawler task id={task.id} with shop_name={task.shop_name}')
+            crawl_taobao_shop_link_by_search(task.shop_name, update_id)
+        except Exception:
+            logger.error(f'get unhandled exception while handling task id={task.id} with shop_name={task.shop_name}')
+            traceback.print_exc()
+            update_task_status(task, TASK_STATUS_ERROR, update_id)
+            continue
+        update_task_status(task, TASK_STATUS_DONE, update_id)
+        time.sleep(SHOP_SEARCH_CRAWL_GAP_IN_SECONDS)
+    return
+
+
+def run_detail_crawler_tasks(update_id):
+    logger = get_logger()
+    start_ts = int(time.time()) - TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS
+    logger.info(f'run detail crawler tasks with start_ts={start_ts}')
+    tasks = DetailCrawlTask.select().where(DetailCrawlTask.status != TASK_STATUS_DONE,
+                                           DetailCrawlTask.status != TASK_STATUS_ARCHIVED,
+                                           DetailCrawlTask.update_ts > start_ts).order_by(
+        DetailCrawlTask.update_ts)
+    for task in tasks:
+        task.try_count = task.try_count + 1
+        update_task_status(task, TASK_STATUS_IN_PROGRESS, update_id)
+        try:
+            logger.info(
+                f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
+            craw_taobao_detail_page(task.product_id, task.product_link, update_id)
+        except Exception:
+            logger.error(
+                f'get unhandled exception while crawling task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
+            traceback.print_exc()
+            update_task_status(task, TASK_STATUS_ERROR, update_id)
+            continue
+        update_task_status(task, TASK_STATUS_DONE, update_id)
+        time.sleep(DETAIL_CRAWL_GAP_IN_SECONDS)
+    return
+
+
+def run_llm_analyze_tasks(update_id):
+    logger = get_logger()
+    start_ts = int(time.time()) - TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS
+    logger.info(f'run llm analyze task with start_ts={start_ts}')
+    product_task_batch = []
+    tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.status != TASK_STATUS_DONE,
+                                          LLMAnalyzeTask.status != TASK_STATUS_ARCHIVED,
+                                          LLMAnalyzeTask.update_ts > start_ts).order_by(
+        LLMAnalyzeTask.update_ts)
+    for task in tasks:
+        task.try_count = task.try_count + 1
+        update_task_status(task, TASK_STATUS_IN_PROGRESS, update_id)
+        try:
+            if len(product_task_batch) >= LLM_TASK_BATCH_SIZE:
+                id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], update_id)
+                for p, t in product_task_batch:
+                    if p.id in id_set:
+                        update_task_status(t, TASK_STATUS_DONE, update_id)
+                    else:
+                        update_task_status(t, TASK_STATUS_ERROR, update_id)
+                product_task_batch = []
+                time.sleep(LLM_ANALYZE_GAP_IN_SECONDS)
+            product_task_batch.append((Product(id=task.product_id, title=task.product_title), task))
+        except Exception:
+            logger.error(
+                f'get unhandled exception while analyzing llm products {[p for p, t in product_task_batch]}')
+            traceback.print_exc()
+            [update_task_status(t, TASK_STATUS_ERROR, update_id) for _, t in product_task_batch]
+            product_task_batch = []
+            continue
+    # handle last batch
+    if len(product_task_batch) > 0:
+        try:
+            id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], update_id)
+            for p, t in product_task_batch:
+                if p.id in id_set:
+                    update_task_status(t, TASK_STATUS_DONE, update_id)
+                else:
+                    update_task_status(t, TASK_STATUS_ERROR, update_id)
+            product_task_batch = []
+            time.sleep(LLM_ANALYZE_GAP_IN_SECONDS)
+        except Exception:
+            logger.error(
+                f'get unhandled exception while analyzing llm products {[p for p, t in product_task_batch]}')
+            traceback.print_exc()
+            [update_task_status(t, TASK_STATUS_ERROR, update_id) for _, t in product_task_batch]
+    return

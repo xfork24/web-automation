@@ -27,5 +27,8 @@ if __name__ == '__main__':
     # 商品统计最好等所有商品修复任务都做完之后再进行
     # analyze_and_add_detail_crawl_tasks(UPDATE_ID)
 
-    # 商品素材下载应该放到所有任务都执行完毕的最后再执行
+    # 分析热门商品
     # analyze_and_add_hot_products(UPDATE_ID)
+
+    # 下载商品素材，应该放到所有任务都执行完毕的最后再执行
+    # download_hot_product_resources()

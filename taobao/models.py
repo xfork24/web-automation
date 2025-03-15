@@ -514,10 +514,10 @@ def add_shop_search_crawl_task(shop_name, additional_properties, update_id, upda
     add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_task_status(task, status, update_id, update_role):
+def update_task_status(task, status, update_id):
     logger = get_logger()
     task.update_id = update_id
-    task.update_role = update_role
+    task.update_role = update_task_status.__name__
     task.status = status
     task.save()
     logger.info(f'update task id={task.id} status to {status}')
