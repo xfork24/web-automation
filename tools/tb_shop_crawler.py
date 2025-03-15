@@ -20,7 +20,7 @@ def main():
     except Exception as e:
         logger.error(f'get unhandled exception {e}, just continue')
         traceback.print_exc()
-    return
+    cleanup()
 
 
 if __name__ == '__main__':

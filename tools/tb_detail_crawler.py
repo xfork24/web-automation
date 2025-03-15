@@ -24,7 +24,7 @@ def main():
             logger.error(f'get unhandled exception {e}, just continue')
             traceback.print_exc()
             continue
-    return
+    cleanup()
 
 
 if __name__ == '__main__':

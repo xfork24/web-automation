@@ -141,7 +141,8 @@ class DingBot:
         }
         headers = {'Content-Type': 'application/json'}
         response = requests.post(webhook_url, headers=headers, data=dumps(data))
-        logger.info(f'DingBot send_action_card_separate request to {webhook_url} with headers={headers} and data={data}')
+        logger.info(
+            f'DingBot send_action_card_separate request to {webhook_url} with headers={headers} and data={data}')
         assert (response.status_code == 200 and response.json().get('errcode') == 0)
 
     def send_free_card(self, links: List[FreeCardLink]):

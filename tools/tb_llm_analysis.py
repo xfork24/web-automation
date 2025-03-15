@@ -35,7 +35,7 @@ def main():
     # the last batch
     if len(product_batch) > 0:
         update_product_llm_analysis_batch(product_batch, UPDATE_ID)
-    return
+    cleanup()
 
 
 if __name__ == '__main__':

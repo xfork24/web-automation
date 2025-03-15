@@ -31,3 +31,5 @@ if __name__ == '__main__':
 
     # 下载商品素材，应该放到所有任务都执行完毕的最后再执行
     # download_hot_product_resources()
+
+    cleanup()
