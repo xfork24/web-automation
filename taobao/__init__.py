@@ -12,10 +12,6 @@ from taobao.analysis import *
 
 
 def cleanup():
-    logger = get_logger()
-    logger.info('close webdriver ...')
-    Driver.close()
-    logger.info('close DB instance ...')
-    DB.close()
-    logger.info('close LLM client ...')
-    GroqClient.close()
+    close_driver()
+    close_db()
+    close_llm_client()

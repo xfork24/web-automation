@@ -21,6 +21,12 @@ CATEGORY_NAME_MAX_LENGTH = 10  # 这里强迫大模型缩短长度，虽然有�
 GroqClient = Groq(api_key=GROQ_KEY, timeout=GROQ_TIMEOUT_IN_SECONDS)
 
 
+def close_llm_client():
+    logger = get_logger()
+    logger.info('close LLM client ...')
+    GroqClient.close()
+
+
 # Data model for LLM to generate
 # 这里有几个问题：
 # 1. 如果写keywords、categories，大模型会认不出来导致格式错误

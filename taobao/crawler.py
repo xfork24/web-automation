@@ -94,6 +94,12 @@ def init_webdriver(webdriver_type: WebDriverType):
     return driver
 
 
+def close_driver():
+    logger = get_logger()
+    logger.info('close webdriver ...')
+    Driver.close()
+
+
 def zoom_content(ratio=1.0):
     logger = get_logger()
     zoom_script = 'document.body.style.zoom="%f"' % ratio

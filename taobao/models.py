@@ -37,6 +37,12 @@ DB = MySQLDatabase(DB_NAME,
 DB.connect(reuse_if_open=True)
 
 
+def close_db():
+    logger = get_logger()
+    logger.info('close DB instance ...')
+    DB.close()
+
+
 class BaseModel(Model):
     class Meta:
         database = DB
