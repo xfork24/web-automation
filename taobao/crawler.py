@@ -83,7 +83,7 @@ def init_webdriver(webdriver_type: WebDriverType):
         options = webdriver.ChromeOptions()
         options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
         options.add_argument('--disable-blink-features=AutomationControlled')
-        # options.add_argument('--headless')
+        options.add_argument('--headless')
         options.add_argument('--disable-gpu')
         driver = webdriver.Chrome(options=options, service=driver_service)
     elif webdriver_type == WebDriverType.SafariDriver:

@@ -12,8 +12,7 @@ UPDATE_ID = 'tb_sale_analysis'
 #                        ('素材', 5),
 #                        ('自动发货', 5), ]
 
-DEFAULT_SEARCH_KEYS = [('自动发货', 5),
-                       ('美剧', 5), ]
+DEFAULT_SEARCH_KEYS = [('电视剧', 5)]
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)

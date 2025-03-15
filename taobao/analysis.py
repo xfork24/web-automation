@@ -143,50 +143,48 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
                     ShopSearchCrawlTask.update_ts).limit(1)
                 if task.count() == 0:
                     add_shop_search_crawl_task(si.shop_name, None, update_id, update_role)
-    # 处理可能的商品问题
-    if fix_product_sale:
-        logger.info('handling product issues with display_sale==-1 or estimated_revenue=-1 ...')
-        search_start_ts = ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
-        shop_start_ts = ts - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
-        pi_query = ProductInfo.select().where(ProductInfo.update_ts > batch_ts).order_by(
-            ProductInfo.update_ts)
-        for pi in pi_query:
-            # 处理无销售数量问题，同时添加搜索任务和店铺任务
-            if pi.display_sale == -1 or pi.estimated_revenue == -1:
-                # 添加搜索任务
-                if fix_product_sale_by_search:
-                    tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == pi.product_title,
-                                                           SearchCrawlTask.update_ts > search_start_ts).order_by(
-                        SearchCrawlTask.update_ts)
-                    task_existed = False
-                    for task in tasks:
-                        target_product_ids = json_loads(task.target_product_ids)
-                        if len(target_product_ids) == 0:
+    logger.info('handling product issues with display_sale==-1 or estimated_revenue=-1 ...')
+    search_start_ts = ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+    shop_start_ts = ts - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
+    pi_query = ProductInfo.select().where(ProductInfo.update_ts > batch_ts).order_by(
+        ProductInfo.update_ts)
+    for pi in pi_query:
+        # 处理无销售数量问题，同时添加搜索任务和店铺任务
+        if pi.display_sale == -1 or pi.estimated_revenue == -1:
+            # 添加搜索任务
+            if fix_product_sale and fix_product_sale_by_search:
+                tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == pi.product_title,
+                                                       SearchCrawlTask.update_ts > search_start_ts).order_by(
+                    SearchCrawlTask.update_ts)
+                task_existed = False
+                for task in tasks:
+                    target_product_ids = json_loads(task.target_product_ids)
+                    if len(target_product_ids) == 0:
+                        task_existed = True
+                        break
+                    else:
+                        if pi.product_id in target_product_ids:
                             task_existed = True
                             break
-                        else:
-                            if pi.product_id in target_product_ids:
-                                task_existed = True
-                                break
-                    if not task_existed:
-                        add_search_crawl_task(pi.product_title, 1, [pi.product_id], None, update_id, update_role)
-                # 同时也添加店铺搜索任务
-                if fix_product_sale_by_shop:
-                    tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
-                                                         ShopCrawlTask.update_ts > shop_start_ts).order_by(
-                        ShopCrawlTask.update_ts)
-                    task_existed = False
-                    for task in tasks:
-                        target_product_ids = json_loads(task.target_product_ids)
-                        if len(target_product_ids) == 0:
+                if not task_existed:
+                    add_search_crawl_task(pi.product_title, 1, [pi.product_id], None, update_id, update_role)
+            # 同时也添加店铺搜索任务
+            if fix_product_sale and fix_product_sale_by_shop:
+                tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
+                                                     ShopCrawlTask.update_ts > shop_start_ts).order_by(
+                    ShopCrawlTask.update_ts)
+                task_existed = False
+                for task in tasks:
+                    target_product_ids = json_loads(task.target_product_ids)
+                    if len(target_product_ids) == 0:
+                        task_existed = True
+                        break
+                    else:
+                        if pi.product_id in target_product_ids:
                             task_existed = True
                             break
-                        else:
-                            if pi.product_id in target_product_ids:
-                                task_existed = True
-                                break
-                    if not task_existed:
-                        add_shop_crawl_task(pi.shop_name, [pi.product_id], None, update_id, update_role)
+                if not task_existed:
+                    add_shop_crawl_task(pi.shop_name, [pi.product_id], None, update_id, update_role)
         # 处理llm_analysis缺失问题，我们不用batch的方式，便于检查任务是否存在，在执行任务时进行batch
         if fix_llm_analysis:
             logger.info('handling product issues with empty LLM analysis ...')
