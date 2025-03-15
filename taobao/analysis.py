@@ -2,11 +2,8 @@
 # !./bin/python
 
 import shutil
-import requests
 from pathlib import Path
-from taobao.config import PRODUCT_DIR
 from taobao.llm import *
-from taobao.models import *
 from taobao.crawler import *
 
 # 各任务的去重检查周期

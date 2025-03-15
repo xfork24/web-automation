@@ -54,7 +54,7 @@ def parse_price_ocr_by_pytesseract(image_file_path, config=TESSERACT_PRICE_OCR_C
 
 def parse_price_ocr_by_pyocr(image_file_path, allowlist=PYOCR_PRICE_ALLOW_LIST):
     logger = get_logger()
-    result = EasyOcrReader.readtext(image_file_path, allowlist)
+    result = EasyOcrReader.readtext(image_file_path, allowlist=allowlist)
     if len(result) != 1:
         msg = f'parse_price_ocr_by_pyocr failed with result={result} while parsing {image_file_path}, allowlist={allowlist}'
         logger.error(msg)

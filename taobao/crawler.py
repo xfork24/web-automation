@@ -341,6 +341,7 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
                 shop_summary = item
         assert (sku_summary is not None and shop_summary is not None)
         sku_items = sku_summary.find_elements(By.XPATH, 'div')
+        sku_title_wrapper, price_wrapper = None, None
         for item in sku_items:
             cls_name = item.get_attribute('class')
             if cls_name is None:
@@ -419,25 +420,25 @@ def craw_taobao_shop_page(shop_link, update_id, target_product_ids=None):
     logger = get_logger()
     load_shop_and_products(shop_link)
     divs = Driver.find_elements(By.XPATH, '//div')
+    shop_name = None
+    sku_divs = []
     for div in divs:
         cls_name = div.get_attribute('class')
         if cls_name is None:
             continue
         if re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
-            try:
-                craw_taobao_shop_sku(div, shop_name, update_id, target_product_ids)
-            except PriceOCRError as e:
-                logger.error(f'get PriceOCRGetEmptyError={e}, nothing will be updated and just continue')
-                traceback.print_exc()
-                continue
+            sku_divs.append(div)
         elif re.match(SHOP_NAME_RE_EXP, cls_name):
-            try:
-                shop_name = div.find_element(By.XPATH, 'span').text
-                update_shop_info(shop_name, shop_link, None, update_id, craw_taobao_shop_page.__name__)
-            except Exception as e:
-                logger.error(f'get unhandled exception {e} while parsing shop info, just continue')
-                traceback.print_exc()
-                continue
+            shop_name = div.find_element(By.XPATH, 'span').text
+    assert (shop_name is not None)
+    update_shop_info(shop_name, shop_link, None, update_id, craw_taobao_shop_page.__name__)
+    for sku_div in sku_divs:
+        try:
+            craw_taobao_shop_sku(sku_div, shop_name, update_id, target_product_ids)
+        except PriceOCRError as e:
+            logger.error(f'get PriceOCRGetEmptyError={e}, nothing will be updated and just continue')
+            traceback.print_exc()
+            continue
 
 
 def load_shop_and_products(shop_link):
@@ -506,7 +507,7 @@ def craw_taobao_shop_sku(shop_sku_div, shop_name, update_id, target_product_ids=
 
 
 def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, shop_name,
-                                price_unit, display_price, product_sale, update_id):
+                                price_unit, display_price, display_sale, update_id):
     logger = get_logger()
     logger.info(f'save_taobao_shop_sku_result parsed record:\n'
                 f'\t\tproduct_id={product_id}\n'
@@ -520,10 +521,10 @@ def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link,
                 f'\t\tupdate_id={update_id}\n')
     update_role = save_taobao_shop_sku_result.__name__
     update_product_info(product_id, sku_id, product_title, product_link, shop_name,
-                        price_unit, display_price, product_sale,
+                        price_unit, display_price, display_sale,
                         None, None, None, None,
                         update_id, update_role)
-    add_product_sale(product_id, shop_name, price_unit, price_val, product_sale, None, update_id, update_role)
+    add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None, update_id, update_role)
 
 
 def crawl_taobao_shop_link_by_search(shop_name, update_id):
@@ -531,6 +532,7 @@ def crawl_taobao_shop_link_by_search(shop_name, update_id):
     logger.info('navigate to taobao shop search page')
     Driver.get(TB_SEARCH_PAGE)
     divs = Driver.find_elements(By.XPATH, '//div')
+    shop_tab_div = None
     for div in divs:
         title = div.text.strip()
         if title == '店铺':
