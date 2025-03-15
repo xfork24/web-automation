@@ -8,10 +8,11 @@ LOG_FILE_NAME = './logs/tb_fix_llm_analysis.log'
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400
 LLM_BATCH_WAIT_IN_SECONDS = 10
 LLM_QUERY_BATCH_SIZE = 10
-UPDATE_ID = 'tb_fix_llm_analysis'
+UPDATE_ID = 'tb_llm_analysis'
 ForceUpdate = False
 
-if __name__ == '__main__':
+
+def main():
     # scan product_info table in update_ts order and update products within time period
     # only products with empty llm_analysis be updated
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
@@ -21,7 +22,8 @@ if __name__ == '__main__':
     logger.info(f'get {len(products)} products to be updated by applying update_ts > {start_ts}')
     product_batch = []
     for product in products:
-        if product.llm_analysis != '' and not ForceUpdate:
+        additional_properties = json_loads(product.additional_properties)
+        if 'llm_analysis' not in additional_properties.keys() and not ForceUpdate:
             logger.info(f'product [{product.product_id}] llm analysis already updated, just ignore')
             continue
         if len(product_batch) == LLM_QUERY_BATCH_SIZE:
@@ -33,3 +35,8 @@ if __name__ == '__main__':
     # the last batch
     if len(product_batch) > 0:
         update_product_llm_analysis_batch(product_batch, UPDATE_ID)
+    return
+
+
+if __name__ == '__main__':
+    main()

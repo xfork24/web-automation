@@ -4,13 +4,26 @@
 
 from taobao import *
 
-QUERY_STRING = '歌曲剪辑消音伴奏降调加主旋律背景配乐音乐音频制作处理混音修音'
-NUM_OF_PAGES_TO_PARSE = 10
+SEARCH_KEYS = ['歌曲剪辑消音伴奏降调加主旋律背景配乐音乐音频制作处理混音修音']
+NUM_OF_PAGES_TO_PARSE = 3
 SALE_ORDER = False
 UPDATE_ID = 'tb_search_crawler'
 LOG_FILE_NAME = './logs/tb_search_crawler.log'
 
-if __name__ == '__main__':
+
+def main():
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
+    logger = get_logger()
     login_taobao()
-    crawl_taobao_search_results(QUERY_STRING, NUM_OF_PAGES_TO_PARSE, SALE_ORDER, UPDATE_ID)
+    for key in SEARCH_KEYS:
+        try:
+            crawl_taobao_search_results(key, NUM_OF_PAGES_TO_PARSE, SALE_ORDER, UPDATE_ID)
+        except Exception as e:
+            logger.error(f'get unhandled exception {e}, just continue')
+            traceback.print_exc()
+            continue
+    return
+
+
+if __name__ == '__main__':
+    main()

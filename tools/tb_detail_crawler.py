@@ -6,10 +6,11 @@
 from taobao import *
 
 LOG_FILE_NAME = './logs/tb_detail_crawler.log'
-UPDATE_ID = 'tb_detail_crawler'
 PRODUCT_IDS = ['895582612450']
+UPDATE_ID = 'tb_detail_crawler'
 
-if __name__ == '__main__':
+
+def main():
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
     login_taobao()
@@ -19,3 +20,12 @@ if __name__ == '__main__':
             craw_taobao_detail_page(product.product_id, product.product_link, UPDATE_ID)
         except DoesNotExist:
             logger.error(f'can not find product [{product_id}] in database')
+        except Exception as e:
+            logger.error(f'get unhandled exception {e}, just continue')
+            traceback.print_exc()
+            continue
+    return
+
+
+if __name__ == '__main__':
+    main()

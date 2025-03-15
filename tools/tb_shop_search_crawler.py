@@ -6,15 +6,25 @@ from taobao import *
 
 LOG_FILE_NAME = './logs/tb_fix_shop_link.log'
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400
-UPDATE_ID = 'tb_fix_shop_link'
+SHOP_NAMES = ['2025全网首发', '出海王']
+UPDATE_ID = 'tb_shop_search_crawler'
 
-if __name__ == '__main__':
+
+def main():
     # scan product_info table in update_ts order and update products within time period
     # only products with empty llm_analysis be updated
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
+    logger = get_logger()
     login_taobao()
-    start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
-    shops = ShopInfo.select().where(ShopInfo.update_ts > start_ts).order_by(ShopInfo.update_ts)
-    for shop in shops:
-        if not re.match(SHOP_LINK_KNOWN_RE_EXP_LIST, shop.shop_link):
-            crawl_taobao_shop_link_by_search(shop.shop_name, UPDATE_ID)
+    for shop_name in SHOP_NAMES:
+        try:
+            crawl_taobao_shop_link_by_search(shop_name, UPDATE_ID)
+        except Exception as e:
+            logger.error(f'get unhandled exception {e}, just continue')
+            traceback.print_exc()
+            continue
+    return
+
+
+if __name__ == '__main__':
+    main()
