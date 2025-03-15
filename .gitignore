@@ -13,3 +13,4 @@ output/
 products/
 logs/
 utils/__pycache__/
+main_test.py
