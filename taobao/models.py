@@ -59,6 +59,7 @@ class ProductInfo(BaseModel):
     sku_id = CharField(max_length=32, index=True)
     product_title = CharField(max_length=128)
     product_link = CharField(max_length=512)
+    product_cover = TextField()
     shop_name = CharField(max_length=128, index=True)
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
@@ -220,26 +221,7 @@ class ShopSearchCrawlTask(BaseModel):
         table_name = 'shop_search_crawl_task'
 
 
-def add_hot_product(product_id, shop_name, additional_properties, update_id, update_role):
-    logger = get_logger()
-    ts = int(time.time())
-    new_hp = HotProduct()
-    new_hp.product_id = product_id
-    new_hp.shop_name = shop_name
-    if additional_properties is not None:
-        new_hp.additional_properties = json_dumps(additional_properties)
-    else:
-        new_hp.additional_properties = json_dumps({})
-    new_hp.create_ts = ts
-    new_hp.update_id = update_id
-    new_hp.update_role = update_role
-    new_hp.save(force_insert=True)
-    logger.info(f'new hot product record inserted: {new_hp.to_dict()}')
-    add_operation_history(f'{product_id},{ts}', new_hp.table_name(), None, update_id, update_role, ts,
-                          DB_OPS_CREATE_NEW)
-
-
-def update_product_info(product_id, sku_id, product_title, product_link, shop_name,
+def update_product_info(product_id, sku_id, product_title, product_link, product_cover, shop_name,
                         price_unit, display_price, display_sale,
                         title_imgs, page_imgs, offer_details, additional_properties, update_id, update_role):
     # update product_info table
@@ -253,6 +235,7 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
         exist_pi.sku_id = sku_id if sku_id != '' else exist_pi.sku_id
         exist_pi.product_title = product_title if product_id != '' else exist_pi.product_title
         exist_pi.product_link = product_link if product_link != '' else exist_pi.product_link
+        exist_pi.product_cover = product_cover if product_cover != '' else exist_pi.product_cover
         exist_pi.shop_name = shop_name if shop_name != '' else exist_pi.shop_name
         exist_pi.price_unit = price_unit if price_unit != '' else exist_pi.price_unit
         exist_pi.display_price = display_price if display_price != -1 else exist_pi.display_price
@@ -279,6 +262,7 @@ def update_product_info(product_id, sku_id, product_title, product_link, shop_na
         new_pi.sku_id = sku_id
         new_pi.product_title = product_title
         new_pi.product_link = product_link
+        new_pi.product_cover = product_cover
         new_pi.shop_name = shop_name
         new_pi.price_unit = price_unit
         new_pi.display_price = display_price
@@ -518,6 +502,25 @@ def add_shop_search_crawl_task(shop_name, additional_properties, update_id, upda
     new_sct.save(force_insert=True)
     logger.info(f'new shop search crawl task record inserted: {new_sct.to_dict()}')
     add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+
+
+def add_hot_product(product_id, shop_name, additional_properties, update_id, update_role):
+    logger = get_logger()
+    ts = int(time.time())
+    new_hp = HotProduct()
+    new_hp.product_id = product_id
+    new_hp.shop_name = shop_name
+    if additional_properties is not None:
+        new_hp.additional_properties = json_dumps(additional_properties)
+    else:
+        new_hp.additional_properties = json_dumps({})
+    new_hp.create_ts = ts
+    new_hp.update_id = update_id
+    new_hp.update_role = update_role
+    new_hp.save(force_insert=True)
+    logger.info(f'new hot product record inserted: {new_hp.to_dict()}')
+    add_operation_history(f'{product_id},{ts}', new_hp.table_name(), None, update_id, update_role, ts,
+                          DB_OPS_CREATE_NEW)
 
 
 def update_task_status(task, status, update_id):

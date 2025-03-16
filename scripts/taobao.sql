@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS product_info
     sku_id                varchar(32)   NOT NULL,
     product_title         varchar(128)  NOT NULL,
     product_link          varchar(512)  NOT NULL,
+    product_cover         text          NOT NULL,
     shop_name             varchar(128)  NOT NULL,
     price_unit            varchar(3)    NOT NULL,
     display_price         int           NOT NULL,

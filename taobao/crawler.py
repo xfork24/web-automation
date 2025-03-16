@@ -34,6 +34,7 @@ TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 SEARCH_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
 SEARCH_SHOP_INFO_RE_EXP = re.compile('^shopInfo--\\w+')
 SEARCH_DESC_WRAPPER_RE_EXP = re.compile('^[\\s\\S]*descWrapper--\\w+')
+SEARCH_IMAGE_WRAPPER_RE_EXP = re.compile('^imageSwitch--\\w+')
 SEARCH_PRICE_WRAPPER_RE_EXP = re.compile('^priceWrapper--\\w+')
 SEARCH_SKU_UNIT_RE_EXP = re.compile('^unit--\\w+')
 
@@ -346,7 +347,7 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
                 shop_summary = item
         assert (sku_summary is not None and shop_summary is not None)
         sku_items = sku_summary.find_elements(By.XPATH, 'div')
-        sku_title_wrapper, price_wrapper = None, None
+        image_wrapper, sku_title_wrapper, price_wrapper = None, None, None
         for item in sku_items:
             cls_name = item.get_attribute('class')
             if cls_name is None:
@@ -355,8 +356,11 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
                 sku_title_wrapper = item
             if re.match(SEARCH_PRICE_WRAPPER_RE_EXP, cls_name):
                 price_wrapper = item
-        assert (sku_title_wrapper is not None and price_wrapper is not None)
+            if re.match(SEARCH_IMAGE_WRAPPER_RE_EXP, cls_name):
+                image_wrapper = item
+        assert (sku_title_wrapper is not None and price_wrapper is not None and image_wrapper is not None)
         product_title = sku_title_wrapper.find_element(By.XPATH, 'div/span').text
+        product_cover = image_wrapper.find_element(By.XPATH, 'img').get_attribute('src')
         price_unit_span, display_sale_span = None, None
         for span in price_wrapper.find_elements(By.XPATH, 'div/span'):
             cls_name = span.get_attribute('class')
@@ -375,7 +379,8 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
         shop_link = shop_summary.find_element(By.XPATH, 'div/a').get_attribute('href') or ''
         shop_name = shop_summary.find_elements(By.XPATH, 'div/a/div/span')[-1].text
         if product_id not in ids_set:
-            save_taobao_search_result(product_id, sku_id, product_title, product_link,
+            save_taobao_search_result(product_id, sku_id, product_title,
+                                      product_link, product_cover,
                                       shop_name, shop_link,
                                       price_unit, display_price, display_sale,
                                       update_id)
@@ -390,13 +395,15 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
         return
 
 
-def save_taobao_search_result(product_id, sku_id, product_title, product_link, shop_name, shop_link, price_unit,
+def save_taobao_search_result(product_id, sku_id, product_title, product_link, product_cover,
+                              shop_name, shop_link, price_unit,
                               display_price, display_sale, update_id):
     logger = get_logger()
     logger.info(f'save_taobao_search_result parsed record:\n'
                 f'\t\tproduct_id={product_id}\n'
                 f'\t\tsku_id={sku_id}\n'
                 f'\t\tproduct_title={product_title}\n'
+                f'\t\tproduct_cover={product_cover}\n'
                 f'\t\tproduct_link={product_link}\n'
                 f'\t\tshop_name={shop_name}\n'
                 f'\t\tshop_link={shop_link}\n'
@@ -409,7 +416,7 @@ def save_taobao_search_result(product_id, sku_id, product_title, product_link, s
     # save shop info
     update_shop_info(shop_name, shop_link, None, update_id, update_role)
     # save product info
-    update_product_info(product_id, sku_id, product_title, product_link, shop_name,
+    update_product_info(product_id, sku_id, product_title, product_link, product_cover, shop_name,
                         price_unit, display_price, display_sale,
                         None, None, None, None,
                         update_id, update_role)
@@ -481,6 +488,7 @@ def load_shop_and_products(shop_link):
 def craw_taobao_shop_sku(shop_sku_div, shop_name, update_id, target_product_ids=None):
     logger = get_logger()
     product_link = shop_sku_div.find_element(By.XPATH, 'a').get_attribute('href')
+    product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
     product_id = parse_product_id_from_product_link(product_link)
     target_product_ids = target_product_ids or []
     if len(target_product_ids) > 0 and product_id not in target_product_ids:
@@ -507,11 +515,11 @@ def craw_taobao_shop_sku(shop_sku_div, shop_name, update_id, target_product_ids=
     display_price = parse_price_span(price_spans[1], product_id)
     product_sale = parse_sale_in_search(sale_div.text)
     # update product_info and product_sales table
-    save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, shop_name,
+    save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover, shop_name,
                                 price_unit, display_price, product_sale, update_id)
 
 
-def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, shop_name,
+def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover, shop_name,
                                 price_unit, display_price, display_sale, update_id):
     logger = get_logger()
     logger.info(f'save_taobao_shop_sku_result parsed record:\n'
@@ -519,13 +527,14 @@ def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link,
                 f'\t\tsku_id={sku_id}\n'
                 f'\t\tproduct_title={product_title}\n'
                 f'\t\tproduct_link={product_link}\n'
+                f'\t\tproduct_cover={product_cover}\n'
                 f'\t\tshop_name={shop_name}\n'
                 f'\t\tprice_unit={price_unit}\n'
                 f'\t\tdisplay_price={display_price}\n'
                 f'\t\tdisplay_sale={display_sale}\n'
                 f'\t\tupdate_id={update_id}\n')
     update_role = save_taobao_shop_sku_result.__name__
-    update_product_info(product_id, sku_id, product_title, product_link, shop_name,
+    update_product_info(product_id, sku_id, product_title, product_link, product_cover, shop_name,
                         price_unit, display_price, display_sale,
                         None, None, None, None,
                         update_id, update_role)
@@ -831,7 +840,7 @@ def save_taobao_detail_result(product_id, sku_id, product_title, product_link,
                 f'\t\toffer_details={offer_details}\n'
                 f'\t\tupdate_id={update_id}\n')
     update_role = save_taobao_detail_result.__name__
-    update_product_info(product_id, sku_id, product_title, product_link, shop_name,
+    update_product_info(product_id, sku_id, product_title, product_link, '', shop_name,
                         price_unit, display_price, display_sale,
                         title_images, main_images, offer_details, None,
                         update_id, update_role)
