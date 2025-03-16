@@ -33,7 +33,7 @@ TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 # search page related controls
 SEARCH_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
 SEARCH_SHOP_INFO_RE_EXP = re.compile('^shopInfo--\\w+')
-SEARCH_DESC_WRAPPER_RE_EXP = re.compile('^[\s\S]*descWrapper--\\w+')
+SEARCH_DESC_WRAPPER_RE_EXP = re.compile('^[\\s\\S]*descWrapper--\\w+')
 SEARCH_PRICE_WRAPPER_RE_EXP = re.compile('^priceWrapper--\\w+')
 SEARCH_SKU_UNIT_RE_EXP = re.compile('^unit--\\w+')
 
@@ -267,7 +267,6 @@ def handle_taobao_post_login_page():
 
 
 def login_taobao():
-    logger = get_logger()
     handle_taobao_login_page()
     handle_taobao_post_login_page()
     set_window_size()

@@ -268,7 +268,7 @@ def download_hot_product_resources(force_download=False):
                 element_screenshot(img,
                                    f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}')
             except Exception:
-                logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
+                logger.error(f'get unhandled exception while get page image link={title_img}, just ignore')
                 traceback.print_exc()
                 continue
         # download page images
