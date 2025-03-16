@@ -35,7 +35,7 @@ TB_SHOP_REVENUE_THRESHOLD = 50000
 TB_SKU_REVENUE_TOPN = 50
 TB_SKU_REVENUE_THRESHOLD = 10000
 TB_HOT_PRODUCT_REVENUE_TOPN = 50
-TB_HOT_PRODUCT_REVENUE_THRESHOLD = 5000
+TB_HOT_PRODUCT_REVENUE_THRESHOLD = 10000
 
 # 资源下载任务相关
 TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS = 3
@@ -211,9 +211,9 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
         # 我们暂时也不处理未经LLM分析，或LLM认为的非虚拟商品，虽然这不一定准确
         additional_properties = json_loads(pi.additional_properties)
         if LLM_ANALYSIS_KEY not in additional_properties:
-            break
+            continue
         if not additional_properties[LLM_ANALYSIS_KEY]['digital']:
-            break
+            continue
         idx += 1
         query = HotProduct.select().where(HotProduct.product_id == pi.product_id,
                                           HotProduct.create_ts > start_ts).order_by(
