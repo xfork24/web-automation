@@ -23,7 +23,7 @@ def main():
     product_batch = []
     for product in products:
         additional_properties = json_loads(product.additional_properties)
-        if 'llm_analysis' not in additional_properties.keys() and not ForceUpdate:
+        if LLM_ANALYSIS_KEY not in additional_properties.keys() and not ForceUpdate:
             logger.info(f'product [{product.product_id}] llm analysis already updated, just ignore')
             continue
         if len(product_batch) == LLM_QUERY_BATCH_SIZE:

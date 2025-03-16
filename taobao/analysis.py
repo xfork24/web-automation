@@ -35,7 +35,7 @@ TB_SHOP_REVENUE_THRESHOLD = 50000
 TB_SKU_REVENUE_TOPN = 50
 TB_SKU_REVENUE_THRESHOLD = 10000
 TB_HOT_PRODUCT_REVENUE_TOPN = 50
-TB_HOT_PRODUCT_REVENUE_THRESHOLD = 10000
+TB_HOT_PRODUCT_REVENUE_THRESHOLD = 5000
 
 # 资源下载任务相关
 TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS = 3
@@ -205,8 +205,14 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
     pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
     idx = 0
     for pi in pi_query:
+        # 我们暂时不分析商品销量历史数据，因为这逻辑上相当于年度均线，且淘宝给出的信息很含糊
         if idx > top_n and pi.estimated_revenue < revenue_threshold * 100:
-            # 我们暂时不分析商品销量历史数据，因为这逻辑上相当于年度均线，且淘宝给出的信息很含糊
+            break
+        # 我们暂时也不处理未经LLM分析，或LLM认为的非虚拟商品，虽然这不一定准确
+        additional_properties = json_loads(pi.additional_properties)
+        if LLM_ANALYSIS_KEY not in additional_properties:
+            break
+        if not additional_properties[LLM_ANALYSIS_KEY]['digital']:
             break
         idx += 1
         query = HotProduct.select().where(HotProduct.product_id == pi.product_id,
