@@ -11,7 +11,7 @@ from json import dumps
 from pydantic import BaseModel
 from pydantic.json import pydantic_encoder
 from typing import List
-from taobao.utils import get_logger
+from core.utils import get_logger
 
 DING_AUTOMATION_BOT_WEBHOOK = 'https://oapi.dingtalk.com/robot/send?access_token=9e8fabbebf505b7f53cc0d2bd9bb54305d72d8be7ba6eff58a6d57b9433b26cc'
 DING_AUTOMATION_BOT_SIGN = 'SEC5a9263ddaedfb9609b078c0b6dfef5bc9f86abad1096279ffc2f14067b4e2696'

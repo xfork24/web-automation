@@ -2,7 +2,7 @@
 # !./bin/python
 # 给定搜索关键字，抓取指定页面数的商品基本信息，更新如下表：product_info, product_sales, shop_info
 
-from taobao import *
+from core import *
 
 SEARCH_KEYS = ['歌曲剪辑消音伴奏降调加主旋律背景配乐音乐音频制作处理混音修音']
 NUM_OF_PAGES_TO_PARSE = 3

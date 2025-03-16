@@ -2,7 +2,7 @@
 # !./bin/python
 # 抓取最近一段时间更新的product_info记录，若llm_analysis内容为空，或强制更新，则调用llm更新分析信息
 
-from taobao import *
+from core import *
 
 LOG_FILE_NAME = './logs/tb_fix_llm_analysis.log'
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400

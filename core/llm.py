@@ -6,8 +6,8 @@ from pydantic import constr, BaseModel
 from typing import List
 from groq import Groq
 
-from taobao.utils import *
-from taobao.models import ProductInfo
+from core.utils import *
+from core.models import ProductInfo
 
 LLM_MODEL = 'deepseek-r1-distill-llama-70b'
 GROQ_KEY = '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'

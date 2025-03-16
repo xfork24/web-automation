@@ -2,7 +2,7 @@
 # !./bin/python
 # ALL IN ONE 抓取任务，因为淘宝的登录认证，本程序长时间运行
 
-from taobao import *
+from core import *
 
 LOG_FILE_NAME = './logs/tb_crawler_task.log'
 UPDATE_ID = 'tb_crawler_task'

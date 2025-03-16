@@ -2,7 +2,7 @@
 # !./bin/python
 # 通过搜索页抓到的商铺链接有些格式为非法，我们通过搜索店铺功能手动fix这些商铺的链接
 
-from taobao import *
+from core import *
 
 LOG_FILE_NAME = './logs/tb_fix_shop_link.log'
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400

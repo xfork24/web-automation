@@ -63,10 +63,9 @@ CREATE TABLE IF NOT EXISTS product_sale
     estimated_revenue     int           NOT NULL,
     additional_properties varchar(4096) NOT NULL,
     create_ts             int           NOT NULL,
-    update_ts             int           NOT NULL,
     update_id             varchar(32)   NOT NULL,
     update_role           varchar(64)   NOT NULL,
-    PRIMARY KEY (product_id, update_ts)
+    PRIMARY KEY (product_id, create_ts)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
@@ -226,7 +225,7 @@ ALTER TABLE product_sale
 ALTER TABLE product_sale
     ADD INDEX idx_estimated_revenue (estimated_revenue);
 ALTER TABLE product_sale
-    ADD INDEX idx_update_ts (update_ts);
+    ADD INDEX idx_create_ts (create_ts);
 ALTER TABLE product_sale
     ADD INDEX idx_update_id (update_id);
 
@@ -238,7 +237,7 @@ ALTER TABLE hot_product
 ALTER TABLE operation_history
     ADD INDEX idx_pk_table_name (pk, table_name);
 ALTER TABLE operation_history
-    ADD INDEX idx_update_role_operation_ts (update_role, operation_ts);
+    ADD INDEX idx_update_id_operation_ts (update_id, operation_ts);
 ALTER TABLE operation_history
     ADD INDEX idx_create_ts (create_ts);
 ALTER TABLE operation_history
@@ -271,6 +270,8 @@ ALTER TABLE search_crawl_task
 ALTER TABLE search_crawl_task
     ADD INDEX idx_update_id (update_id);
 
+ALTER TABLE llm_analyze_task
+    ADD INDEX idx_product_id (product_id);
 ALTER TABLE llm_analyze_task
     ADD INDEX idx_status (status);
 ALTER TABLE llm_analyze_task

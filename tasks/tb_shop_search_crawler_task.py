@@ -2,7 +2,7 @@
 # !./bin/python
 # 淘宝店铺搜索任务，本程序长时间运行
 
-from taobao import *
+from core import *
 
 LOG_FILE_NAME = './logs/tb_shop_search_crawler_task.log'
 UPDATE_ID = 'tb_shop_search_crawler_task'

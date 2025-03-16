@@ -3,7 +3,7 @@
 # 抓取某个单一商品（提供商品链接和可选ID）的Detail页面信息，更新product_info表里的对应商品的如下字段：title_imgs, page_imgs, offer_details
 # 若商品不存在，则创建新的product_info表记录，并写入商品信息
 
-from taobao import *
+from core import *
 
 LOG_FILE_NAME = './logs/tb_detail_crawler.log'
 PRODUCT_IDS = ['895582612450']

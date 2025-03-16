@@ -2,7 +2,7 @@
 # !./bin/python
 # 大模型分析任务，本程序长时间运行
 
-from taobao import *
+from core import *
 
 LOG_FILE_NAME = './logs/tb_llm_analyze_task.log'
 UPDATE_ID = 'tb_llm_analyze_task'

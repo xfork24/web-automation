@@ -2,7 +2,7 @@
 # !./bin/python
 # 定期以一定规则生成抓取任务，参考README.md
 
-from taobao import *
+from core import *
 
 LOG_FILE_NAME = './logs/tb_sales_analysis.log'
 UPDATE_ID = 'tb_sale_analysis'

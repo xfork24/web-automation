@@ -3,8 +3,8 @@
 
 import shutil
 from pathlib import Path
-from taobao.llm import *
-from taobao.crawler import *
+from core.llm import *
+from core.crawler import *
 
 # 各任务的去重检查周期
 TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800

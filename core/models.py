@@ -5,15 +5,15 @@ import re
 import time
 from uuid import uuid4
 from peewee import *
-from taobao.utils import json_dumps
-from taobao.config import (
+from core.utils import *
+from core.config import (
     DB_NAME,
     DB_HOST,
     DB_USER,
     DB_PASSWORD,
     DB_PORT,
     DB_CHARSET)
-from taobao.utils import get_logger
+from core.utils import get_logger
 from playhouse.shortcuts import model_to_dict
 
 DB_OPS_CREATE_NEW = 1
@@ -99,14 +99,13 @@ class ProductSale(BaseModel):
     display_sale = IntegerField(index=True)
     estimated_revenue = IntegerField(index=True)
     additional_properties = CharField(max_length=4096)
-    create_ts = IntegerField()
-    update_ts = IntegerField(index=True)
+    create_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
 
     class Meta:
         table_name = 'product_sale'
-        primary_key = CompositeKey('product_id', 'update_ts')
+        primary_key = CompositeKey('product_id', 'create_ts')
 
 
 class HotProduct(BaseModel):
@@ -137,7 +136,7 @@ class OperationHistory(BaseModel):
         table_name = 'operation_history'
         indexes = (
             (('pk', 'table_name'), False),
-            (('update_role', 'operation_ts'), False),
+            (('update_id', 'operation_ts'), False),
         )
 
 
@@ -343,7 +342,7 @@ def add_product_sale(product_id, shop_name,
     estimated_revenue = -1 if estimated_revenue < 0 else estimated_revenue
     # 有些情况下（比如shop中）同样的商品可以出现多次，所以这里我们仍然要检查一下是否有键重复
     try:
-        ProductSale.get(ProductSale.product_id == product_id, ProductSale.update_ts == ts)
+        ProductSale.get(ProductSale.product_id == product_id, ProductSale.create_ts == ts)
         logger.error(f'product sale record already exist, id = {product_id} and update_ts = {ts}, just ignore')
     except DoesNotExist:
         new_ps = ProductSale()
@@ -358,7 +357,6 @@ def add_product_sale(product_id, shop_name,
         else:
             new_ps.additional_properties = json_dumps({})
         new_ps.create_ts = ts
-        new_ps.update_ts = ts
         new_ps.update_id = update_id
         new_ps.update_role = update_role
         new_ps.save(force_insert=True)

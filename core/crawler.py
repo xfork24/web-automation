@@ -12,10 +12,10 @@ from selenium.webdriver.chrome.service import Service as ChromeDriverService
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from taobao.config import *
-from taobao.exceptions import *
-from taobao.utils import *
-from taobao.models import *
+from core.config import *
+from core.exceptions import *
+from core.utils import *
+from core.models import *
 
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'

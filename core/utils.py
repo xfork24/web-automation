@@ -7,7 +7,7 @@ import easyocr
 import pytesseract
 from json import dumps, loads
 from PIL import Image
-from taobao.exceptions import PriceOCRError
+from core.exceptions import PriceOCRError
 
 TESSERACT_PRICE_OCR_CONFIG = '--psm 7 --oem 1 tessedit_char_whitelist=0123456789.'
 PYOCR_PRICE_ALLOW_LIST = '0123456789.'
