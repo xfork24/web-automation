@@ -2,12 +2,14 @@
 # !./bin/python
 # restful API for management console
 
-from bottle import route, request
+from flask import Flask, request
 from core.models import *
 
-DB_QUERY_DEFAULT_LIMIT = 10000
+DB_QUERY_DEFAULT_LIMIT = 100
 ERROR_CODE_SERVER_ERROR = -1
 ERROR_CODE_NOT_FOUND = -11
+
+api = Flask(__name__)
 
 
 def build_success_response(resp):
@@ -40,7 +42,7 @@ def parse_param_compare(x, v):
     return exps
 
 
-@route('/api/v1/product/<product_id>', method='GET')
+@api.get('/api/v1/product/<product_id>')
 def get_product_by_id(product_id):
     logger = get_logger()
     try:
@@ -66,7 +68,7 @@ def get_product_by_id(product_id):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/products', method='GET')
+@api.get('/api/v1/products')
 def query_products():
     logger = get_logger()
     try:
@@ -75,11 +77,9 @@ def query_products():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'shop_name':
-                # OR use direct property access (request.query.shop_name) to decode automatically
-                # See: https://stackoverflow.com/questions/27432211/python-bottle-requests-and-unicode
-                select_exps.append(ProductInfo.shop_name == v.encode("ISO-8859-1").decode("utf-8"))
+                select_exps.append(ProductInfo.shop_name == v)
             elif k == 'update_ts':
                 select_exps += parse_param_compare(ProductInfo.update_ts, v)
             elif k == 'display_sale':
@@ -116,7 +116,7 @@ def query_products():
         return build_server_error_response(msg)
 
 
-@route('/api/v1/shop/<shop_name>', method='GET')
+@api.get('/api/v1/shop/<shop_name>')
 def get_shop_by_name(shop_name):
     logger = get_logger()
     try:
@@ -140,7 +140,7 @@ def get_shop_by_name(shop_name):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/shops', method='GET')
+@api.get('/api/v1/shops')
 def query_shops():
     logger = get_logger()
     try:
@@ -149,7 +149,7 @@ def query_shops():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'update_ts':
                 select_exps += parse_param_compare(ShopInfo.update_ts, v)
             elif k == 'update_id':
@@ -180,7 +180,7 @@ def query_shops():
         return build_server_error_response(msg)
 
 
-@route('/api/v1/product_sale/<product_id>/<create_ts>', method='GET')
+@api.get('/api/v1/product_sale/<product_id>/<create_ts>')
 def get_product_sale_by_id_and_ts(product_id, create_ts):
     logger = get_logger()
     try:
@@ -207,7 +207,7 @@ def get_product_sale_by_id_and_ts(product_id, create_ts):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/product_sales', method='GET')
+@api.get('/api/v1/product_sales')
 def query_product_sales():
     logger = get_logger()
     try:
@@ -216,13 +216,11 @@ def query_product_sales():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'product_id':
                 select_exps.append(ProductSale.product_id == v)
             elif k == 'shop_name':
-                # OR use direct property access (request.query.shop_name) to decode automatically
-                # See: https://stackoverflow.com/questions/27432211/python-bottle-requests-and-unicode
-                select_exps.append(ProductSale.shop_name == v.encode("ISO-8859-1").decode("utf-8"))
+                select_exps.append(ProductSale.shop_name == v)
             elif k == 'create_ts':
                 select_exps += parse_param_compare(ProductSale.create_ts, v)
             elif k == 'display_sale':
@@ -259,7 +257,7 @@ def query_product_sales():
         return build_server_error_response(msg)
 
 
-@route('/api/v1/hot_product/<product_id>/<create_ts>', method='GET')
+@api.get('/api/v1/hot_product/<product_id>/<create_ts>')
 def get_hot_product_by_id_and_ts(product_id, create_ts):
     logger = get_logger()
     try:
@@ -284,7 +282,7 @@ def get_hot_product_by_id_and_ts(product_id, create_ts):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/hot_products', method='GET')
+@api.get('/api/v1/hot_products')
 def query_hot_products():
     logger = get_logger()
     try:
@@ -293,13 +291,11 @@ def query_hot_products():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'product_id':
                 select_exps.append(HotProduct.product_id == v)
             elif k == 'shop_name':
-                # OR use direct property access (request.query.shop_name) to decode automatically
-                # See: https://stackoverflow.com/questions/27432211/python-bottle-requests-and-unicode
-                select_exps.append(HotProduct.shop_name == v.encode("ISO-8859-1").decode("utf-8"))
+                select_exps.append(HotProduct.shop_name == v)
             elif k == 'create_ts':
                 select_exps += parse_param_compare(HotProduct.create_ts, v)
             elif k == 'update_id':
@@ -330,7 +326,7 @@ def query_hot_products():
         return build_server_error_response(msg)
 
 
-@route('/api/v1/operation_history/<history_id>', method='GET')
+@api.get('/api/v1/operation_history/<history_id>')
 def get_operation_history_by_id(history_id):
     logger = get_logger()
     try:
@@ -356,7 +352,7 @@ def get_operation_history_by_id(history_id):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/operation_histories', method='GET')
+@api.get('/api/v1/operation_histories')
 def query_operation_histories():
     logger = get_logger()
     try:
@@ -365,9 +361,9 @@ def query_operation_histories():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'pk':
-                select_exps.append(OperationHistory.pk == v.encode("ISO-8859-1").decode("utf-8"))
+                select_exps.append(OperationHistory.pk == v)
             elif k == 'table_name':
                 select_exps.append(OperationHistory.table_name == v)
             elif k == 'update_id':
@@ -403,7 +399,7 @@ def query_operation_histories():
         return build_server_error_response(msg)
 
 
-@route('/api/v1/detail_task/<task_id>', method='GET')
+@api.get('/api/v1/detail_task/<task_id>')
 def get_detail_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
@@ -428,7 +424,7 @@ def get_detail_crawl_task_by_id(task_id):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/detail_tasks', method='GET')
+@api.get('/api/v1/detail_tasks')
 def get_detail_crawl_tasks():
     logger = get_logger()
     try:
@@ -437,7 +433,7 @@ def get_detail_crawl_tasks():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'product_id':
                 select_exps.append(DetailCrawlTask.product_id == v)
             elif k == 'status':
@@ -472,7 +468,7 @@ def get_detail_crawl_tasks():
         return build_server_error_response(msg)
 
 
-@route('/api/v1/shop_task/<task_id>', method='GET')
+@api.get('/api/v1/shop_task/<task_id>')
 def get_shop_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
@@ -497,7 +493,7 @@ def get_shop_crawl_task_by_id(task_id):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/shop_tasks', method='GET')
+@api.get('/api/v1/shop_tasks')
 def get_shop_crawl_tasks():
     logger = get_logger()
     try:
@@ -506,11 +502,9 @@ def get_shop_crawl_tasks():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'shop_name':
-                # OR use direct property access (request.query.shop_name) to decode automatically
-                # See: https://stackoverflow.com/questions/27432211/python-bottle-requests-and-unicode
-                select_exps.append(ShopCrawlTask.shop_name == v.encode("ISO-8859-1").decode("utf-8"))
+                select_exps.append(ShopCrawlTask.shop_name == v)
             elif k == 'status':
                 select_exps.append(ShopCrawlTask.status == int(v))
             elif k == 'update_ts':
@@ -543,7 +537,7 @@ def get_shop_crawl_tasks():
         return build_server_error_response(msg)
 
 
-@route('/api/v1/search_task/<task_id>', method='GET')
+@api.get('/api/v1/search_task/<task_id>')
 def get_search_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
@@ -568,7 +562,7 @@ def get_search_crawl_task_by_id(task_id):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/search_tasks', method='GET')
+@api.get('/api/v1/search_tasks')
 def get_search_crawl_tasks():
     logger = get_logger()
     try:
@@ -577,11 +571,9 @@ def get_search_crawl_tasks():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'search_key':
-                # OR use direct property access (request.query.shop_name) to decode automatically
-                # See: https://stackoverflow.com/questions/27432211/python-bottle-requests-and-unicode
-                select_exps.append(SearchCrawlTask.search_key == v.encode("ISO-8859-1").decode("utf-8"))
+                select_exps.append(SearchCrawlTask.search_key == v)
             elif k == 'status':
                 select_exps.append(SearchCrawlTask.status == int(v))
             elif k == 'update_ts':
@@ -614,7 +606,7 @@ def get_search_crawl_tasks():
         return build_server_error_response(msg)
 
 
-@route('/api/v1/llm_task/<task_id>', method='GET')
+@api.get('/api/v1/llm_task/<task_id>')
 def get_llm_analyze_task_by_id(task_id):
     logger = get_logger()
     try:
@@ -639,7 +631,7 @@ def get_llm_analyze_task_by_id(task_id):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/llm_tasks', method='GET')
+@api.get('/api/v1/llm_tasks')
 def get_llm_analyze_tasks():
     logger = get_logger()
     try:
@@ -648,11 +640,9 @@ def get_llm_analyze_tasks():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'product_id':
-                # OR use direct property access (request.query.shop_name) to decode automatically
-                # See: https://stackoverflow.com/questions/27432211/python-bottle-requests-and-unicode
-                select_exps.append(LLMAnalyzeTask.product_id == v.encode("ISO-8859-1").decode("utf-8"))
+                select_exps.append(LLMAnalyzeTask.product_id == v)
             elif k == 'status':
                 select_exps.append(LLMAnalyzeTask.status == int(v))
             elif k == 'update_ts':
@@ -685,7 +675,7 @@ def get_llm_analyze_tasks():
         return build_server_error_response(msg)
 
 
-@route('/api/v1/shop_search_task/<task_id>', method='GET')
+@api.get('/api/v1/shop_search_task/<task_id>')
 def get_shop_search_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
@@ -710,7 +700,7 @@ def get_shop_search_crawl_task_by_id(task_id):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/shop_search_tasks', method='GET')
+@api.get('/api/v1/shop_search_tasks')
 def get_shop_search_crawl_tasks():
     logger = get_logger()
     try:
@@ -719,11 +709,9 @@ def get_shop_search_crawl_tasks():
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
-        for k, v in request.query.items():
+        for k, v in request.args.items():
             if k == 'shop_name':
-                # OR use direct property access (request.query.shop_name) to decode automatically
-                # See: https://stackoverflow.com/questions/27432211/python-bottle-requests-and-unicode
-                select_exps.append(ShopSearchCrawlTask.shop_name == v.encode("ISO-8859-1").decode("utf-8"))
+                select_exps.append(ShopSearchCrawlTask.shop_name == v)
             elif k == 'status':
                 select_exps.append(ShopSearchCrawlTask.status == int(v))
             elif k == 'update_ts':
