@@ -104,7 +104,10 @@ def query_products():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = ProductInfo.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = ProductInfo.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = ProductInfo.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -165,7 +168,10 @@ def query_shops():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = ShopInfo.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = ShopInfo.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = ShopInfo.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -241,7 +247,10 @@ def query_product_sales():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = ProductSale.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = ProductSale.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = ProductSale.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -275,7 +284,7 @@ def get_hot_product_by_id_and_ts(product_id, create_ts):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@route('/api/v1/hot_product', method='GET')
+@route('/api/v1/hot_products', method='GET')
 def query_hot_products():
     logger = get_logger()
     try:
@@ -309,7 +318,10 @@ def query_hot_products():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = HotProduct.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = HotProduct.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = HotProduct.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -355,7 +367,7 @@ def query_operation_histories():
         offset = 0
         for k, v in request.query.items():
             if k == 'pk':
-                select_exps.append(OperationHistory.pk == v)
+                select_exps.append(OperationHistory.pk == v.encode("ISO-8859-1").decode("utf-8"))
             elif k == 'table_name':
                 select_exps.append(OperationHistory.table_name == v)
             elif k == 'update_id':
@@ -379,7 +391,10 @@ def query_operation_histories():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = OperationHistory.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = OperationHistory.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = OperationHistory.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -445,7 +460,10 @@ def get_detail_crawl_tasks():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = DetailCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = DetailCrawlTask.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = DetailCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -513,7 +531,10 @@ def get_shop_crawl_tasks():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = ShopCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = ShopCrawlTask.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = ShopCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -581,7 +602,10 @@ def get_search_crawl_tasks():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = SearchCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = SearchCrawlTask.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = SearchCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -649,7 +673,10 @@ def get_llm_analyze_tasks():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = LLMAnalyzeTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = LLMAnalyzeTask.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = LLMAnalyzeTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -717,7 +744,10 @@ def get_shop_search_crawl_tasks():
             elif k == 'offset':
                 offset = int(v)
         sort = sort.desc() if desc else sort
-        query = ShopSearchCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        if len(select_exps) == 0:
+            query = ShopSearchCrawlTask.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = ShopSearchCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
