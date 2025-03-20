@@ -1,0 +1,1 @@
+<p>Shop detail page with sale information</p>

@@ -1,0 +1,1 @@
+<p>shop list page with filters</p>

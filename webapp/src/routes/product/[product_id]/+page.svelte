@@ -1,0 +1,1 @@
+<p>Product detail page with sale information</p>
