@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronDown } from 'lucide-svelte/icons';
+	import { ChevronDown, Link } from 'lucide-svelte/icons';
 	import {
 		type ColumnDef,
 		type ColumnFiltersState,
@@ -58,45 +58,49 @@
 			enableHiding: false
 		},
 		{
+			id: 'Product',
 			accessorKey: 'product_cover',
-			header: 'Cover Image',
+			header: 'Product',
 			cell: ({ row }) => {
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const product_cover = getData();
 					return {
-						render: () => `<div><a href=${product_cover}><img class="h-16 w-32 object-scale-down" src=${product_cover} /></a></div>;`
+						render: () => `<a href="${row.original.product_link}" target="_blank"><img class="h-16 w-32 object-scale-down" src=${product_cover} /></a>`
 					};
 				});
-				return renderSnippet(statusSnippet, row.getValue('product_cover'));
+				return renderSnippet(statusSnippet, row.getValue('Product'));
 			}
 		},
 		{
+			id: 'Title',
 			accessorKey: 'product_title',
 			header: 'Title',
 			cell: ({ row }) => {
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const product_title = getData();
 					return {
-						render: () => `<div><a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href=${row.original.product_link}>${product_title}</a></div>;`
+						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${row.original.product_id}'>${product_title}</a>`
 					};
 				});
-				return renderSnippet(statusSnippet, row.getValue('product_title'));
+				return renderSnippet(statusSnippet, row.getValue('Title'));
 			}
 		},
 		{
+			id: 'Shop',
 			accessorKey: 'shop_name',
 			header: 'Shop',
 			cell: ({ row }) => {
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const shop_name = getData();
 					return {
-						render: () => `<div><a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href=${row.original.shop_link}>${shop_name}</a></div>;`
+						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${row.original.shop_name}'>${shop_name}</a>`
 					};
 				});
-				return renderSnippet(statusSnippet, row.getValue('shop_name'));
+				return renderSnippet(statusSnippet, row.getValue('Shop'));
 			}
 		},
 		{
+			id: 'Price',
 			accessorKey: 'display_price',
 			header: ({ column }) =>
 				renderComponent(DataTableSortButton, {
@@ -114,14 +118,14 @@
 					style: 'currency',
 					currency: row.original.price_unit
 				});
-
 				return renderSnippet(
 					amountCellSnippet,
-					formatter.format(Number.parseFloat(row.getValue('display_price')) / 100)
+					formatter.format(Number.parseFloat(row.getValue('Price')) / 100)
 				);
 			}
 		},
 		{
+			id: 'Sale/Year',
 			accessorKey: 'display_sale',
 			header: ({ column }) =>
 				renderComponent(DataTableSortButton, {
@@ -130,6 +134,7 @@
 				})
 		},
 		{
+			id: 'Revenue/Year',
 			accessorKey: 'estimated_revenue',
 			header: ({ column }) =>
 				renderComponent(DataTableSortButton, {
@@ -150,11 +155,12 @@
 
 				return renderSnippet(
 					amountCellSnippet,
-					formatter.format(Number.parseFloat(row.getValue('estimated_revenue')) / 100)
+					formatter.format(Number.parseFloat(row.getValue('Revenue/Year')) / 100)
 				);
 			}
 		},
 		{
+			id: 'Create Time',
 			accessorKey: 'create_ts',
 			header: ({ column }) =>
 				renderComponent(DataTableSortButton, {
@@ -163,6 +169,7 @@
 				})
 		},
 		{
+			id: 'Update Time',
 			accessorKey: 'update_ts',
 			header: ({ column }) =>
 				renderComponent(DataTableSortButton, {
@@ -171,6 +178,7 @@
 				})
 		},
 		{
+			id: 'Operator ID',
 			accessorKey: 'update_id',
 			header: 'Operator ID'
 		},
@@ -250,11 +258,11 @@
 	<div class="flex items-center py-4">
 		<Input
 			placeholder="Filter Product Title..."
-			value={(table.getColumn("product_title")?.getFilterValue() as string) ?? ""}
+			value={(table.getColumn("Title")?.getFilterValue() as string) ?? ""}
 			oninput={(e) =>
-        table.getColumn("product_title")?.setFilterValue(e.currentTarget.value)}
+        table.getColumn("Title")?.setFilterValue(e.currentTarget.value)}
 			onchange={(e) => {
-        table.getColumn("product_title")?.setFilterValue(e.currentTarget.value);
+        table.getColumn("Title")?.setFilterValue(e.currentTarget.value);
       }}
 			class="max-w-sm"
 		/>
