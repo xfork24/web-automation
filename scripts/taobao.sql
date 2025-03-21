@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS product_info
     product_link          varchar(512)  NOT NULL,
     product_cover         text          NOT NULL,
     shop_name             varchar(128)  NOT NULL,
+    shop_link             varchar(512)  NOT NULL,
     price_unit            varchar(3)    NOT NULL,
     display_price         int           NOT NULL,
     display_sale          int           NOT NULL,

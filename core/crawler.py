@@ -416,7 +416,8 @@ def save_taobao_search_result(product_id, sku_id, product_title, product_link, p
     # save shop info
     update_shop_info(shop_name, shop_link, None, update_id, update_role)
     # save product info
-    update_product_info(product_id, sku_id, product_title, product_link, product_cover, shop_name,
+    update_product_info(product_id, sku_id, product_title, product_link, product_cover,
+                        shop_name, shop_link,
                         price_unit, display_price, display_sale,
                         None, None, None, None,
                         update_id, update_role)
@@ -446,7 +447,7 @@ def craw_taobao_shop_page(shop_link, update_id, target_product_ids=None):
     update_shop_info(shop_name, shop_link, None, update_id, craw_taobao_shop_page.__name__)
     for sku_div in sku_divs:
         try:
-            craw_taobao_shop_sku(sku_div, shop_name, update_id, target_product_ids)
+            craw_taobao_shop_sku(sku_div, shop_name, shop_link, update_id, target_product_ids)
         except PriceOCRError as e:
             logger.error(f'get PriceOCRGetEmptyError={e}, nothing will be updated and just continue')
             traceback.print_exc()
@@ -485,7 +486,7 @@ def load_shop_and_products(shop_link):
         scroll_window_to_element(load_more_flag_div)
 
 
-def craw_taobao_shop_sku(shop_sku_div, shop_name, update_id, target_product_ids=None):
+def craw_taobao_shop_sku(shop_sku_div, shop_name, shop_link, update_id, target_product_ids=None):
     logger = get_logger()
     product_link = shop_sku_div.find_element(By.XPATH, 'a').get_attribute('href')
     product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
@@ -515,11 +516,13 @@ def craw_taobao_shop_sku(shop_sku_div, shop_name, update_id, target_product_ids=
     display_price = parse_price_span(price_spans[1], product_id)
     product_sale = parse_sale_in_search(sale_div.text)
     # update product_info and product_sales table
-    save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover, shop_name,
+    save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover,
+                                shop_name, shop_link,
                                 price_unit, display_price, product_sale, update_id)
 
 
-def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover, shop_name,
+def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover,
+                                shop_name, shop_link,
                                 price_unit, display_price, display_sale, update_id):
     logger = get_logger()
     logger.info(f'save_taobao_shop_sku_result parsed record:\n'
@@ -529,12 +532,14 @@ def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link,
                 f'\t\tproduct_link={product_link}\n'
                 f'\t\tproduct_cover={product_cover}\n'
                 f'\t\tshop_name={shop_name}\n'
+                f'\t\tshop_link={shop_link}\n'
                 f'\t\tprice_unit={price_unit}\n'
                 f'\t\tdisplay_price={display_price}\n'
                 f'\t\tdisplay_sale={display_sale}\n'
                 f'\t\tupdate_id={update_id}\n')
     update_role = save_taobao_shop_sku_result.__name__
-    update_product_info(product_id, sku_id, product_title, product_link, product_cover, shop_name,
+    update_product_info(product_id, sku_id, product_title, product_link, product_cover,
+                        shop_name, shop_link,
                         price_unit, display_price, display_sale,
                         None, None, None, None,
                         update_id, update_role)
@@ -840,7 +845,8 @@ def save_taobao_detail_result(product_id, sku_id, product_title, product_link,
                 f'\t\toffer_details={offer_details}\n'
                 f'\t\tupdate_id={update_id}\n')
     update_role = save_taobao_detail_result.__name__
-    update_product_info(product_id, sku_id, product_title, product_link, '', shop_name,
+    update_product_info(product_id, sku_id, product_title, product_link, '',
+                        shop_name, shop_link,
                         price_unit, display_price, display_sale,
                         title_images, main_images, offer_details, None,
                         update_id, update_role)

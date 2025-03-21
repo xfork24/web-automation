@@ -114,7 +114,6 @@
 	];
 </script>
 
-<!--<Sidebar.Provider>-->
 <Sidebar.Root collapsible="icon">
 
 	<!-- Header -->
@@ -238,10 +237,3 @@
 		</Sidebar.Menu>
 	</Sidebar.Footer>
 </Sidebar.Root>
-
-<Sidebar.Inset>
-	<header class="flex h-12 items-center justify-between px-4">
-		<Sidebar.Trigger />
-	</header>
-</Sidebar.Inset>
-<!--</Sidebar.Provider>-->

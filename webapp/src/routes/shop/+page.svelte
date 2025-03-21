@@ -1,1 +1,8 @@
-<p>shop list page with filters</p>
+<script lang="ts">
+	import DataTable from "./(components)/data-table.svelte";
+	import { columns } from "./(components)/columns.js";
+
+	let { data } = $props();
+</script>
+
+<DataTable {data} {columns} />

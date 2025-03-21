@@ -61,6 +61,7 @@ class ProductInfo(BaseModel):
     product_link = CharField(max_length=512)
     product_cover = TextField()
     shop_name = CharField(max_length=128, index=True)
+    shop_link = CharField(max_length=512)
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
     display_sale = IntegerField(index=True)
@@ -220,7 +221,8 @@ class ShopSearchCrawlTask(BaseModel):
         table_name = 'shop_search_crawl_task'
 
 
-def update_product_info(product_id, sku_id, product_title, product_link, product_cover, shop_name,
+def update_product_info(product_id, sku_id, product_title, product_link, product_cover,
+                        shop_name, shop_link,
                         price_unit, display_price, display_sale,
                         title_imgs, page_imgs, offer_details, additional_properties, update_id, update_role):
     # update product_info table
@@ -236,6 +238,15 @@ def update_product_info(product_id, sku_id, product_title, product_link, product
         exist_pi.product_link = product_link if product_link != '' else exist_pi.product_link
         exist_pi.product_cover = product_cover if product_cover != '' else exist_pi.product_cover
         exist_pi.shop_name = shop_name if shop_name != '' else exist_pi.shop_name
+        shop_link_match = False
+        for reg_exp in SHOP_LINK_KNOWN_RE_EXP_LIST:
+            if re.match(reg_exp, shop_link):
+                shop_link_match = True
+                break
+        if shop_link_match:
+            exist_pi.shop_link = shop_link
+        else:
+            logger.info(f'find shop_name={shop_name} with unknown link={shop_link}, exist record not updated')
         exist_pi.price_unit = price_unit if price_unit != '' else exist_pi.price_unit
         exist_pi.display_price = display_price if display_price != -1 else exist_pi.display_price
         exist_pi.display_sale = display_sale if display_sale != -1 else exist_pi.display_sale
@@ -263,6 +274,7 @@ def update_product_info(product_id, sku_id, product_title, product_link, product
         new_pi.product_link = product_link
         new_pi.product_cover = product_cover
         new_pi.shop_name = shop_name
+        new_pi.shop_link = shop_link
         new_pi.price_unit = price_unit
         new_pi.display_price = display_price
         new_pi.display_sale = display_sale
