@@ -4,7 +4,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { goto } from '$app/navigation';
 
-	let { product_id, sku_id }: { product_id: string, sku_id: string } = $props();
+	let { row } = $props();
 </script>
 
 <DropdownMenu.Root>
@@ -23,16 +23,29 @@
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content>
 		<DropdownMenu.Group>
-			<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
-			<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(product_id)}>
+			<DropdownMenu.GroupHeading>Copy ID</DropdownMenu.GroupHeading>
+			<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.product_id)}>
 				Copy Product ID
 			</DropdownMenu.Item>
-			<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(sku_id)}>
+			<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.sku_id)}>
 				Copy SKU ID
 			</DropdownMenu.Item>
 		</DropdownMenu.Group>
 		<DropdownMenu.Separator />
-		<DropdownMenu.Item>Crawl Product</DropdownMenu.Item>
-		<DropdownMenu.Item onclick={() => goto('/product/' + product_id)}>View Details</DropdownMenu.Item>
+		<DropdownMenu.Group>
+			<DropdownMenu.GroupHeading>Navigate to</DropdownMenu.GroupHeading>
+			<DropdownMenu.Item onclick={() => window.open(row.product_link, '_blank')}>
+				Taobao Product Page
+			</DropdownMenu.Item>
+			<DropdownMenu.Item onclick={() => window.open(row.shop_link, '_blank')}>
+				Taobao Shop Page
+			</DropdownMenu.Item>
+		</DropdownMenu.Group>
+		<DropdownMenu.Separator />
+		<DropdownMenu.Group>
+			<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
+			<DropdownMenu.Item>Crawl Product</DropdownMenu.Item>
+			<DropdownMenu.Item onclick={() => goto('/product/' + row.product_id + '/shelf')}>Product OnShelf</DropdownMenu.Item>
+		</DropdownMenu.Group>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>

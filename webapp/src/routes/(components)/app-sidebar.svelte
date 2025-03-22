@@ -85,7 +85,7 @@
 		},
 		{
 			group: false,
-			title: 'Operations',
+			title: 'Operation History',
 			url: '/operation',
 			icon: History
 		},

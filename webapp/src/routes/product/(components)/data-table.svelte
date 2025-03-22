@@ -36,6 +36,11 @@
 	let rowSelection = $state<RowSelectionState>({});
 	let columnVisibility = $state<VisibilityState>({});
 
+	function timeConverter(ts: number) {
+		let a = new Date(ts * 1000);
+		return `${a.getFullYear()}/${String(a.getMonth()).padStart(2, '0')}/${String(a.getDate()).padStart(2, '0')} ${String(a.getHours()).padStart(2, '0')}:${String(a.getMinutes()).padStart(2, '0')}:${String(a.getSeconds()).padStart(2, '0')}`;
+	}
+
 	export const columns: ColumnDef<ProductInfo>[] = [
 		{
 			id: 'select',
@@ -166,7 +171,16 @@
 				renderComponent(DataTableSortButton, {
 					title: 'Create Time',
 					onclick: () => column.toggleSorting(column.getIsSorted() === 'asc')
-				})
+				}),
+			cell: ({ row }) => {
+				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
+					const create_ts = getData();
+					return {
+						render: () => `<div>${timeConverter(create_ts)}</div>`
+					};
+				});
+				return renderSnippet(amountCellSnippet, row.getValue('Create Time'));
+			}
 		},
 		{
 			id: 'Update Time',
@@ -175,7 +189,16 @@
 				renderComponent(DataTableSortButton, {
 					title: 'Update Time',
 					onclick: () => column.toggleSorting(column.getIsSorted() === 'asc')
-				})
+				}),
+			cell: ({ row }) => {
+				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
+					const create_ts = getData();
+					return {
+						render: () => `<div>${timeConverter(create_ts)}</div>`
+					};
+				});
+				return renderSnippet(amountCellSnippet, row.getValue('Update Time'));
+			}
 		},
 		{
 			id: 'Operator ID',
@@ -186,7 +209,7 @@
 			id: 'actions',
 			enableHiding: false,
 			cell: ({ row }) =>
-				renderComponent(DataTableActions, { product_id: row.original.product_id, sku_id: row.original.sku_id })
+				renderComponent(DataTableActions, { row: row.original })
 		}
 	];
 
