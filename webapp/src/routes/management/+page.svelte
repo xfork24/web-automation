@@ -1,3 +1,26 @@
-<p>management page with filters</p>
-<img alt="some text"
-		 src="https://g-search2.alicdn.com/img/bao/uploaded/i4/i2/362844518/TB23oXtbE.jyKJjy0FpXXX2wVXa_!!362844518.jpg_580x580q90.jpg" />
+<script lang="ts">
+	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
+	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import Tally_1 from 'lucide-svelte/icons/tally-1';
+</script>
+
+<Sidebar.Inset>
+	<header class="flex h-16 shrink-0 items-center gap-2">
+		<div class="flex items-center gap-2 px-4">
+			<Sidebar.Trigger />
+			<Breadcrumb.Root>
+				<Breadcrumb.List>
+					<Breadcrumb.Separator>
+						<Tally_1 />
+					</Breadcrumb.Separator>
+					<Breadcrumb.Item>
+						<Breadcrumb.Link href="/management">Management</Breadcrumb.Link>
+					</Breadcrumb.Item>
+				</Breadcrumb.List>
+			</Breadcrumb.Root>
+		</div>
+	</header>
+	<main>
+		<p>management page with filters</p>
+	</main>
+</Sidebar.Inset>

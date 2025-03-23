@@ -13,8 +13,8 @@
 		getSortedRowModel
 	} from '@tanstack/table-core';
 	import { createRawSnippet } from 'svelte';
-	import DataTableCheckbox from './data-table-checkbox.svelte';
-	import DataTableSortButton from './data-table-sort-button.svelte';
+	import DataTableCheckbox from '../../(components)/data-table-checkbox.svelte';
+	import DataTableSortButton from '../../(components)/data-table-sort-button.svelte';
 	import DataTableActions from './data-table-actions.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -26,7 +26,44 @@
 		renderComponent,
 		renderSnippet
 	} from '$lib/components/ui/data-table';
-	import { type ProductInfo } from '../+page.server';
+
+	type OfferItem = {
+		name: string;
+		img: string;
+	}
+	type OfferInfo = {
+		offer_items: OfferItem[][];
+		valid_offers: string[][];
+	}
+	type LLMAnalyzeResult = {
+		keyword: string;
+		category: string;
+		digital: boolean;
+	}
+	type AdditionalProperties = {
+		llm_analysis: LLMAnalyzeResult;
+	}
+	type ProductInfo = {
+		id: string;
+		product_id: string;
+		sku_id: string;
+		product_cover: string;
+		product_title: string;
+		product_link: string;
+		shop_name: string;
+		shop_link: string;
+		price_unit: string;
+		display_price: number;
+		display_sale: number;
+		estimated_revenue: number;
+		title_images: string[];
+		page_images: string[];
+		offer_details: OfferInfo;
+		additional_properties: AdditionalProperties;
+		create_ts: number;
+		update_ts: number;
+		update_id: string;
+	};
 
 	let { data } = $props();
 
@@ -280,20 +317,30 @@
 <div class="w-full">
 	<div class="flex items-center py-4">
 		<Input
-			placeholder="Filter Product Title..."
+			placeholder="Filter Title..."
 			value={(table.getColumn("Title")?.getFilterValue() as string) ?? ""}
 			oninput={(e) =>
         table.getColumn("Title")?.setFilterValue(e.currentTarget.value)}
 			onchange={(e) => {
         table.getColumn("Title")?.setFilterValue(e.currentTarget.value);
       }}
-			class="max-w-sm"
+			class="max-w-xs mr-4"
+		/>
+		<Input
+			placeholder="Filter Shop..."
+			value={(table.getColumn("Shop")?.getFilterValue() as string) ?? ""}
+			oninput={(e) =>
+        table.getColumn("Shop")?.setFilterValue(e.currentTarget.value)}
+			onchange={(e) => {
+        table.getColumn("Shop")?.setFilterValue(e.currentTarget.value);
+      }}
+			class="max-w-xs mr-4"
 		/>
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}
 					<Button {...props} variant="outline" class="ml-auto">
-						Columns
+						Visible Columns
 						<ChevronDown class="ml-2 size-4" />
 					</Button>
 				{/snippet}
@@ -303,7 +350,6 @@
 					.getAllColumns()
 					.filter((col) => col.getCanHide()) as column (column)}
 					<DropdownMenu.CheckboxItem
-						class="capitalize"
 						bind:checked={
               () => column.getIsVisible(), (v) => column.toggleVisibility(!!v)
             }

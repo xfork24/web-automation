@@ -7,16 +7,6 @@
 </script>
 
 <Sidebar.Provider>
-
 	<AppSidebar />
-
-	<Sidebar.Inset>
-		<header class="flex h-12 items-center justify-between px-4">
-			<Sidebar.Trigger />
-		</header>
-		<main>
-				{@render children?.()}
-		</main>
-	</Sidebar.Inset>
-
+	{@render children?.()}
 </Sidebar.Provider>

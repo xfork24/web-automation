@@ -1,8 +1,34 @@
 <script lang="ts">
-	import DataTable from "./(components)/data-table.svelte";
-	import { columns } from "./(components)/columns.js";
+	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
+	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import Tally_1 from 'lucide-svelte/icons/tally-1';
+	import DataTable from './(components)/data-table.svelte';
+	import { columns } from './(components)/columns.js';
 
 	let { data } = $props();
 </script>
 
-<DataTable {data} {columns} />
+<Sidebar.Inset>
+	<header class="flex h-16 shrink-0 items-center gap-2">
+		<div class="flex items-center gap-2 px-4">
+			<Sidebar.Trigger />
+			<Breadcrumb.Root>
+				<Breadcrumb.List>
+					<Breadcrumb.Separator>
+						<Tally_1 />
+					</Breadcrumb.Separator>
+					<Breadcrumb.Item>
+						<Breadcrumb.Link href="/">Home</Breadcrumb.Link>
+					</Breadcrumb.Item>
+					<Breadcrumb.Separator />
+					<Breadcrumb.Item>
+						<Breadcrumb.Link href="/shop">Shops</Breadcrumb.Link>
+					</Breadcrumb.Item>
+				</Breadcrumb.List>
+			</Breadcrumb.Root>
+		</div>
+	</header>
+	<main>
+		<DataTable {data} {columns} />
+	</main>
+</Sidebar.Inset>

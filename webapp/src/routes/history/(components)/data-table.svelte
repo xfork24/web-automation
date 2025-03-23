@@ -1,0 +1,385 @@
+<script lang="ts">
+	import { ChevronDown } from 'lucide-svelte/icons';
+	import {
+		type ColumnDef,
+		type ColumnFiltersState,
+		type PaginationState,
+		type RowSelectionState,
+		type SortingState,
+		type VisibilityState,
+		getCoreRowModel,
+		getFilteredRowModel,
+		getPaginationRowModel,
+		getSortedRowModel
+	} from '@tanstack/table-core';
+	import { createRawSnippet } from 'svelte';
+	import DataTableCheckbox from '../../(components)/data-table-checkbox.svelte';
+	import DataTableSortButton from '../../(components)/data-table-sort-button.svelte';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as Table from '$lib/components/ui/table';
+	import {
+		FlexRender,
+		createSvelteTable,
+		renderComponent,
+		renderSnippet
+	} from '$lib/components/ui/data-table';
+
+	type AdditionalProperties = {}
+	type OperationHistory = {
+		id: number;
+		pk: string;
+		table_name: string;
+		additional_properties: AdditionalProperties;
+		operation_ts: number;
+		create_ts: number;
+		update_ts: number;
+		update_id: string;
+		update_role: string;
+	};
+
+	let { data } = $props();
+
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
+	let sorting = $state<SortingState>([]);
+	let columnFilters = $state<ColumnFiltersState>([]);
+	let rowSelection = $state<RowSelectionState>({});
+	let columnVisibility = $state<VisibilityState>({});
+
+	function timeConverter(ts: number) {
+		let a = new Date(ts * 1000);
+		return `${a.getFullYear()}/${String(a.getMonth()).padStart(2, '0')}/${String(a.getDate()).padStart(2, '0')} ${String(a.getHours()).padStart(2, '0')}:${String(a.getMinutes()).padStart(2, '0')}:${String(a.getSeconds()).padStart(2, '0')}`;
+	}
+
+	export const columns: ColumnDef<OperationHistory>[] = [
+		{
+			id: 'select',
+			header: ({ table }) =>
+				renderComponent(DataTableCheckbox, {
+					checked: table.getIsAllPageRowsSelected(),
+					indeterminate:
+						table.getIsSomePageRowsSelected() &&
+						!table.getIsAllPageRowsSelected(),
+					onCheckedChange: (value) => table.toggleAllPageRowsSelected(!!value),
+					'aria-label': 'Select all'
+				}),
+			cell: ({ row }) =>
+				renderComponent(DataTableCheckbox, {
+					checked: row.getIsSelected(),
+					onCheckedChange: (value) => row.toggleSelected(!!value),
+					'aria-label': 'Select row'
+				}),
+			enableSorting: false,
+			enableHiding: false
+		},
+		{
+			id: 'ID',
+			accessorKey: 'id',
+			header: 'ID',
+			cell: ({ row }) => {
+				const statusSnippet = createRawSnippet<[number]>((getData) => {
+					const operation_id = getData();
+					return {
+						render: () => `<span>${operation_id}</span>`
+					};
+				});
+				return renderSnippet(statusSnippet, row.getValue('ID'));
+			}
+		},
+		{
+			id: 'Primary Key',
+			accessorKey: 'pk',
+			header: 'Primary Key',
+			cell: ({ row }) => {
+				const statusSnippet = createRawSnippet<[string]>((getData) => {
+					const pk = getData();
+					let link = '';
+					if (row.original.table_name == 'product_info') {
+						link = `/product/${pk}`;
+					} else if (row.original.table_name == 'shop_info') {
+						link = `/shop/${pk}`;
+					} else if (row.original.table_name == 'product_sale') {
+						link = `/product/${pk.split(',')[0]}`;
+					} else if (row.original.table_name == 'hot_product') {
+						link = `/product/${pk.split(',')[0]}`;
+					} else if (row.original.table_name == 'search_crawl_task') {
+						link = `/task/search?id=${pk}`;
+					} else if (row.original.table_name == 'shop_crawl_task') {
+						link = `/task/shop?id=${pk}`;
+					} else if (row.original.table_name == 'detail_crawl_task') {
+						link = `/task/detail?id=${pk}`;
+					} else if (row.original.table_name == 'shop_search_crawl_task') {
+						link = `/task/shop_search?id=${pk}`;
+					} else if (row.original.table_name == 'llm_analyze_task') {
+						link = `/task/llm?id=${pk}`;
+					}
+					return {
+						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href=${link}>${pk}</a>`
+					};
+				});
+				return renderSnippet(statusSnippet, row.getValue('Primary Key'));
+			}
+		},
+		{
+			id: 'Table',
+			accessorKey: 'table_name',
+			header: 'Table',
+			cell: ({ row }) => {
+				const statusSnippet = createRawSnippet<[string]>((getData) => {
+					const table_name = getData();
+					return {
+						render: () => `<span>${table_name}</span>`
+					};
+				});
+				return renderSnippet(statusSnippet, row.getValue('Table'));
+			}
+		},
+		{
+			id: 'Operation',
+			accessorKey: 'operation',
+			header: 'Operation',
+			cell: ({ row }) => {
+				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
+					const operation = getData();
+					let ops = '';
+					if (operation == 1) {
+						ops = 'CREATE NEW';
+					} else if (operation == 2) {
+						ops = 'UPDATE EXIST';
+					}
+					return {
+						render: () => `<div>${ops}</div>`
+					};
+				});
+				return renderSnippet(amountCellSnippet, row.getValue('Operation'));
+			}
+		},
+		{
+			id: 'Operation Time',
+			accessorKey: 'operation_ts',
+			header: ({ column }) =>
+				renderComponent(DataTableSortButton, {
+					title: 'Operation Time',
+					onclick: () => column.toggleSorting(column.getIsSorted() === 'asc')
+				}),
+			cell: ({ row }) => {
+				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
+					const operation_ts = getData();
+					return {
+						render: () => `<div>${timeConverter(operation_ts)}</div>`
+					};
+				});
+				return renderSnippet(amountCellSnippet, row.getValue('Operation Time'));
+			}
+		},
+		{
+			id: 'Create Time',
+			accessorKey: 'create_ts',
+			header: ({ column }) =>
+				renderComponent(DataTableSortButton, {
+					title: 'Create Time',
+					onclick: () => column.toggleSorting(column.getIsSorted() === 'asc')
+				}),
+			cell: ({ row }) => {
+				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
+					const create_ts = getData();
+					return {
+						render: () => `<div>${timeConverter(create_ts)}</div>`
+					};
+				});
+				return renderSnippet(amountCellSnippet, row.getValue('Create Time'));
+			}
+		},
+		{
+			id: 'Operator ID',
+			accessorKey: 'update_id',
+			header: 'Operator ID'
+		}
+	];
+
+	const table = createSvelteTable({
+		get data() {
+			return data.content;
+		},
+		columns,
+		state: {
+			get pagination() {
+				return pagination;
+			},
+			get sorting() {
+				return sorting;
+			},
+			get columnVisibility() {
+				return columnVisibility;
+			},
+			get rowSelection() {
+				return rowSelection;
+			},
+			get columnFilters() {
+				return columnFilters;
+			}
+		},
+		getCoreRowModel: getCoreRowModel(),
+		getPaginationRowModel: getPaginationRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		onPaginationChange: (updater) => {
+			if (typeof updater === 'function') {
+				pagination = updater(pagination);
+			} else {
+				pagination = updater;
+			}
+		},
+		onSortingChange: (updater) => {
+			if (typeof updater === 'function') {
+				sorting = updater(sorting);
+			} else {
+				sorting = updater;
+			}
+		},
+		onColumnFiltersChange: (updater) => {
+			if (typeof updater === 'function') {
+				columnFilters = updater(columnFilters);
+			} else {
+				columnFilters = updater;
+			}
+		},
+		onColumnVisibilityChange: (updater) => {
+			if (typeof updater === 'function') {
+				columnVisibility = updater(columnVisibility);
+			} else {
+				columnVisibility = updater;
+			}
+		},
+		onRowSelectionChange: (updater) => {
+			if (typeof updater === 'function') {
+				rowSelection = updater(rowSelection);
+			} else {
+				rowSelection = updater;
+			}
+		}
+	});
+</script>
+
+<div class="w-full">
+	<div class="flex items-center py-4">
+		<Input
+			placeholder="Filter Primary Key..."
+			value={(table.getColumn("Primary Key")?.getFilterValue() as string) ?? ""}
+			oninput={(e) =>
+        table.getColumn("Primary Key")?.setFilterValue(e.currentTarget.value)}
+			onchange={(e) => {
+        table.getColumn("Primary Key")?.setFilterValue(e.currentTarget.value);
+      }}
+			class="max-w-xs mr-4"
+		/>
+		<Input
+			placeholder="Filter Table..."
+			value={(table.getColumn("Table")?.getFilterValue() as string) ?? ""}
+			oninput={(e) =>
+        table.getColumn("Table")?.setFilterValue(e.currentTarget.value)}
+			onchange={(e) => {
+        table.getColumn("Table")?.setFilterValue(e.currentTarget.value);
+      }}
+			class="max-w-xs mr-4"
+		/>
+		<Input
+			placeholder="Filter Operator ID..."
+			value={(table.getColumn("Operator ID")?.getFilterValue() as string) ?? ""}
+			oninput={(e) =>
+        table.getColumn("Operator ID")?.setFilterValue(e.currentTarget.value)}
+			onchange={(e) => {
+        table.getColumn("Operator ID")?.setFilterValue(e.currentTarget.value);
+      }}
+			class="max-w-xs mr-4"
+		/>
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger>
+				{#snippet child({ props })}
+					<Button {...props} variant="outline" class="ml-auto">
+						Visible Columns
+						<ChevronDown class="ml-2 size-4" />
+					</Button>
+				{/snippet}
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content align="end">
+				{#each table
+					.getAllColumns()
+					.filter((col) => col.getCanHide()) as column (column)}
+					<DropdownMenu.CheckboxItem
+						bind:checked={
+              () => column.getIsVisible(), (v) => column.toggleVisibility(!!v)
+            }
+					>
+						{column.id}
+					</DropdownMenu.CheckboxItem>
+				{/each}
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
+	</div>
+	<div class="rounded-md border">
+		<Table.Root>
+			<Table.Header>
+				{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
+					<Table.Row>
+						{#each headerGroup.headers as header (header.id)}
+							<Table.Head class="[&:has([role=checkbox])]:pl-3">
+								{#if !header.isPlaceholder}
+									<FlexRender
+										content={header.column.columnDef.header}
+										context={header.getContext()}
+									/>
+								{/if}
+							</Table.Head>
+						{/each}
+					</Table.Row>
+				{/each}
+			</Table.Header>
+			<Table.Body>
+				{#each table.getRowModel().rows as row (row.id)}
+					<Table.Row data-state={row.getIsSelected() && "selected"}>
+						{#each row.getVisibleCells() as cell (cell.id)}
+							<Table.Cell class="[&:has([role=checkbox])]:pl-3">
+								<FlexRender
+									content={cell.column.columnDef.cell}
+									context={cell.getContext()}
+								/>
+							</Table.Cell>
+						{/each}
+					</Table.Row>
+				{:else}
+					<Table.Row>
+						<Table.Cell colspan={columns.length} class="h-24 text-center">
+							No results.
+						</Table.Cell>
+					</Table.Row>
+				{/each}
+			</Table.Body>
+		</Table.Root>
+	</div>
+	<div class="flex items-center justify-end space-x-2 pt-4">
+		<div class="text-muted-foreground flex-1 text-sm">
+			{table.getFilteredSelectedRowModel().rows.length} of
+			{table.getFilteredRowModel().rows.length} row(s) selected.
+		</div>
+		<div class="space-x-2">
+			<Button
+				variant="outline"
+				size="sm"
+				onclick={() => table.previousPage()}
+				disabled={!table.getCanPreviousPage()}
+			>
+				Previous
+			</Button>
+			<Button
+				variant="outline"
+				size="sm"
+				onclick={() => table.nextPage()}
+				disabled={!table.getCanNextPage()}
+			>
+				Next
+			</Button>
+		</div>
+	</div>
+</div>

@@ -425,7 +425,7 @@ def add_shop_crawl_task(shop_name, target_product_ids, additional_properties, up
     new_sct = ShopCrawlTask()
     new_sct.id = pk
     new_sct.shop_name = shop_name
-    new_sct.target_product_ids = json_dumps(target_product_ids) if target_product_ids is not None else json_dumps({})
+    new_sct.target_product_ids = json_dumps(target_product_ids) if target_product_ids is not None else json_dumps([])
     new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
     if additional_properties is not None:
@@ -453,7 +453,7 @@ def add_search_crawl_task(search_key, num_of_pages, target_product_ids, addition
     if target_product_ids is not None:
         new_sct.target_product_ids = json_dumps(target_product_ids)
     else:
-        new_sct.target_product_ids = json_dumps({})
+        new_sct.target_product_ids = json_dumps([])
     new_sct.status = TASK_STATUS_NEW
     new_sct.try_count = 0
     if additional_properties is not None:

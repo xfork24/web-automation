@@ -11,6 +11,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Collapsible from '$lib/components/ui/collapsible';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 
 	const active_url = $derived(page.url.pathname);
 	let active_user = $state({ id: 0, name: 'Heng Liu' });
@@ -62,23 +63,23 @@
 					url: '/task'
 				},
 				{
-					title: 'Detail Crawl Task',
+					title: 'Detail Crawl Tasks',
 					url: '/task/detail'
 				},
 				{
-					title: 'LLM Analyze Task',
+					title: 'LLM Analyze Tasks',
 					url: '/task/llm'
 				},
 				{
-					title: 'Search Crawl Task',
+					title: 'Search Crawl Tasks',
 					url: '/task/search'
 				},
 				{
-					title: 'Shop Crawl Task',
+					title: 'Shop Crawl Tasks',
 					url: '/task/shop'
 				},
 				{
-					title: 'Shop Search Crawl Task',
+					title: 'Shop Search Crawl Tasks',
 					url: '/task/shop_search'
 				}
 			]
@@ -86,7 +87,7 @@
 		{
 			group: false,
 			title: 'Operation History',
-			url: '/operation',
+			url: '/history',
 			icon: History
 		},
 		{
@@ -98,7 +99,7 @@
 	];
 	const valid_workspaces = [
 		{
-			title: 'Taobao Analysis',
+			title: 'Taobao Management Console',
 			url: '/'
 		}
 	];
@@ -223,11 +224,9 @@
 						class="w-[--bits-dropdown-menu-anchor-width]"
 					>
 						{#each valid_users as valid_user (valid_user.id)}
-							<DropdownMenu.Item onclick={()=>active_user = valid_user}>
+							<DropdownMenu.Item onclick={() => active_user = valid_user}>
 								{#snippet child({ props })}
-									<a href='/user/{valid_user.id}' {...props}>
-										<span>{valid_user.name}</span>
-									</a>
+									<span {...props}>{valid_user.name}</span>
 								{/snippet}
 							</DropdownMenu.Item>
 						{/each}
