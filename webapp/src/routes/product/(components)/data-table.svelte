@@ -20,6 +20,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Table from '$lib/components/ui/table';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import {
 		FlexRender,
 		createSvelteTable,
@@ -111,6 +112,20 @@
 					};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Product'));
+			}
+		},
+		{
+			id: 'Product ID',
+			accessorKey: 'product_id',
+			header: 'Product ID',
+			cell: ({ row }) => {
+				const statusSnippet = createRawSnippet<[string]>((getData) => {
+					const product_id = getData();
+					return {
+						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${product_id}'>${product_id}</a>`
+					};
+				});
+				return renderSnippet(statusSnippet, row.getValue('Product ID'));
 			}
 		},
 		{
@@ -312,27 +327,46 @@
 			}
 		}
 	});
+
+	const filter_fields = [
+		{ value: 'product_id', label: 'Product ID' },
+		{ value: 'title', label: 'Title' },
+		{ value: 'shop', label: 'Shop' },
+		{ value: 'operator_id', label: 'Operator ID' }
+	];
+
+	let value = $state('product_id');
+
+	const triggerContent = $derived(
+		filter_fields.find((f) => f.value === value)?.label ?? 'Product ID'
+	);
 </script>
 
 <div class="w-full">
 	<div class="flex items-center py-4">
+		<div class="max-w-xs mr-4">
+			<Select.Root type="single" name="favoriteFruit" bind:value>
+				<Select.Trigger class="w-[180px]">
+					{triggerContent}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						{#each filter_fields as filter (filter.value)}
+							<Select.Item value={filter.value} label={filter.label}
+							>{filter.label}</Select.Item
+							>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+		</div>
 		<Input
-			placeholder="Filter Title..."
-			value={(table.getColumn("Title")?.getFilterValue() as string) ?? ""}
+			placeholder="Filter {triggerContent}..."
+			value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
 			oninput={(e) =>
-        table.getColumn("Title")?.setFilterValue(e.currentTarget.value)}
+        table.getColumn(triggerContent)?.setFilterValue(e.currentTarget.value)}
 			onchange={(e) => {
-        table.getColumn("Title")?.setFilterValue(e.currentTarget.value);
-      }}
-			class="max-w-xs mr-4"
-		/>
-		<Input
-			placeholder="Filter Shop..."
-			value={(table.getColumn("Shop")?.getFilterValue() as string) ?? ""}
-			oninput={(e) =>
-        table.getColumn("Shop")?.setFilterValue(e.currentTarget.value)}
-			onchange={(e) => {
-        table.getColumn("Shop")?.setFilterValue(e.currentTarget.value);
+        table.getColumn(triggerContent)?.setFilterValue(e.currentTarget.value);
       }}
 			class="max-w-xs mr-4"
 		/>

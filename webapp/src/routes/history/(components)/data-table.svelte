@@ -18,6 +18,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import * as Table from '$lib/components/ui/table';
 	import {
 		FlexRender,
@@ -260,37 +261,46 @@
 			}
 		}
 	});
+
+	const filter_fields = [
+		{ value: 'id', label: 'ID' },
+		{ value: 'primary_key', label: 'Primary Key' },
+		{ value: 'table', label: 'Table' },
+		{ value: 'operator_id', label: 'Operator ID' }
+	];
+
+	let value = $state('id');
+
+	const triggerContent = $derived(
+		filter_fields.find((f) => f.value === value)?.label ?? 'ID'
+	);
 </script>
 
 <div class="w-full">
 	<div class="flex items-center py-4">
+		<div class="max-w-xs mr-4">
+			<Select.Root type="single" name="favoriteFruit" bind:value>
+				<Select.Trigger class="w-[180px]">
+					{triggerContent}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						{#each filter_fields as filter (filter.value)}
+							<Select.Item value={filter.value} label={filter.label}
+							>{filter.label}</Select.Item
+							>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+		</div>
 		<Input
-			placeholder="Filter Primary Key..."
-			value={(table.getColumn("Primary Key")?.getFilterValue() as string) ?? ""}
+			placeholder="Filter {triggerContent}..."
+			value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
 			oninput={(e) =>
-        table.getColumn("Primary Key")?.setFilterValue(e.currentTarget.value)}
+        table.getColumn(triggerContent)?.setFilterValue(e.currentTarget.value)}
 			onchange={(e) => {
-        table.getColumn("Primary Key")?.setFilterValue(e.currentTarget.value);
-      }}
-			class="max-w-xs mr-4"
-		/>
-		<Input
-			placeholder="Filter Table..."
-			value={(table.getColumn("Table")?.getFilterValue() as string) ?? ""}
-			oninput={(e) =>
-        table.getColumn("Table")?.setFilterValue(e.currentTarget.value)}
-			onchange={(e) => {
-        table.getColumn("Table")?.setFilterValue(e.currentTarget.value);
-      }}
-			class="max-w-xs mr-4"
-		/>
-		<Input
-			placeholder="Filter Operator ID..."
-			value={(table.getColumn("Operator ID")?.getFilterValue() as string) ?? ""}
-			oninput={(e) =>
-        table.getColumn("Operator ID")?.setFilterValue(e.currentTarget.value)}
-			onchange={(e) => {
-        table.getColumn("Operator ID")?.setFilterValue(e.currentTarget.value);
+        table.getColumn(triggerContent)?.setFilterValue(e.currentTarget.value);
       }}
 			class="max-w-xs mr-4"
 		/>

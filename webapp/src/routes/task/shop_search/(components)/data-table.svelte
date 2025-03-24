@@ -26,6 +26,7 @@
 		renderComponent,
 		renderSnippet
 	} from '$lib/components/ui/data-table';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { type ShopSearchCrawlTask } from '../+page.server';
 
 	let { data } = $props();
@@ -233,27 +234,45 @@
 			}
 		}
 	});
+
+	const filter_fields = [
+		{ value: 'id', label: 'ID' },
+		{ value: 'shop', label: 'Shop' },
+		{ value: 'status', label: 'Status' },
+	];
+
+	let value = $state('id');
+
+	const triggerContent = $derived(
+		filter_fields.find((f) => f.value === value)?.label ?? 'ID'
+	);
 </script>
 
 <div class="w-full">
 	<div class="flex items-center py-4">
+		<div class="max-w-xs mr-4">
+			<Select.Root type="single" name="favoriteFruit" bind:value>
+				<Select.Trigger class="w-[180px]">
+					{triggerContent}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						{#each filter_fields as filter (filter.value)}
+							<Select.Item value={filter.value} label={filter.label}
+							>{filter.label}</Select.Item
+							>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+		</div>
 		<Input
-			placeholder="Filter Shop..."
-			value={(table.getColumn("Shop")?.getFilterValue() as string) ?? ""}
+			placeholder="Filter {triggerContent}..."
+			value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
 			oninput={(e) =>
-        table.getColumn("Shop")?.setFilterValue(e.currentTarget.value)}
+        table.getColumn(triggerContent)?.setFilterValue(e.currentTarget.value)}
 			onchange={(e) => {
-        table.getColumn("Shop")?.setFilterValue(e.currentTarget.value);
-      }}
-			class="max-w-xs mr-4"
-		/>
-		<Input
-			placeholder="Filter Status..."
-			value={(table.getColumn("Status")?.getFilterValue() as string) ?? ""}
-			oninput={(e) =>
-        table.getColumn("Status")?.setFilterValue(e.currentTarget.value)}
-			onchange={(e) => {
-        table.getColumn("Status")?.setFilterValue(e.currentTarget.value);
+        table.getColumn(triggerContent)?.setFilterValue(e.currentTarget.value);
       }}
 			class="max-w-xs mr-4"
 		/>
