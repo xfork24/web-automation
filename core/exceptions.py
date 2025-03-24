@@ -7,3 +7,7 @@ class PriceOCRError(RuntimeError):
 
 class NotStandardShop(RuntimeError):
     pass
+
+
+class ShopSkuNumExceeded(RuntimeError):
+    pass

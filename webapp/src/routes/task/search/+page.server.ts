@@ -17,7 +17,7 @@ export type SearchCrawlTask = {
 
 export const load = async () => {
 	try {
-		const response = await fetch('http://localhost:8000/api/v1/search_tasks?limit=20&sort=update_ts&desc=true', {
+		const response = await fetch('http://localhost:8000/api/v1/search_tasks?limit=1000&sort=update_ts&desc=true', {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json;charset=UTF-8'

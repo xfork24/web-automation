@@ -28,6 +28,7 @@ DETAIL_PAGE_WAIT_IN_SECONDS = 5
 SHOP_PAGE_WAIT_IN_SECONDS = 5
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
+SHOP_PAGE_MAX_SKU_NUM = 500
 
 # search page related controls
 SEARCH_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
@@ -458,6 +459,7 @@ def load_shop_and_products(shop_link):
     logger.info(f'navigate to shop_link={shop_link} and wait for seconds')
     Driver.get(shop_link)
     time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
+    num_of_skus = 0
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
         load_more_flag_div = None
@@ -466,6 +468,10 @@ def load_shop_and_products(shop_link):
             cls_name = div.get_attribute('class')
             if cls_name is None:
                 continue
+            if re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
+                num_of_skus += 1
+                if num_of_skus > SHOP_PAGE_MAX_SKU_NUM:
+                    raise ShopSkuNumExceeded()
             if re.match(SHOP_LOAD_STATUS_RE_EXP, cls_name):
                 if div.text == '没有更多商品':
                     loaded = True

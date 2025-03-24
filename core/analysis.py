@@ -143,7 +143,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
                     ShopSearchCrawlTask.update_ts).limit(1)
                 if task.count() == 0:
                     add_shop_search_crawl_task(si.shop_name, None, update_id, update_role)
-    logger.info('handling product issues with display_sale==-1 or estimated_revenue=-1 ...')
+    logger.info('handling product issues with display_sale==-1 or estimated_revenue==-1 ...')
     search_start_ts = ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
     shop_start_ts = ts - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
     pi_query = ProductInfo.select().where(ProductInfo.update_ts > batch_ts).order_by(
@@ -153,37 +153,37 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
         if pi.display_sale == -1 or pi.estimated_revenue == -1:
             # 添加搜索任务
             if fix_product_sale and fix_product_sale_by_search:
+                # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
                 tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == pi.product_title,
+                                                       SearchCrawlTask.status != TASK_STATUS_DONE,
                                                        SearchCrawlTask.update_ts > search_start_ts).order_by(
                     SearchCrawlTask.update_ts)
-                task_existed = False
-                for task in tasks:
-                    target_product_ids = json_loads(task.target_product_ids)
-                    if len(target_product_ids) == 0:
-                        task_existed = True
-                        break
-                    else:
-                        if pi.product_id in target_product_ids:
-                            task_existed = True
-                            break
-                if not task_existed:
+                if len(tasks) > 0:
+                    assert (len(tasks) == 1)
+                    target_product_ids = json_loads(tasks[0].target_product_ids)
+                    if len(target_product_ids) > 0:
+                        if pi.product_id not in target_product_ids:
+                            target_product_ids.append(pi.product_id)
+                            tasks[0].target_product_ids = json_dumps(target_product_ids)
+                            tasks[0].save()
+                else:
                     add_search_crawl_task(pi.product_title, 1, [pi.product_id], None, update_id, update_role)
             # 同时也添加店铺搜索任务
             if fix_product_sale and fix_product_sale_by_shop:
+                # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
                 tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
+                                                     ShopCrawlTask.status != TASK_STATUS_DONE,
                                                      ShopCrawlTask.update_ts > shop_start_ts).order_by(
                     ShopCrawlTask.update_ts)
-                task_existed = False
-                for task in tasks:
-                    target_product_ids = json_loads(task.target_product_ids)
-                    if len(target_product_ids) == 0:
-                        task_existed = True
-                        break
-                    else:
-                        if pi.product_id in target_product_ids:
-                            task_existed = True
-                            break
-                if not task_existed:
+                if len(tasks) > 0:
+                    assert (len(tasks) == 1)
+                    target_product_ids = json_loads(tasks[0].target_product_ids)
+                    if len(target_product_ids) > 0:
+                        if pi.product_id not in target_product_ids:
+                            target_product_ids.append(pi.product_id)
+                            tasks[0].target_product_ids = json_dumps(target_product_ids)
+                            tasks[0].save()
+                else:
                     add_shop_crawl_task(pi.shop_name, [pi.product_id], None, update_id, update_role)
         # 处理llm_analysis缺失问题，我们不用batch的方式，便于检查任务是否存在，在执行任务时进行batch
         if fix_llm_analysis:
@@ -298,7 +298,7 @@ def download_hot_product_resources(force_download=False):
 
 def run_all_in_one_crawler_task(update_id):
     task_ts = run_search_crawler_task(update_id)
-    analyze_and_generate_fix_tasks(task_ts, update_id)
+    analyze_and_generate_fix_tasks(int(time.time()) - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS, update_id)
     run_shop_search_crawler_task(update_id)
     run_shop_crawler_tasks(update_id)
     run_llm_analyze_tasks(update_id)
@@ -352,6 +352,12 @@ def run_shop_crawler_tasks(update_id):
             craw_taobao_shop_page(shop.shop_link, task.id, target_product_ids)
         except DoesNotExist:
             logger.error(f'shop_info record with shop_name={task.shop_name} does not exist, just ignore')
+            continue
+        except ShopSkuNumExceeded:
+            logger.error(f'num of sku items in shop_name={task.shop_name} exceeds limit, just ignore')
+            task.additional_properties = json_dumps(
+                {'reason': f'num of sku items in shop_name={task.shop_name} exceeds limit'})
+            update_task_status(task, TASK_STATUS_ARCHIVED, update_id)
             continue
         except Exception:
             logger.error(
@@ -428,7 +434,8 @@ def run_llm_analyze_tasks(update_id):
         update_task_status(task, TASK_STATUS_IN_PROGRESS, update_id)
         try:
             if len(product_task_batch) >= LLM_TASK_BATCH_SIZE:
-                id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], run_llm_analyze_tasks.__name__)
+                id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch],
+                                                           run_llm_analyze_tasks.__name__)
                 for p, t in product_task_batch:
                     if p.id in id_set:
                         update_task_status(t, TASK_STATUS_DONE, update_id)
@@ -447,7 +454,8 @@ def run_llm_analyze_tasks(update_id):
     # handle last batch
     if len(product_task_batch) > 0:
         try:
-            id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], run_llm_analyze_tasks.__name__)
+            id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch],
+                                                       run_llm_analyze_tasks.__name__)
             for p, t in product_task_batch:
                 if p.id in id_set:
                     update_task_status(t, TASK_STATUS_DONE, update_id)
