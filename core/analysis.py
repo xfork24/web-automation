@@ -320,7 +320,7 @@ def run_search_crawler_task(update_id):
             logger.info(
                 f'handling search crawl task id={task.id} with search_key={task.search_key}, num_of_pages={task.num_of_pages}, target_product_ids={task.target_product_ids}')
             target_product_ids = json_loads(task.target_product_ids)
-            crawl_taobao_search_results(task.search_key, task.num_of_pages, SALE_ORDER, update_id,
+            crawl_taobao_search_results(task.search_key, task.num_of_pages, SALE_ORDER, task.id,
                                         target_product_ids)
         except Exception:
             logger.error(
@@ -349,7 +349,7 @@ def run_shop_crawler_tasks(update_id):
                 f'handling shop crawl task id={task.id} with shop_name={task.shop_name}, target_product_ids={task.target_product_ids}')
             shop = ShopInfo.get(ShopInfo.shop_name == task.shop_name)
             target_product_ids = json_loads(task.target_product_ids)
-            craw_taobao_shop_page(shop.shop_link, update_id, target_product_ids)
+            craw_taobao_shop_page(shop.shop_link, task.id, target_product_ids)
         except DoesNotExist:
             logger.error(f'shop_info record with shop_name={task.shop_name} does not exist, just ignore')
             continue
@@ -377,7 +377,7 @@ def run_shop_search_crawler_task(update_id):
         update_task_status(task, TASK_STATUS_IN_PROGRESS, update_id)
         try:
             logger.info(f'handling shop search crawler task id={task.id} with shop_name={task.shop_name}')
-            crawl_taobao_shop_link_by_search(task.shop_name, update_id)
+            crawl_taobao_shop_link_by_search(task.shop_name, task.id)
         except Exception:
             logger.error(f'get unhandled exception while handling task id={task.id} with shop_name={task.shop_name}')
             traceback.print_exc()
@@ -428,7 +428,7 @@ def run_llm_analyze_tasks(update_id):
         update_task_status(task, TASK_STATUS_IN_PROGRESS, update_id)
         try:
             if len(product_task_batch) >= LLM_TASK_BATCH_SIZE:
-                id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], update_id)
+                id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], run_llm_analyze_tasks.__name__)
                 for p, t in product_task_batch:
                     if p.id in id_set:
                         update_task_status(t, TASK_STATUS_DONE, update_id)
@@ -447,7 +447,7 @@ def run_llm_analyze_tasks(update_id):
     # handle last batch
     if len(product_task_batch) > 0:
         try:
-            id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], update_id)
+            id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch], run_llm_analyze_tasks.__name__)
             for p, t in product_task_batch:
                 if p.id in id_set:
                     update_task_status(t, TASK_STATUS_DONE, update_id)
