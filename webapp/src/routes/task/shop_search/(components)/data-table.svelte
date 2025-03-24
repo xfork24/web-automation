@@ -106,11 +106,11 @@
 			}
 		},
 		{
-			id: 'Try Count',
+			id: 'Attempts',
 			accessorKey: 'try_count',
 			header: ({ column }) =>
 				renderComponent(DataTableSortButton, {
-					title: 'Try Count',
+					title: 'Attempts',
 					onclick: () => column.toggleSorting(column.getIsSorted() === 'asc')
 				}),
 			cell: ({ row }) => {
@@ -120,7 +120,7 @@
 						render: () => `<div>${try_count}</div>`
 					};
 				});
-				return renderSnippet(statusSnippet, row.getValue('Try Count'));
+				return renderSnippet(statusSnippet, row.getValue('Attempts'));
 			}
 		},
 		{
