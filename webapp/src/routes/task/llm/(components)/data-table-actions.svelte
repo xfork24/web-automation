@@ -30,13 +30,6 @@
 		</DropdownMenu.Group>
 		<DropdownMenu.Separator />
 		<DropdownMenu.Group>
-			<DropdownMenu.GroupHeading>Navigate to</DropdownMenu.GroupHeading>
-			<DropdownMenu.Item onclick={() => window.open(row.product_link, '_blank')}>
-				Taobao Product Page
-			</DropdownMenu.Item>
-		</DropdownMenu.Group>
-		<DropdownMenu.Separator />
-		<DropdownMenu.Group>
 			<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
 			<DropdownMenu.Item>Re-Run Task</DropdownMenu.Item>
 		</DropdownMenu.Group>
