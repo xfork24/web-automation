@@ -5,6 +5,7 @@
 from flask import Flask, request
 from core.models import *
 
+TASK_STATUS_QUERY_PERIOD = 604800
 DB_QUERY_DEFAULT_LIMIT = 100
 ERROR_CODE_SERVER_ERROR = -1
 ERROR_CODE_NOT_FOUND = -11
@@ -40,6 +41,22 @@ def parse_param_compare(x, v):
     exps.append(x < int(param['lt'])) if 'lt' in param else None
     exps.append(x <= int(param['lte'])) if 'lte' in param else None
     return exps
+
+
+def parse_task_status_query(query):
+    result = {}
+    for q in query:
+        if q.status == TASK_STATUS_NEW:
+            result['NEW'] = q.count
+        elif q.status == TASK_STATUS_IN_PROGRESS:
+            result['IN_PROGRESS'] = q.count
+        elif q.status == TASK_STATUS_DONE:
+            result['DONE'] = q.count
+        elif q.status == TASK_STATUS_ERROR:
+            result['ERROR'] = q.count
+        elif q.status == TASK_STATUS_ARCHIVED:
+            result['ARCHIVED'] = q.count
+    return result
 
 
 @api.get('/api/v1/product/<product_id>')
@@ -446,6 +463,50 @@ def query_operation_histories():
         else:
             query = OperationHistory.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_dict() for q in query]
+        return build_success_response({'data': data})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+# update_ts = {"lt": 100, "gt": 30}
+@api.get('/api/v1/tasks')
+def get_all_tasks():
+    logger = get_logger()
+    try:
+        data = {}
+        now = int(time.time())
+        start_ts = now - TASK_STATUS_QUERY_PERIOD
+        if 'update_ts' in request.args.keys():
+            param = json_loads(request.args['update_ts'])
+            start_ts = int(param['gt']) if 'gt' in param else start_ts
+            start_ts = int(param['gte']) if 'gte' in param else start_ts
+            now = int(param['lt']) if 'lt' in param else now
+            now = int(param['lte']) if 'lte' in param else now
+        # detail crawl task
+        query = DetailCrawlTask.select(DetailCrawlTask.status, fn.COUNT(DetailCrawlTask.id).alias('count')).where(
+            DetailCrawlTask.update_ts >= start_ts, DetailCrawlTask.update_ts < now).group_by(DetailCrawlTask.status)
+        data['detail_crawl_task'] = parse_task_status_query(query)
+        # search crawl task
+        query = SearchCrawlTask.select(SearchCrawlTask.status, fn.COUNT(SearchCrawlTask.id).alias('count')).where(
+            SearchCrawlTask.update_ts >= start_ts, SearchCrawlTask.update_ts < now).group_by(SearchCrawlTask.status)
+        data['search_crawl_task'] = parse_task_status_query(query)
+        # shop crawl task
+        query = ShopCrawlTask.select(ShopCrawlTask.status, fn.COUNT(ShopCrawlTask.id).alias('count')).where(
+            ShopCrawlTask.update_ts >= start_ts, ShopCrawlTask.update_ts < now).group_by(ShopCrawlTask.status)
+        data['shop_crawl_task'] = parse_task_status_query(query)
+        # shop search crawl task
+        query = ShopSearchCrawlTask.select(
+            ShopSearchCrawlTask.status, fn.COUNT(ShopSearchCrawlTask.id).alias('count')).where(
+            ShopSearchCrawlTask.update_ts >= start_ts, ShopSearchCrawlTask.update_ts < now).group_by(
+            ShopSearchCrawlTask.status)
+        data['shop_search_crawl_task'] = parse_task_status_query(query)
+        # llm analyze task
+        query = LLMAnalyzeTask.select(
+            LLMAnalyzeTask.status, fn.COUNT(LLMAnalyzeTask.id).alias('count')).where(
+            LLMAnalyzeTask.update_ts >= start_ts, LLMAnalyzeTask.update_ts < now).group_by(LLMAnalyzeTask.status)
+        data['llm_analyze_task'] = parse_task_status_query(query)
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
