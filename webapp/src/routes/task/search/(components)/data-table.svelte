@@ -26,21 +26,7 @@
 		renderComponent,
 		renderSnippet
 	} from '$lib/components/ui/data-table';
-
-	type AdditionalProperties = {}
-	type SearchCrawlTask = {
-		id: number;
-		search_key: string;
-		num_of_pages: string;
-		status: number;
-		try_count: number;
-		target_product_ids: string;
-		additional_properties: AdditionalProperties;
-		create_ts: number;
-		update_ts: number;
-		update_id: string;
-		update_role: string;
-	};
+	import type { SearchCrawlTask } from '../+page.server';
 
 	let { data } = $props();
 
@@ -98,8 +84,8 @@
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const search_key = getData();
 					return {
-						render: () => `<div>${search_key}</div>`
-					};
+						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='https://s.taobao.com/search?page=1&q=${search_key}' target="_blank">${search_key}</a>`
+				};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Search Key'));
 			}
@@ -145,20 +131,8 @@
 			cell: ({ row }) => {
 				const statusSnippet = createRawSnippet<[number]>((getData) => {
 					const status = getData();
-					let task_status = '';
-					if (status == 1) {
-						task_status = 'NEW';
-					} else if (status == 2) {
-						task_status = 'IN PROGRESS';
-					} else if (status == 3) {
-						task_status = 'DONE';
-					} else if (status == 4) {
-						task_status = 'ERROR';
-					} else if (status == 5) {
-						task_status = 'ARCHIVED';
-					}
 					return {
-						render: () => `<div>${task_status}</div>`
+						render: () => `<div>${status}</div>`
 					};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Status'));

@@ -135,7 +135,7 @@
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const shop_name = getData();
 					return {
-						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${row.original.shop_name}'>${shop_name}</a>`
+						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/shop/${shop_name}'>${shop_name}</a>`
 					};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Shop'));

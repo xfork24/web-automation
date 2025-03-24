@@ -120,8 +120,26 @@ def query_products():
 def get_shop_by_name(shop_name):
     logger = get_logger()
     try:
-        p = ShopInfo.get(ShopInfo.shop_name == shop_name)
-        return build_success_response({'data': p.to_dict()})
+        p = ShopInfo.select(ShopInfo.shop_name,
+                            ShopInfo.shop_link,
+                            ShopInfo.additional_properties,
+                            ShopInfo.create_ts,
+                            ShopInfo.update_ts,
+                            ShopInfo.update_id,
+                            ShopInfo.update_role,
+                            fn.AVG(ProductInfo.display_price).alias('avg_price'),
+                            fn.SUM(ProductInfo.display_sale).alias('total_sale'),
+                            fn.SUM(ProductInfo.estimated_revenue).alias('total_revenue')).join(ProductInfo,
+                                                                                               JOIN.LEFT_OUTER).group_by(
+            ShopInfo.shop_name).where(
+            ShopInfo.shop_name == shop_name)
+        item = {
+            'avg_price': int(p[0].avg_price) if p[0].avg_price is not None else -1,
+            'total_sale': int(p[0].total_sale) if p[0].total_sale is not None else -1,
+            'total_revenue': int(p[0].total_revenue) if p[0].total_revenue is not None else -1
+        }
+        item.update(p[0].to_dict())
+        return build_success_response({'data': item})
     except DoesNotExist:
         msg = f'shop_name={shop_name} not found'
         logger.info(f'invalid shop_name={shop_name}, not found')
@@ -135,8 +153,11 @@ def get_shop_by_name(shop_name):
 # supported query params:
 # shop_name = XXX
 # update_ts = {"lt": 100, "gt": 30}
+# avg_price = {"lt": 100, "gt": 30}
+# total_sale = {"lt": 100, "gt": 30}
+# total_revenue = {"lt": 100, "gt": 30}
 # update_id = XXX
-# sort = update_ts or update_id
+# sort = update_ts or update_id or avg_price or total_sale or total_revenue
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
@@ -157,7 +178,10 @@ def query_shops():
             elif k == 'sort':
                 sort_columns = {
                     'update_ts': ShopInfo.update_ts,
-                    'update_id': ShopInfo.update_id
+                    'update_id': ShopInfo.update_id,
+                    'avg_price': fn.AVG(ProductInfo.display_price),
+                    'total_sale': fn.SUM(ProductInfo.display_sale),
+                    'total_revenue': fn.SUM(ProductInfo.estimated_revenue)
                 }
                 if v in sort_columns:
                     sort = sort_columns[v]
@@ -169,10 +193,40 @@ def query_shops():
                 offset = int(v)
         sort = sort.desc() if desc else sort
         if len(select_exps) == 0:
-            query = ShopInfo.select().order_by(sort).limit(limit).offset(offset)
+            query = ShopInfo.select(ShopInfo.shop_name,
+                                    ShopInfo.shop_link,
+                                    ShopInfo.additional_properties,
+                                    ShopInfo.create_ts,
+                                    ShopInfo.update_ts,
+                                    ShopInfo.update_id,
+                                    ShopInfo.update_role,
+                                    fn.AVG(ProductInfo.display_price).alias('avg_price'),
+                                    fn.SUM(ProductInfo.display_sale).alias('total_sale'),
+                                    fn.SUM(ProductInfo.estimated_revenue).alias('total_revenue')).join(ProductInfo,
+                                                                                                       JOIN.LEFT_OUTER).group_by(
+                ShopInfo.shop_name).order_by(sort).limit(limit).offset(offset)
         else:
-            query = ShopInfo.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+            query = ShopInfo.select(ShopInfo.shop_name,
+                                    ShopInfo.shop_link,
+                                    ShopInfo.additional_properties,
+                                    ShopInfo.create_ts,
+                                    ShopInfo.update_ts,
+                                    ShopInfo.update_id,
+                                    ShopInfo.update_role,
+                                    fn.AVG(ProductInfo.display_price).alias('avg_price'),
+                                    fn.SUM(ProductInfo.display_sale).alias('total_sale'),
+                                    fn.SUM(ProductInfo.estimated_revenue).alias('total_revenue')).join(ProductInfo,
+                                                                                                       JOIN.LEFT_OUTER).group_by(
+                ShopInfo.shop_name).where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        data = []
+        for q in query:
+            item = {
+                'avg_price': int(q.avg_price) if q.avg_price is not None else -1,
+                'total_sale': int(q.total_sale) if q.total_sale is not None else -1,
+                'total_revenue': int(q.total_revenue) if q.total_revenue is not None else -1
+            }
+            item.update(q.to_dict())
+            data.append(item)
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'

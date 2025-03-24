@@ -13,8 +13,8 @@
 		getSortedRowModel
 	} from '@tanstack/table-core';
 	import { createRawSnippet } from 'svelte';
-	import DataTableCheckbox from './data-table-checkbox.svelte';
-	import DataTableSortButton from './data-table-sort-button.svelte';
+	import DataTableCheckbox from '../../(components)/data-table-checkbox.svelte';
+	import DataTableSortButton from '../../(components)/data-table-sort-button.svelte';
 	import DataTableActions from './data-table-actions.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -26,7 +26,7 @@
 		renderComponent,
 		renderSnippet
 	} from '$lib/components/ui/data-table';
-	import { type ProductInfo } from '../+page.server';
+	import { type ShopInfo } from '../+page.server';
 
 	let { data } = $props();
 
@@ -41,7 +41,7 @@
 		return `${a.getFullYear()}/${String(a.getMonth()).padStart(2, '0')}/${String(a.getDate()).padStart(2, '0')} ${String(a.getHours()).padStart(2, '0')}:${String(a.getMinutes()).padStart(2, '0')}:${String(a.getSeconds()).padStart(2, '0')}`;
 	}
 
-	export const columns: ColumnDef<ProductInfo>[] = [
+	export const columns: ColumnDef<ShopInfo>[] = [
 		{
 			id: 'select',
 			header: ({ table }) =>
@@ -63,34 +63,6 @@
 			enableHiding: false
 		},
 		{
-			id: 'Product',
-			accessorKey: 'product_cover',
-			header: 'Product',
-			cell: ({ row }) => {
-				const statusSnippet = createRawSnippet<[string]>((getData) => {
-					const product_cover = getData();
-					return {
-						render: () => `<a href="${row.original.product_link}" target="_blank"><img class="h-16 w-32 object-scale-down" src=${product_cover} /></a>`
-					};
-				});
-				return renderSnippet(statusSnippet, row.getValue('Product'));
-			}
-		},
-		{
-			id: 'Title',
-			accessorKey: 'product_title',
-			header: 'Title',
-			cell: ({ row }) => {
-				const statusSnippet = createRawSnippet<[string]>((getData) => {
-					const product_title = getData();
-					return {
-						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${row.original.product_id}'>${product_title}</a>`
-					};
-				});
-				return renderSnippet(statusSnippet, row.getValue('Title'));
-			}
-		},
-		{
 			id: 'Shop',
 			accessorKey: 'shop_name',
 			header: 'Shop',
@@ -98,40 +70,40 @@
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const shop_name = getData();
 					return {
-						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${row.original.shop_name}'>${shop_name}</a>`
+						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/shop/${shop_name}'>${shop_name}</a>`
 					};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Shop'));
 			}
 		},
 		{
-			id: 'Price',
-			accessorKey: 'display_price',
+			id: 'Avg Price',
+			accessorKey: 'avg_price',
 			header: ({ column }) =>
 				renderComponent(DataTableSortButton, {
-					title: 'Price',
+					title: 'Avg Price',
 					onclick: () => column.toggleSorting(column.getIsSorted() === 'asc')
 				}),
 			cell: ({ row }) => {
 				const amountCellSnippet = createRawSnippet<[string]>((getData) => {
-					const display_price = getData();
+					const avg_price = getData();
 					return {
-						render: () => `<div>${display_price}</div>`
+						render: () => `<div>${avg_price}</div>`
 					};
 				});
 				const formatter = new Intl.NumberFormat('zh-CN', {
 					style: 'currency',
-					currency: row.original.price_unit
+					currency: 'CNY'
 				});
 				return renderSnippet(
 					amountCellSnippet,
-					formatter.format(Number.parseFloat(row.getValue('Price')) / 100)
+					formatter.format(Number.parseFloat(row.getValue('Avg Price')) / 100)
 				);
 			}
 		},
 		{
 			id: 'Sale/Year',
-			accessorKey: 'display_sale',
+			accessorKey: 'total_revenue',
 			header: ({ column }) =>
 				renderComponent(DataTableSortButton, {
 					title: 'Sale/Year',
@@ -140,7 +112,7 @@
 		},
 		{
 			id: 'Revenue/Year',
-			accessorKey: 'estimated_revenue',
+			accessorKey: 'total_revenue',
 			header: ({ column }) =>
 				renderComponent(DataTableSortButton, {
 					title: 'Revenue/Year',
@@ -148,14 +120,14 @@
 				}),
 			cell: ({ row }) => {
 				const amountCellSnippet = createRawSnippet<[string]>((getData) => {
-					const estimated_revenue = getData();
+					const total_revenue = getData();
 					return {
-						render: () => `<div>${estimated_revenue}</div>`
+						render: () => `<div>${total_revenue}</div>`
 					};
 				});
 				const formatter = new Intl.NumberFormat('zh-CN', {
 					style: 'currency',
-					currency: row.original.price_unit
+					currency: 'CNY'
 				});
 
 				return renderSnippet(
@@ -279,16 +251,6 @@
 
 <div class="w-full">
 	<div class="flex items-center py-4">
-		<Input
-			placeholder="Filter Title..."
-			value={(table.getColumn("Title")?.getFilterValue() as string) ?? ""}
-			oninput={(e) =>
-        table.getColumn("Title")?.setFilterValue(e.currentTarget.value)}
-			onchange={(e) => {
-        table.getColumn("Title")?.setFilterValue(e.currentTarget.value);
-      }}
-			class="max-w-xs mr-4"
-		/>
 		<Input
 			placeholder="Filter Shop..."
 			value={(table.getColumn("Shop")?.getFilterValue() as string) ?? ""}

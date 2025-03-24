@@ -1,9 +1,8 @@
 <script lang="ts">
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import Tally_1 from 'lucide-svelte/icons/tally-1';
 	import DataTable from './(components)/data-table.svelte';
-	import { columns } from './(components)/columns.js';
+	import Tally_1 from 'lucide-svelte/icons/tally-1';
 
 	let { data } = $props();
 </script>
@@ -29,6 +28,11 @@
 		</div>
 	</header>
 	<main>
-		<DataTable {data} {columns} />
+		<div class="items-center justify-between px-4">
+			<div class="text-4xl ">All Shops</div>
+			<div>
+				<DataTable {data} />
+			</div>
+		</div>
 	</main>
 </Sidebar.Inset>

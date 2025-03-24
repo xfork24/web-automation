@@ -47,11 +47,24 @@ class BaseModel(Model):
     class Meta:
         database = DB
 
-    def to_dict(self):
-        return model_to_dict(self)
+    def to_dict(self, recurse=False):
+        return model_to_dict(self, recurse=recurse)
 
     def table_name(self):
         return self._meta.table_name
+
+
+class ShopInfo(BaseModel):
+    shop_name = CharField(max_length=128, primary_key=True)
+    shop_link = CharField(max_length=512)
+    additional_properties = CharField(max_length=4096)
+    create_ts = IntegerField()
+    update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
+    update_role = CharField(max_length=64)
+
+    class Meta:
+        table_name = 'shop_info'
 
 
 class ProductInfo(BaseModel):
@@ -60,7 +73,7 @@ class ProductInfo(BaseModel):
     product_title = CharField(max_length=128)
     product_link = CharField(max_length=512)
     product_cover = TextField()
-    shop_name = CharField(max_length=128, index=True)
+    shop_name = ForeignKeyField(ShopInfo, backref='productinfos', column_name='shop_name', lazy_load=False)
     shop_link = CharField(max_length=512)
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
@@ -79,22 +92,9 @@ class ProductInfo(BaseModel):
         table_name = 'product_info'
 
 
-class ShopInfo(BaseModel):
-    shop_name = CharField(max_length=128, primary_key=True)
-    shop_link = CharField(max_length=512)
-    additional_properties = CharField(max_length=4096)
-    create_ts = IntegerField()
-    update_ts = IntegerField(index=True)
-    update_id = CharField(max_length=32, index=True)
-    update_role = CharField(max_length=64)
-
-    class Meta:
-        table_name = 'shop_info'
-
-
 class ProductSale(BaseModel):
-    product_id = CharField(max_length=32)
-    shop_name = CharField(max_length=128, index=True)
+    product_id = ForeignKeyField(ProductInfo, backref='productsales', column_name='product_id', lazy_load=False)
+    shop_name = ForeignKeyField(ShopInfo, backref='productsales', column_name='shop_name', lazy_load=False)
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
     display_sale = IntegerField(index=True)
@@ -110,8 +110,8 @@ class ProductSale(BaseModel):
 
 
 class HotProduct(BaseModel):
-    product_id = CharField(max_length=32)
-    shop_name = CharField(max_length=128)
+    product_id = ForeignKeyField(ProductInfo, backref='hotproducts', column_name='product_id', lazy_load=False)
+    shop_name = ForeignKeyField(ShopInfo, backref='hotproducts', column_name='shop_name', lazy_load=False)
     additional_properties = CharField(max_length=4096)
     create_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -143,7 +143,7 @@ class OperationHistory(BaseModel):
 
 class DetailCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    product_id = CharField(max_length=32, index=True)
+    product_id = ForeignKeyField(ProductInfo, backref='detailcrawltasks', column_name='product_id', lazy_load=False)
     product_link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
@@ -159,7 +159,7 @@ class DetailCrawlTask(BaseModel):
 
 class ShopCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    shop_name = CharField(max_length=128, index=True)
+    shop_name = ForeignKeyField(ShopInfo, backref='shopcrawltasks', column_name='shop_name', lazy_load=False)
     target_product_ids = CharField(max_length=1024)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
@@ -192,7 +192,7 @@ class SearchCrawlTask(BaseModel):
 
 class LLMAnalyzeTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    product_id = CharField(max_length=32, index=True)
+    product_id = ForeignKeyField(ProductInfo, backref='llmanalyzetasks', column_name='product_id', lazy_load=False)
     product_title = CharField(max_length=128)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
@@ -208,7 +208,7 @@ class LLMAnalyzeTask(BaseModel):
 
 class ShopSearchCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    shop_name = CharField(max_length=128, index=True)
+    shop_name = ForeignKeyField(ShopInfo, backref='shopsearchcrawltasks', column_name='shop_name', lazy_load=False)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
     additional_properties = CharField(max_length=4096)
