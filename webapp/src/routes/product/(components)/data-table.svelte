@@ -27,6 +27,7 @@
 		renderComponent,
 		renderSnippet
 	} from '$lib/components/ui/data-table';
+	import FunnelX from 'lucide-svelte/icons/funnel-x';
 
 	type OfferItem = {
 		name: string;
@@ -340,6 +341,12 @@
 	const triggerContent = $derived(
 		filter_fields.find((f) => f.value === value)?.label ?? 'Product ID'
 	);
+
+	function clearAllTableFilters() {
+		table.getAllColumns().forEach(column => {
+			column.setFilterValue('');
+		});
+	}
 </script>
 
 <div class="w-full">
@@ -370,6 +377,9 @@
       }}
 			class="max-w-xs mr-4"
 		/>
+		<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()}>
+			<FunnelX />
+		</Button>
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}

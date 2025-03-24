@@ -28,6 +28,8 @@
 	} from '$lib/components/ui/data-table';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { type ShopCrawlTask } from '../+page.server';
+	import FunnelX from 'lucide-svelte/icons/funnel-x';
+
 
 	let { data } = $props();
 
@@ -263,6 +265,12 @@
 	const triggerContent = $derived(
 		filter_fields.find((f) => f.value === value)?.label ?? 'ID'
 	);
+
+	function clearAllTableFilters() {
+		table.getAllColumns().forEach(column => {
+			column.setFilterValue('');
+		});
+	}
 </script>
 
 <div class="w-full">
@@ -293,6 +301,9 @@
       }}
 			class="max-w-xs mr-4"
 		/>
+		<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()}>
+			<FunnelX />
+		</Button>
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}
