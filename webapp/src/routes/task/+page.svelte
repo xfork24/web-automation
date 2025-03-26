@@ -3,9 +3,10 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import Tally_1 from 'lucide-svelte/icons/tally-1';
 	import TaskCard from './(components)/task-card.svelte';
-	import DataTable from './detail/(components)/data-table.svelte';
+	import { type TaskStatus } from './+page.server';
 
 	let { data } = $props();
+	let tasks: TaskStatus[] = data.content!;
 </script>
 
 <Sidebar.Inset>
@@ -31,9 +32,9 @@
 	<main>
 		<div class="items-center justify-between px-4">
 			<div class="text-4xl">All Tasks Overview</div>
-			<div class="flex flex-nowrap items-center gap-4 p-2">
-				{#each Object.entries(data.content) as [task_name, task_status]}
-					<TaskCard {task_name} {task_status} />
+			<div class="flex flex-wrap items-center gap-4 p-2">
+				{#each tasks as data (data.key)}
+					<TaskCard {data} />
 				{/each}
 			</div>
 		</div>

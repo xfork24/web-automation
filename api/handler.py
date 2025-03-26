@@ -56,6 +56,16 @@ def parse_task_status_query(query):
             result['ERROR'] = q.count
         elif q.status == TASK_STATUS_ARCHIVED:
             result['ARCHIVED'] = q.count
+    if 'NEW' not in result.keys():
+        result['NEW'] = 0
+    if 'IN_PROGRESS' not in result.keys():
+        result['IN_PROGRESS'] = 0
+    if 'DONE' not in result.keys():
+        result['DONE'] = 0
+    if 'ERROR' not in result.keys():
+        result['ERROR'] = 0
+    if 'ARCHIVED' not in result.keys():
+        result['ARCHIVED'] = 0
     return result
 
 

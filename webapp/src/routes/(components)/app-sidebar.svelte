@@ -29,11 +29,11 @@
 				},
 				{
 					title: 'Product Detail',
-					url: '/product/1'
+					url: '/product/<product_id>'
 				},
 				{
 					title: 'Product On Shelf',
-					url: '/product/1/shelf'
+					url: '/product/<product_id>/shelf'
 				}
 			]
 		},
@@ -48,7 +48,7 @@
 				},
 				{
 					title: 'Shop Detail',
-					url: '/shop/1'
+					url: '/shop/<shop_name>'
 				}
 			]
 

@@ -2,10 +2,9 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import Tally_1 from 'lucide-svelte/icons/tally-1';
+	import DataTable from '../../product/(components)/data-table.svelte';
 
-	import { page } from '$app/state';
-
-	let shop_name = page.params.shop_name;
+	let { data } = $props();
 </script>
 
 <Sidebar.Inset>
@@ -26,13 +25,18 @@
 					</Breadcrumb.Item>
 					<Breadcrumb.Separator />
 					<Breadcrumb.Item>
-						<Breadcrumb.Link href="/shop/{shop_name}">Shop Details</Breadcrumb.Link>
+						<Breadcrumb.Link href="/shop/{data.shop_name}">Shop Details</Breadcrumb.Link>
 					</Breadcrumb.Item>
 				</Breadcrumb.List>
 			</Breadcrumb.Root>
 		</div>
 	</header>
 	<main>
-		<p>Shop detail page with sale information: {shop_name}</p>
+		<div class="items-center justify-between px-4">
+			<div class="text-4xl ">Included Products for Shop: {data.shop_name}</div>
+			<div>
+				<DataTable {data} />
+			</div>
+		</div>
 	</main>
 </Sidebar.Inset>

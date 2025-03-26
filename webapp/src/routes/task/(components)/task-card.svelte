@@ -4,53 +4,30 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 
-	const notifications = [
-		{
-			title: 'Your call has been confirmed.',
-			description: '1 hour ago'
-		},
-		{
-			title: 'You have a new message!',
-			description: '1 hour ago'
-		},
-		{
-			title: 'Your subscription is expiring soon!',
-			description: '2 hours ago'
-		}
-	];
+	let { data } = $props();
 
-	let { task_name, task_status } = $props();
 </script>
 
-<Card.Root class="w-[300px]">
-	<Card.Header>
-		<Card.Title>Notifications</Card.Title>
-		<Card.Description>You have 3 unread messages.</Card.Description>
-	</Card.Header>
-	<Card.Content class="grid gap-4">
-		<div>
-			{#each notifications as notification, idx (idx)}
-				<div
-					class="mb-4 grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0"
-				>
-          <span class="flex size-2 translate-y-1 rounded-full bg-sky-500"
-					></span>
-					<div class="space-y-1">
-						<p class="text-sm font-medium leading-none">
-							{notification.title}
-						</p>
-						<p class="text-muted-foreground text-sm">
-							{notification.description}
-						</p>
-					</div>
-				</div>
-			{/each}
-		</div>
-	</Card.Content>
-	<Card.Footer>
-		<Button class="w-full">
-			<Check class="mr-2 size-4" />
-			Mark all as read
-		</Button>
-	</Card.Footer>
-</Card.Root>
+<a href={data.link}>
+	<Card.Root>
+		<Card.Header>
+			<Card.Title class="text-nowrap">{data.title}</Card.Title>
+		</Card.Header>
+		<Card.Content class="grid gap-4">
+			<div>
+				{#each Object.entries(data) as [status, count]}
+					{#if status !== 'key' && status !== 'title' && status !== 'link'}
+						<div class="flex items-center justify-between space-x-4">
+							<span class="text-xl font-medium leading-none float-left">
+								{status}
+							</span>
+							<span class="text-muted-foreground text-xl float-right">
+								{count}
+							</span>
+						</div>
+					{/if}
+				{/each}
+			</div>
+		</Card.Content>
+	</Card.Root>
+</a>
