@@ -1,18 +1,5 @@
 import { statusToString } from '../(components)/utils';
-
-type AdditionalProperties = {}
-export type DetailCrawlTask = {
-	id: number;
-	product_id: string;
-	product_link: string;
-	status: string;
-	try_count: number;
-	additional_properties: AdditionalProperties;
-	create_ts: number;
-	update_ts: number;
-	update_id: string;
-	update_role: string;
-};
+import type { DetailCrawlTask } from '../../(components)/model';
 
 export const load = async () => {
 	try {

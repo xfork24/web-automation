@@ -1,20 +1,5 @@
-export type TaskStatus = {
-	key: string;
-	title: string;
-	link: string;
-	NEW: number;
-	IN_PROGRESS: number;
-	DONE: number;
-	ERROR: number;
-	ARCHIVED: number;
-}
-type TaskStatusResult = {
-	detail_crawl_task: TaskStatus;
-	search_crawl_task: TaskStatus;
-	shop_crawl_task: TaskStatus;
-	shop_search_crawl_task: TaskStatus;
-	llm_analyze_task: TaskStatus;
-}
+import type { TaskStatus, TaskStatusResult } from '../(components)/model';
+
 
 export const load = async () => {
 	try {

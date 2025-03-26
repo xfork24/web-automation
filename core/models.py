@@ -393,6 +393,7 @@ def add_operation_history(pk, table_name, additional_properties, update_id, upda
     new_oh.create_ts = int(time.time())
     new_oh.save(force_insert=True)
     logger.info(f'new operation history record inserted: {new_oh.to_dict()}')
+    return new_oh.id
 
 
 def add_detail_crawl_task(product_id, link, additional_properties, update_id, update_role):
@@ -416,6 +417,7 @@ def add_detail_crawl_task(product_id, link, additional_properties, update_id, up
     new_dct.save(force_insert=True)
     logger.info(f'new detail crawl task record inserted: {new_dct.to_dict()}')
     add_operation_history(pk, new_dct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    return pk
 
 
 def add_shop_crawl_task(shop_name, target_product_ids, additional_properties, update_id, update_role):
@@ -439,6 +441,7 @@ def add_shop_crawl_task(shop_name, target_product_ids, additional_properties, up
     new_sct.save(force_insert=True)
     logger.info(f'new shop crawl task record inserted: {new_sct.to_dict()}')
     add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    return pk
 
 
 def add_search_crawl_task(search_key, num_of_pages, target_product_ids, additional_properties, update_id,
@@ -467,6 +470,7 @@ def add_search_crawl_task(search_key, num_of_pages, target_product_ids, addition
     new_sct.save(force_insert=True)
     logger.info(f'new search crawl task record inserted: {new_sct.to_dict()}')
     add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    return pk
 
 
 def add_llm_analyze_task(product_id, product_title, additional_properties, update_id, update_role):
@@ -490,6 +494,7 @@ def add_llm_analyze_task(product_id, product_title, additional_properties, updat
     new_lat.save(force_insert=True)
     logger.info(f'new llm analyze task record inserted: {new_lat.to_dict()}')
     add_operation_history(pk, new_lat.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    return pk
 
 
 def add_shop_search_crawl_task(shop_name, additional_properties, update_id, update_role):
@@ -512,6 +517,7 @@ def add_shop_search_crawl_task(shop_name, additional_properties, update_id, upda
     new_sct.save(force_insert=True)
     logger.info(f'new shop search crawl task record inserted: {new_sct.to_dict()}')
     add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    return pk
 
 
 def add_hot_product(product_id, shop_name, additional_properties, update_id, update_role):

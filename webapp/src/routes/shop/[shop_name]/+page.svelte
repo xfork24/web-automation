@@ -33,7 +33,7 @@
 	</header>
 	<main>
 		<div class="items-center justify-between px-4">
-			<div class="text-4xl ">Included Products for Shop: {data.shop_name}</div>
+			<div class="text-4xl">Included Products for Shop: {data.shop_name}</div>
 			<div>
 				<DataTable {data} />
 			</div>

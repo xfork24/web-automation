@@ -27,8 +27,8 @@
 		renderSnippet
 	} from '$lib/components/ui/data-table';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import { type ShopSearchCrawlTask } from '../+page.server';
 	import FunnelX from 'lucide-svelte/icons/funnel-x';
+	import type { ShopSearchCrawlTask } from '../../../(components)/model';
 
 
 	let { data } = $props();
@@ -240,7 +240,7 @@
 	const filter_fields = [
 		{ value: 'id', label: 'ID' },
 		{ value: 'shop', label: 'Shop' },
-		{ value: 'status', label: 'Status' },
+		{ value: 'status', label: 'Status' }
 	];
 
 	let value = $state('id');

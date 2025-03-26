@@ -27,19 +27,7 @@
 		renderComponent,
 		renderSnippet
 	} from '$lib/components/ui/data-table';
-
-	type AdditionalProperties = {}
-	type OperationHistory = {
-		id: number;
-		pk: string;
-		table_name: string;
-		additional_properties: AdditionalProperties;
-		operation_ts: number;
-		create_ts: number;
-		update_ts: number;
-		update_id: string;
-		update_role: string;
-	};
+	import type { OperationHistory } from '../../(components)/model';
 
 	let { data } = $props();
 

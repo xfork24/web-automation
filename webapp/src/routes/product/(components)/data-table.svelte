@@ -28,44 +28,7 @@
 		renderSnippet
 	} from '$lib/components/ui/data-table';
 	import FunnelX from 'lucide-svelte/icons/funnel-x';
-
-	type OfferItem = {
-		name: string;
-		img: string;
-	}
-	type OfferInfo = {
-		offer_items: OfferItem[][];
-		valid_offers: string[][];
-	}
-	type LLMAnalyzeResult = {
-		keyword: string;
-		category: string;
-		digital: boolean;
-	}
-	type AdditionalProperties = {
-		llm_analysis: LLMAnalyzeResult;
-	}
-	type ProductInfo = {
-		id: string;
-		product_id: string;
-		sku_id: string;
-		product_cover: string;
-		product_title: string;
-		product_link: string;
-		shop_name: string;
-		shop_link: string;
-		price_unit: string;
-		display_price: number;
-		display_sale: number;
-		estimated_revenue: number;
-		title_images: string[];
-		page_images: string[];
-		offer_details: OfferInfo;
-		additional_properties: AdditionalProperties;
-		create_ts: number;
-		update_ts: number;
-		update_id: string;
-	};
+	import type { ProductInfo } from '../../(components)/model';
 
 	let { data } = $props();
 

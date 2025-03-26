@@ -4,6 +4,15 @@
 
 from flask import Flask, request
 from core.models import *
+from core.analysis import (
+    TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS,
+    TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS,
+    TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS,
+    TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS,
+    TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS,
+    TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS,
+    TB_HOT_PRODUCT_PERIOD_IN_SECONDS
+)
 
 TASK_STATUS_QUERY_PERIOD = 604800
 DB_QUERY_DEFAULT_LIMIT = 100
@@ -540,6 +549,45 @@ def get_detail_crawl_task_by_id(task_id):
         return build_server_error_response(msg)
 
 
+@api.put('/api/v1/detail_task')
+def create_detail_crawl_task():
+    logger = get_logger()
+    try:
+        start_ts = int(time.time()) - TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS
+        payload = request.json
+        tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == payload.get('product_id'),
+                                               DetailCrawlTask.status != TASK_STATUS_DONE,
+                                               DetailCrawlTask.status != TASK_STATUS_ARCHIVED,
+                                               DetailCrawlTask.update_ts > start_ts)
+        task_id = ''
+        if len(tasks) == 0 or payload.get('force') == 'true':
+            task_id = add_detail_crawl_task(payload.get('product_id'),
+                                            payload.get('product_link'),
+                                            {},
+                                            payload.get('update_id'),
+                                            create_detail_crawl_task.__name__)
+        else:
+            logger.info(
+                f'same task already exist for product_id={payload.get("product_id")} and "force" is not set to "true", just ignore')
+        return build_success_response({'task_id': task_id})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/detail_task/<task_id>')
+def delete_detail_crawl_task(task_id):
+    logger = get_logger()
+    try:
+        x = DetailCrawlTask.delete().where(DetailCrawlTask.id == task_id).execute()
+        return build_success_response({'task_id': task_id if x == 1 else ''})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 # supported query params:
 # product_id = XXX
 # status = XXX
@@ -603,6 +651,50 @@ def get_shop_crawl_task_by_id(task_id):
         msg = f'id={task_id} not found'
         logger.info(f'invalid id={task_id}, not found')
         return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.put('/api/v1/shop_task')
+def create_shop_crawl_task():
+    logger = get_logger()
+    try:
+        start_ts = int(time.time()) - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
+        payload = request.json
+        tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == payload.get('shop_name'),
+                                             ShopCrawlTask.status != TASK_STATUS_DONE,
+                                             ShopCrawlTask.status != TASK_STATUS_ARCHIVED,
+                                             ShopCrawlTask.update_ts > start_ts)
+        exist = False
+        target_product_ids = payload.get('target_product_ids')
+        for task in tasks:
+            if set(target_product_ids).issubset(set(json_loads(task.target_product_ids))):
+                exist = True
+        task_id = ''
+        if not exist or payload.get('force') == 'true':
+            task_id = add_shop_crawl_task(payload.get('shop_name'),
+                                          target_product_ids,
+                                          {},
+                                          payload.get('update_id'),
+                                          create_shop_crawl_task.__name__)
+        else:
+            logger.info(
+                f'same task already exist for shop_name={payload.get("shop_name")}, target_product_ids={target_product_ids} and "force" is not set to "true", just ignore')
+        return build_success_response({'task_id': task_id})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/shop_task/<task_id>')
+def delete_shop_crawl_task(task_id):
+    logger = get_logger()
+    try:
+        x = ShopCrawlTask.delete().where(ShopCrawlTask.id == task_id).execute()
+        return build_success_response({'task_id': task_id if x == 1 else ''})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -678,6 +770,52 @@ def get_search_crawl_task_by_id(task_id):
         return build_server_error_response(msg)
 
 
+@api.put('/api/v1/search_task')
+def create_search_crawl_task():
+    logger = get_logger()
+    try:
+        start_ts = int(time.time()) - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+        payload = request.json
+        tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == payload.get('search_key'),
+                                               SearchCrawlTask.status != TASK_STATUS_DONE,
+                                               SearchCrawlTask.status != TASK_STATUS_ARCHIVED,
+                                               SearchCrawlTask.update_ts > start_ts)
+        exist = False
+        # 忽略num_of_pages的配置
+        target_product_ids = payload.get('target_product_ids')
+        for task in tasks:
+            if set(target_product_ids).issubset(set(json_loads(task.target_product_ids))):
+                exist = True
+        task_id = ''
+        if not exist or payload.get('force') == 'true':
+            task_id = add_search_crawl_task(payload.get('search_key'),
+                                            payload.get('num_of_pages'),
+                                            target_product_ids,
+                                            {},
+                                            payload.get('update_id'),
+                                            create_search_crawl_task.__name__)
+        else:
+            logger.info(
+                f'same task already exist for search_key={payload.get("search_key")}, target_product_ids={target_product_ids} and "force" is not set to "true", just ignore')
+        return build_success_response({'task_id': task_id})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/search_task/<task_id>')
+def delete_search_crawl_task(task_id):
+    logger = get_logger()
+    try:
+        x = SearchCrawlTask.delete().where(SearchCrawlTask.id == task_id).execute()
+        return build_success_response({'task_id': task_id if x == 1 else ''})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 # supported query params:
 # search_key = XXX
 # status = XXX
@@ -747,6 +885,45 @@ def get_llm_analyze_task_by_id(task_id):
         return build_server_error_response(msg)
 
 
+@api.put('/api/v1/llm_task')
+def create_llm_analyze_task():
+    logger = get_logger()
+    try:
+        start_ts = int(time.time()) - TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS
+        payload = request.json
+        tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == payload.get('product_id'),
+                                              LLMAnalyzeTask.status != TASK_STATUS_DONE,
+                                              LLMAnalyzeTask.status != TASK_STATUS_ARCHIVED,
+                                              LLMAnalyzeTask.update_ts > start_ts)
+        task_id = ''
+        if len(tasks) == 0 or payload.get('force') == 'true':
+            task_id = add_llm_analyze_task(payload.get('product_id'),
+                                           payload.get('product_title'),
+                                           {},
+                                           payload.get('update_id'),
+                                           create_llm_analyze_task.__name__)
+        else:
+            logger.info(
+                f'same task already exist for product_id={payload.get("product_id")} and "force" is not set to "true", just ignore')
+        return build_success_response({'task_id': task_id})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/llm_task/<task_id>')
+def delete_llm_analyze_task(task_id):
+    logger = get_logger()
+    try:
+        x = LLMAnalyzeTask.delete().where(LLMAnalyzeTask.id == task_id).execute()
+        return build_success_response({'task_id': task_id if x == 1 else ''})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 # supported query params:
 # product_id = XXX
 # status = XXX
@@ -810,6 +987,44 @@ def get_shop_search_crawl_task_by_id(task_id):
         msg = f'id={task_id} not found'
         logger.info(f'invalid id={task_id}, not found')
         return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.put('/api/v1/shop_search_task')
+def create_shop_search_task():
+    logger = get_logger()
+    try:
+        start_ts = int(time.time()) - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+        payload = request.json
+        tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == payload.get('shop_name'),
+                                                   ShopSearchCrawlTask.status != TASK_STATUS_DONE,
+                                                   ShopSearchCrawlTask.status != TASK_STATUS_ARCHIVED,
+                                                   ShopSearchCrawlTask.update_ts > start_ts)
+        task_id = ''
+        if len(tasks) == 0 or payload.get('force') == 'true':
+            task_id = add_shop_search_crawl_task(payload.get('shop_name'),
+                                                 {},
+                                                 payload.get('update_id'),
+                                                 create_shop_search_task.__name__)
+        else:
+            logger.info(
+                f'same task already exist for shop_name={payload.get("shop_name")} and "force" is not set to "true", just ignore')
+        return build_success_response({'task_id': task_id})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/shop_search_task/<task_id>')
+def delete_shop_search_crawl_task(task_id):
+    logger = get_logger()
+    try:
+        x = ShopSearchCrawlTask.delete().where(ShopSearchCrawlTask.id == task_id).execute()
+        return build_success_response({'task_id': task_id if x == 1 else ''})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
