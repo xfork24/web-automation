@@ -8,6 +8,20 @@
 
 	let { row, user } = $props();
 	let open = $state(false);
+	let dialog_title = $state('Are you sure?');
+	let dialog_body = $state('');
+	let handler = $state(async function(_: SearchCrawlTask) {
+	});
+
+	function beforeCreateSearchDialog() {
+		dialog_body = 'This action will add a search crawl task. The task will be scheduled later.';
+		handler = createSearchCrawlTask;
+	}
+
+	function beforeDeleteSearchDialog() {
+		dialog_body = 'This action will try to delete a search crawl task. You must fix all external constraints before this operation can be done.';
+		handler = deleteSearchCrawlTask;
+	}
 
 	async function createSearchCrawlTask(row: SearchCrawlTask) {
 		try {
@@ -34,6 +48,23 @@
 		}
 	}
 
+	async function deleteSearchCrawlTask(row: SearchCrawlTask) {
+		try {
+			const response = await fetch(`http://localhost:8000/api/v1/search_task/${row.id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json;charset=UTF-8'
+				}
+			});
+			const result = await response.json();
+			if (result.code == 0) {
+				open = false;
+				return;
+			}
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
 </script>
 
 <Dialog.Root bind:open>
@@ -55,8 +86,13 @@
 			<DropdownMenu.Group>
 				<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
 				<Dialog.Trigger class="w-full">
-					<DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => beforeCreateSearchDialog()}>
 						<span>Resubmit Task</span>
+					</DropdownMenu.Item>
+				</Dialog.Trigger>
+				<Dialog.Trigger class="w-full">
+					<DropdownMenu.Item onclick={() => beforeDeleteSearchDialog()}>
+						<span>Delete Task</span>
 					</DropdownMenu.Item>
 				</Dialog.Trigger>
 			</DropdownMenu.Group>
@@ -64,15 +100,14 @@
 	</DropdownMenu.Root>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Are you sure absolutely sure?</Dialog.Title>
+			<Dialog.Title>{dialog_title}</Dialog.Title>
 			<Dialog.Description>
-				This action will add a search crawl task.<br>
-				The task will be scheduled later.
+				{dialog_body}
 			</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
 			<Button type="reset" onclick={() => open = false}>Cancel</Button>
-			<Button type="submit" class="bg-red-500 hover:bg-red-500" onclick={() => createSearchCrawlTask(row)}>Continue
+			<Button type="submit" class="bg-red-500 hover:bg-red-500" onclick={() => handler(row)}>Continue
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>

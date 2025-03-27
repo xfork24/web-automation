@@ -5,7 +5,6 @@
 from flask import Flask, request
 from core.models import *
 from core.analysis import (
-    TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS,
     TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS,
     TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS,
     TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS,
@@ -88,6 +87,18 @@ def get_product_by_id(product_id):
         msg = f'product_id={product_id} not found'
         logger.info(f'invalid product_id={product_id}, not found')
         return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/product/<product_id>')
+def delete_product_by_id(product_id):
+    logger = get_logger()
+    try:
+        x = ProductInfo.delete().where(ProductInfo.product_id == product_id).execute()
+        return build_success_response({'product_id': product_id if x == 1 else ''})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -180,6 +191,18 @@ def get_shop_by_name(shop_name):
         msg = f'shop_name={shop_name} not found'
         logger.info(f'invalid shop_name={shop_name}, not found')
         return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/shop/<shop_name>')
+def delete_shop_by_name(shop_name):
+    logger = get_logger()
+    try:
+        x = ShopInfo.delete().where(ShopInfo.shop_name == shop_name).execute()
+        return build_success_response({'shop_name': shop_name if x == 1 else ''})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -286,6 +309,20 @@ def get_product_sale_by_id_and_ts(product_id, create_ts):
         return build_server_error_response(msg)
 
 
+@api.delete('/api/v1/product_sale/<product_id>/<create_ts>')
+def delete_product_sale_by_id_and_ts(product_id, create_ts):
+    logger = get_logger()
+    try:
+        x = ProductSale.delete().where(ProductSale.product_id == product_id,
+                                       ProductSale.create_ts == create_ts).execute()
+        return build_success_response(
+            {'product_id': product_id if x == 1 else '', 'create_ts': create_ts if x == 1 else ''})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 # supported query params:
 # product_id = XXX
 # shop_name = XXX
@@ -357,6 +394,37 @@ def get_hot_product_by_id_and_ts(product_id, create_ts):
         msg = f'product_id={product_id} and create_ts={create_ts} not found'
         logger.info(f'invalid product_id={product_id} and create_ts={create_ts} not found')
         return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.put('/api/v1/hot_product')
+def create_hot_product():
+    logger = get_logger()
+    try:
+        payload = request.json
+        add_hot_product(payload.get('product_id'),
+                        payload.get('shop_name'),
+                        {},
+                        payload.get('update_id'),
+                        create_hot_product.__name__)
+        return build_success_response({})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/hot_product/<product_id>/<create_ts>')
+def delete_hot_product_by_id_and_ts(product_id, create_ts):
+    logger = get_logger()
+    try:
+        x = HotProduct.delete().where(HotProduct.product_id == product_id,
+                                      HotProduct.create_ts == create_ts).execute()
+        return build_success_response(
+            {'product_id': product_id if x == 1 else '', 'create_ts': create_ts if x == 1 else ''})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)

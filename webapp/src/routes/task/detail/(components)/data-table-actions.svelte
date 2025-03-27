@@ -3,14 +3,28 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { goto } from '$app/navigation';
-	import type { ProductInfo } from '../../../(components)/model';
+	import type { DetailCrawlTask } from '../../../(components)/model';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-
-	let open = $state(false);
 
 	let { row, user } = $props();
 
-	async function createDetailCrawlTask(row: ProductInfo) {
+	let open = $state(false);
+	let dialog_title = $state('Are you sure?');
+	let dialog_body = $state('');
+	let handler = $state(async function(_: DetailCrawlTask) {
+	});
+
+	function beforeCrawlDetailDialog() {
+		dialog_body = 'This action will add a detail crawl task. The task will be scheduled later.';
+		handler = createDetailCrawlTask;
+	}
+
+	function beforeDeleteDetailCrawlDialog() {
+		dialog_body = 'This action will try to delete a detail crawl task. You must fix all external constraints before this operation can be done.';
+		handler = deleteDetailCrawlTask;
+	}
+
+	async function createDetailCrawlTask(row: DetailCrawlTask) {
 		try {
 			const response = await fetch('http://localhost:8000/api/v1/detail_task', {
 				method: 'PUT',
@@ -25,6 +39,24 @@
 			});
 			const result = await response.json();
 			console.log(result);
+			if (result.code == 0) {
+				open = false;
+				return;
+			}
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
+
+	async function deleteDetailCrawlTask(row: DetailCrawlTask) {
+		try {
+			const response = await fetch(`http://localhost:8000/api/v1/detail_task/${row.id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json;charset=UTF-8'
+				}
+			});
+			const result = await response.json();
 			if (result.code == 0) {
 				open = false;
 				return;
@@ -61,8 +93,13 @@
 			<DropdownMenu.Group>
 				<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
 				<Dialog.Trigger class="w-full">
-					<DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => beforeCrawlDetailDialog()}>
 						<span>Resubmit Task</span>
+					</DropdownMenu.Item>
+				</Dialog.Trigger>
+				<Dialog.Trigger class="w-full">
+					<DropdownMenu.Item onclick={() => beforeDeleteDetailCrawlDialog()}>
+						<span>Delete Product</span>
 					</DropdownMenu.Item>
 				</Dialog.Trigger>
 			</DropdownMenu.Group>
@@ -70,15 +107,14 @@
 	</DropdownMenu.Root>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Are you sure absolutely sure?</Dialog.Title>
+			<Dialog.Title>{dialog_title}</Dialog.Title>
 			<Dialog.Description>
-				This action will re-submit a product crawl task.<br>
-				The task will be scheduled later.
+				{dialog_body}
 			</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
 			<Button type="reset" onclick={() => open = false}>Cancel</Button>
-			<Button type="submit" class="bg-red-500 hover:bg-red-500" onclick={() => createDetailCrawlTask(row)}>Continue
+			<Button type="submit" class="bg-red-500 hover:bg-red-500" onclick={() => handler(row)}>Continue
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>

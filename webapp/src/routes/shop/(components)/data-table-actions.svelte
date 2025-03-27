@@ -6,9 +6,23 @@
 	import type { ShopInfo } from '../../(components)/model';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 
-	let open = $state(false);
-
 	let { row, user } = $props();
+
+	let open = $state(false);
+	let dialog_title = $state('Are you sure?');
+	let dialog_body = $state('');
+	let handler = $state(async function(_: ShopInfo) {
+	});
+
+	function beforeCrawlShopDialog() {
+		dialog_body = 'This action will add a shop crawl task. The task will be scheduled later.';
+		handler = createShopCrawlTask;
+	}
+
+	function beforeDeleteShopDialog() {
+		dialog_body = 'This action will try to delete a shop. You must fix all external constraints before this operation can be done.';
+		handler = deleteShop;
+	}
 
 	async function createShopCrawlTask(row: ShopInfo) {
 		try {
@@ -19,11 +33,30 @@
 				},
 				body: JSON.stringify({
 					'shop_name': row.shop_name,
+					'target_product_ids': '[]',
 					'update_id': user.name
 				})
 			});
 			const result = await response.json();
 			console.log(result);
+			if (result.code == 0) {
+				open = false;
+				return;
+			}
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
+
+	async function deleteShop(row: ShopInfo) {
+		try {
+			const response = await fetch(`http://localhost:8000/api/v1/shop/${row.shop_name}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json;charset=UTF-8'
+				}
+			});
+			const result = await response.json();
 			if (result.code == 0) {
 				open = false;
 				return;
@@ -61,8 +94,13 @@
 			<DropdownMenu.Group>
 				<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
 				<Dialog.Trigger class="w-full">
-					<DropdownMenu.Item>
-						<span>Crawl Product</span>
+					<DropdownMenu.Item onclick={() => beforeCrawlShopDialog()}>
+						<span>Crawl Shop</span>
+					</DropdownMenu.Item>
+				</Dialog.Trigger>
+				<Dialog.Trigger class="w-full">
+					<DropdownMenu.Item onclick={() => beforeDeleteShopDialog()}>
+						<span>Delete Shop</span>
 					</DropdownMenu.Item>
 				</Dialog.Trigger>
 				<DropdownMenu.Item onclick={() => goto('/shop/' + row.shop_name)}>View Shop Products
@@ -72,15 +110,14 @@
 	</DropdownMenu.Root>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Are you sure absolutely sure?</Dialog.Title>
+			<Dialog.Title>{dialog_title}</Dialog.Title>
 			<Dialog.Description>
-				This action will add a shop crawl task.<br>
-				The task will be scheduled later.
+				{dialog_body}
 			</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
 			<Button type="reset" onclick={() => open = false}>Cancel</Button>
-			<Button type="submit" class="bg-red-500 hover:bg-red-500" onclick={() => createShopCrawlTask(row)}>Continue
+			<Button type="submit" class="bg-red-500 hover:bg-red-500" onclick={() => handler(row)}>Continue
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
