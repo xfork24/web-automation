@@ -668,7 +668,7 @@ def create_shop_crawl_task():
                                              ShopCrawlTask.status != TASK_STATUS_ARCHIVED,
                                              ShopCrawlTask.update_ts > start_ts)
         exist = False
-        target_product_ids = payload.get('target_product_ids')
+        target_product_ids = json_loads(payload.get('target_product_ids'))
         for task in tasks:
             if set(target_product_ids).issubset(set(json_loads(task.target_product_ids))):
                 exist = True
@@ -782,7 +782,7 @@ def create_search_crawl_task():
                                                SearchCrawlTask.update_ts > start_ts)
         exist = False
         # 忽略num_of_pages的配置
-        target_product_ids = payload.get('target_product_ids')
+        target_product_ids = json_loads(payload.get('target_product_ids'))
         for task in tasks:
             if set(target_product_ids).issubset(set(json_loads(task.target_product_ids))):
                 exist = True

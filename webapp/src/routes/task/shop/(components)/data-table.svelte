@@ -186,7 +186,7 @@
 			id: 'actions',
 			enableHiding: false,
 			cell: ({ row }) =>
-				renderComponent(DataTableActions, { row: row.original })
+				renderComponent(DataTableActions, { row: row.original, user: data.user })
 		}
 	];
 
@@ -257,7 +257,7 @@
 		{ value: 'id', label: 'ID' },
 		{ value: 'shop', label: 'Shop' },
 		{ value: 'target_product_ids', label: 'Target Product IDs' },
-		{ value: 'status', label: 'Status' },
+		{ value: 'status', label: 'Status' }
 	];
 
 	let value = $state('id');

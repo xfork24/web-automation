@@ -14,7 +14,7 @@
 	import { goto } from '$app/navigation';
 
 	const active_url = $derived(page.url.pathname);
-	let active_user = $state({ id: 0, name: 'Heng Liu' });
+	let { data } = $props();
 	let workspace = $state('Taobao Analysis');
 	// Menu items.
 	const sidebar_items = [
@@ -99,7 +99,7 @@
 	];
 	const valid_workspaces = [
 		{
-			title: 'Taobao Management Console',
+			title: 'Taobao Analysis',
 			url: '/'
 		}
 	];
@@ -214,7 +214,7 @@
 								class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
 							>
 								<User />
-								{active_user.name}
+								{data.user.name}
 								<ChevronUp class="ml-auto" />
 							</Sidebar.MenuButton>
 						{/snippet}
@@ -223,13 +223,13 @@
 						side="top"
 						class="w-[--bits-dropdown-menu-anchor-width]"
 					>
-						{#each valid_users as valid_user (valid_user.id)}
-							<DropdownMenu.Item onclick={() => active_user = valid_user}>
-								{#snippet child({ props })}
-									<span {...props}>{valid_user.name}</span>
-								{/snippet}
-							</DropdownMenu.Item>
-						{/each}
+						<DropdownMenu.Item>
+							{#snippet child({ props })}
+								<a href="/user/{data.user.id}" {...props}>
+									<span>{data.user.name}</span>
+								</a>
+							{/snippet}
+						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Sidebar.MenuItem>

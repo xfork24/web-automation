@@ -88,7 +88,7 @@
 					const search_key = getData();
 					return {
 						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='https://s.taobao.com/search?page=1&q=${search_key}' target="_blank">${search_key}</a>`
-				};
+					};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Search Key'));
 			}
@@ -204,7 +204,7 @@
 			id: 'actions',
 			enableHiding: false,
 			cell: ({ row }) =>
-				renderComponent(DataTableActions, { row: row.original })
+				renderComponent(DataTableActions, { row: row.original, user: data.user })
 		}
 	];
 
@@ -275,7 +275,7 @@
 		{ value: 'id', label: 'ID' },
 		{ value: 'search_key', label: 'Search Key' },
 		{ value: 'target_product_ids', label: 'Target Product IDs' },
-		{ value: 'status', label: 'Status' },
+		{ value: 'status', label: 'Status' }
 	];
 
 	let value = $state('id');

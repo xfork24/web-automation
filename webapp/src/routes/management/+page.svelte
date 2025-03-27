@@ -14,6 +14,10 @@
 						<Tally_1 />
 					</Breadcrumb.Separator>
 					<Breadcrumb.Item>
+						<Breadcrumb.Link href="/">Home</Breadcrumb.Link>
+					</Breadcrumb.Item>
+					<Breadcrumb.Separator />
+					<Breadcrumb.Item>
 						<Breadcrumb.Link href="/management">Management</Breadcrumb.Link>
 					</Breadcrumb.Item>
 				</Breadcrumb.List>

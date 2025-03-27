@@ -170,7 +170,7 @@
 			id: 'actions',
 			enableHiding: false,
 			cell: ({ row }) =>
-				renderComponent(DataTableActions, { row: row.original })
+				renderComponent(DataTableActions, { row: row.original, user: data.user })
 		}
 	];
 

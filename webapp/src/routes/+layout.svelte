@@ -1,12 +1,13 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import AppSidebar from './(components)/app-sidebar.svelte';
+	import type { LayoutProps } from './$types';
 	import '../app.css';
 
-	let { children } = $props();
+	let { data, children }: LayoutProps = $props();
 </script>
 
 <Sidebar.Provider>
-	<AppSidebar />
-	{@render children?.()}
+	<AppSidebar {data} />
+	{@render children?.() }
 </Sidebar.Provider>
