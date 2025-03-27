@@ -93,6 +93,8 @@
 			<DropdownMenu.Separator />
 			<DropdownMenu.Group>
 				<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
+				<DropdownMenu.Item onclick={() => goto('/shop/' + row.shop_name)}>View Shop Products
+				</DropdownMenu.Item>
 				<Dialog.Trigger class="w-full">
 					<DropdownMenu.Item onclick={() => beforeCrawlShopDialog()}>
 						<span>Crawl Shop</span>
@@ -103,8 +105,6 @@
 						<span>Delete Shop</span>
 					</DropdownMenu.Item>
 				</Dialog.Trigger>
-				<DropdownMenu.Item onclick={() => goto('/shop/' + row.shop_name)}>View Shop Products
-				</DropdownMenu.Item>
 			</DropdownMenu.Group>
 		</DropdownMenu.Content>
 	</DropdownMenu.Root>
