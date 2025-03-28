@@ -25,6 +25,6 @@
 		</div>
 	</header>
 	<main>
-		<p>management page with filters</p>
+		<p>Management Page</p>
 	</main>
 </Sidebar.Inset>
