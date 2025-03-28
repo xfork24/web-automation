@@ -231,7 +231,7 @@
 
 	const table = createSvelteTable({
 		get data() {
-			return data.content;
+			return data.shop_products;
 		},
 		columns,
 		state: {

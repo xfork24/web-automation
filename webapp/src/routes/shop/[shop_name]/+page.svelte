@@ -2,9 +2,10 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import Tally_1 from 'lucide-svelte/icons/tally-1';
-	import DataTable from '../../product/(components)/data-table.svelte';
+	import DataTable from './(components)/data-table.svelte';
 
 	let { data } = $props();
+	const valid_shop = data.shop_info != undefined;
 </script>
 
 <Sidebar.Inset>
@@ -32,11 +33,16 @@
 		</div>
 	</header>
 	<main>
-		<div class="items-center justify-between px-4">
-			<div class="text-4xl">Included Products for Shop: {data.shop_name}</div>
+		{#if valid_shop }
+			<div class="items-center justify-between px-4 text-4xl">Included Products for Shop: {data.shop_name}</div>
 			<div>
 				<DataTable {data} />
 			</div>
-		</div>
+		{:else}
+			<div class="items-center justify-between px-4 text-4xl">Please select a valid shop from <a
+				class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/shop'>All Shops</a> page
+				first.
+			</div>
+		{/if}
 	</main>
 </Sidebar.Inset>

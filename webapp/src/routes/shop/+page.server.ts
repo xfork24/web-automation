@@ -8,7 +8,7 @@ export const load = async () => {
 		});
 		const body = await response.json();
 		return {
-			content: body.data
+			shops: body.data
 		};
 	} catch (error) {
 		console.error(`Error in load function: ${error}`);

@@ -38,7 +38,6 @@
 				})
 			});
 			const result = await response.json();
-			console.log(result);
 			if (result.code == 0) {
 				open = false;
 				return;
@@ -86,6 +85,9 @@
 		<DropdownMenu.Content>
 			<DropdownMenu.Group>
 				<DropdownMenu.GroupHeading>Navigate to</DropdownMenu.GroupHeading>
+				<DropdownMenu.Item onclick={() => goto('/shop/' + row.shop_name)}>
+					Shop Detail Page
+				</DropdownMenu.Item>
 				<DropdownMenu.Item onclick={() => window.open(row.shop_link, '_blank')}>
 					Taobao Shop Page
 				</DropdownMenu.Item>
@@ -93,8 +95,6 @@
 			<DropdownMenu.Separator />
 			<DropdownMenu.Group>
 				<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
-				<DropdownMenu.Item onclick={() => goto('/shop/' + row.shop_name)}>View Shop Products
-				</DropdownMenu.Item>
 				<Dialog.Trigger class="w-full">
 					<DropdownMenu.Item onclick={() => beforeCrawlShopDialog()}>
 						<span>Crawl Shop</span>

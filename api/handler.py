@@ -180,6 +180,8 @@ def get_shop_by_name(shop_name):
                                                                                                JOIN.LEFT_OUTER).group_by(
             ShopInfo.shop_name).where(
             ShopInfo.shop_name == shop_name)
+        if len(p) == 0:
+            raise DoesNotExist()
         item = {
             'avg_price': int(p[0].avg_price) if p[0].avg_price is not None else -1,
             'total_sale': int(p[0].total_sale) if p[0].total_sale is not None else -1,

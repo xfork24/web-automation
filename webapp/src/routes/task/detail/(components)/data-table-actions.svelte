@@ -38,7 +38,6 @@
 				})
 			});
 			const result = await response.json();
-			console.log(result);
 			if (result.code == 0) {
 				open = false;
 				return;

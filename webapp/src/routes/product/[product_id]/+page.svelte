@@ -16,7 +16,7 @@
 	const product_id = data.product_id;
 	const product = data.product_info;
 
-	let sales = $state(data.product_sale);
+	let sales = $state(data.product_sales);
 
 	let formatter = $state(new Intl.NumberFormat('zh-CN', {
 		style: 'currency',
@@ -90,8 +90,8 @@
 		</div>
 	</header>
 	<main>
-		<div class="items-center justify-between px-4 text-4xl">Product Detail for Product: {product_id}</div>
 		{#if valid_product }
+			<div class="items-center justify-between px-4 text-4xl">Product Detail for Product: {product_id}</div>
 			<div class="flex p-4">
 				<div class="items-center justify-between w-1/5">
 					<img src={product.product_cover} alt="product cover" />
@@ -178,6 +178,11 @@
 						</Table.Body>
 					</Table.Root>
 				</div>
+			</div>
+		{:else}
+			<div class="items-center justify-between px-4 text-4xl">Please select a valid product from <a
+				class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product'>All Products</a> page
+				first.
 			</div>
 		{/if}
 	</main>

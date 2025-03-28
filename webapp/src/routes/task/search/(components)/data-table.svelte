@@ -105,7 +105,7 @@
 				const statusSnippet = createRawSnippet<[number]>((getData) => {
 					const num_of_pages = getData();
 					return {
-						render: () => `<div>${num_of_pages}</div>`
+						render: () => `<div class="text-center">${num_of_pages}</div>`
 					};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Number of Pages'));
@@ -153,7 +153,7 @@
 				const statusSnippet = createRawSnippet<[number]>((getData) => {
 					const try_count = getData();
 					return {
-						render: () => `<div>${try_count}</div>`
+						render: () => `<div class="text-center">${try_count}</div>`
 					};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Attempts'));

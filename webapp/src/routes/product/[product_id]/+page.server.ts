@@ -31,7 +31,7 @@ export const load = async ({ url }) => {
 		return {
 			product_id: decodeURI(product_id!),
 			product_info: product.data,
-			product_sale: sale.data.filter((item: ProductSale) => {
+			product_sales: sale.data.filter((item: ProductSale) => {
 				return item.display_sale != -1 && item.estimated_revenue != -1;
 			})
 		};

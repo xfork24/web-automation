@@ -135,7 +135,7 @@
 				const statusSnippet = createRawSnippet<[number]>((getData) => {
 					const try_count = getData();
 					return {
-						render: () => `<div>${try_count}</div>`
+						render: () => `<div class="text-center">${try_count}</div>`
 					};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Attempts'));
