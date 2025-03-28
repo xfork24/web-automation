@@ -326,7 +326,7 @@ def delete_product_sale_by_id_and_ts(product_id, create_ts):
 # supported query params:
 # product_id = XXX
 # shop_name = XXX
-# update_ts = {"lt": 100, "gt": 30}
+# create_ts = {"lt": 100, "gt": 30}
 # display_sale = {"lt": 100, "gt": 30}
 # estimated_revenue = {"lt": 100, "gt": 30}
 # update_id = XXX

@@ -11,16 +11,16 @@
 	let { data } = $props();
 	let tasks: TaskStatus[] = $state(data.content!);
 
-	let start = today(getLocalTimeZone());
-	let end = start.add({ days: 1 });
+	let end = today(getLocalTimeZone()).add({ days: 1 });
+	let start = end.add({ days: -7 });
 	let value = $state({
 		start,
 		end
 	});
 
 	function resetCalendar() {
-		let start = today(getLocalTimeZone());
-		let end = start.add({ days: 1 });
+		let end = today(getLocalTimeZone()).add({ days: 1 });
+		let start = end.add({ days: -7 });
 		value = {
 			start,
 			end

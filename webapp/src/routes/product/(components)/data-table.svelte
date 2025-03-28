@@ -29,6 +29,7 @@
 	} from '$lib/components/ui/data-table';
 	import FunnelX from 'lucide-svelte/icons/funnel-x';
 	import type { ProductInfo } from '../../(components)/model';
+	import { timeConverter } from './util';
 
 	let { data } = $props();
 
@@ -37,11 +38,6 @@
 	let columnFilters = $state<ColumnFiltersState>([]);
 	let rowSelection = $state<RowSelectionState>({});
 	let columnVisibility = $state<VisibilityState>({});
-
-	function timeConverter(ts: number) {
-		let a = new Date(ts * 1000);
-		return `${a.getFullYear()}/${String(a.getMonth()).padStart(2, '0')}/${String(a.getDate()).padStart(2, '0')} ${String(a.getHours()).padStart(2, '0')}:${String(a.getMinutes()).padStart(2, '0')}:${String(a.getSeconds()).padStart(2, '0')}`;
-	}
 
 	export const columns: ColumnDef<ProductInfo>[] = [
 		{
