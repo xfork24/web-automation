@@ -5,7 +5,7 @@
 	import DataTable from './(components)/data-table.svelte';
 
 	let { data } = $props();
-	const valid_shop = data.shop_info != undefined;
+
 </script>
 
 <Sidebar.Inset>
@@ -33,7 +33,7 @@
 		</div>
 	</header>
 	<main>
-		{#if valid_shop }
+		{#if data.shop_info !== undefined }
 			<div class="items-center justify-between px-4 text-4xl">Included Products for Shop: {data.shop_name}</div>
 			<div>
 				<DataTable {data} />

@@ -12,7 +12,6 @@
 
 	let { data } = $props();
 
-	const valid_product = data.product_info != undefined;
 	const product_id = data.product_id;
 	const product = data.product_info;
 
@@ -90,7 +89,7 @@
 		</div>
 	</header>
 	<main>
-		{#if valid_product }
+		{#if data.product_info !== undefined }
 			<div class="items-center justify-between px-4 text-4xl">Product Detail for Product: {product_id}</div>
 			<div class="flex p-4">
 				<div class="items-center justify-between w-1/5">
