@@ -298,7 +298,7 @@ def download_hot_product_resources(force_download=False):
 
 def run_all_in_one_crawler_task(update_id):
     task_ts = run_search_crawler_task(update_id)
-    analyze_and_generate_fix_tasks(int(time.time()) - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS, update_id)
+    analyze_and_generate_fix_tasks(task_ts, update_id)
     run_shop_search_crawler_task(update_id)
     run_shop_crawler_tasks(update_id)
     run_llm_analyze_tasks(update_id)

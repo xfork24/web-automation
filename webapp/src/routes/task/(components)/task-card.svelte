@@ -1,7 +1,4 @@
 <script lang="ts">
-	import BellRing from '@lucide/svelte/icons/bell-ring';
-	import Check from '@lucide/svelte/icons/check';
-	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 
 	let { data } = $props();
@@ -20,7 +17,7 @@
 		<Card.Header>
 			<Card.Title class="text-nowrap">{data.title}</Card.Title>
 		</Card.Header>
-		<Card.Content class="grid gap-4">
+		<Card.Content class="grid gap-4 text-l">
 			<div>
 				{#each Object.entries(data) as [status, count]}
 					{#if Object.keys(STATE_COLOR).includes(status)}
