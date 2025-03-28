@@ -1,6 +1,6 @@
 export const load = async ({ url }) => {
 	try {
-		const regexp = /^\/shop\/(?<shop_name>[<>%\w]+)(?<query_params>\??[%_=&\w]*)(?<tag>[#\w]*)/;
+		const regexp = /^\/shop\/(?<shop_name>[<_>%\w]+)(?<query_params>\??[%_=&\w]*)(?<tag>[#\w]*)/;
 		const matches = url.pathname.match(regexp);
 		let shop_name = undefined;
 		if (matches && matches.groups) {

@@ -3,7 +3,7 @@ import { getLocalTimeZone, today } from '@internationalized/date';
 
 export const load = async ({ url }) => {
 	try {
-		const regexp = /^\/product\/(?<product_id>[<>%\w]+)(?<query_params>\??[%_=&\w]*)(?<tag>[#\w]*)/;
+		const regexp = /^\/product\/(?<product_id>[<_>%\w]+)(?<query_params>\??[%_=&\w]*)(?<tag>[#\w]*)/;
 		const matches = url.pathname.match(regexp);
 		let product_id = undefined;
 		if (matches && matches.groups) {
