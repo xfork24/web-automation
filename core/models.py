@@ -25,6 +25,11 @@ TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
 TASK_STATUS_ARCHIVED = 5
 
+TASK_FAILED_UNEXPECTED_ERROR = 1
+TASK_FAILED_SHOP_NOT_STANDARD = 2
+TASK_FAILED_SHOP_SKU_EXCEEDS_LIMIT = 3
+TASK_FAILED_SHOP_NOT_EXIST = 4
+
 SHOP_LINK_KNOWN_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
                                re.compile('^https://shop\\w+.taobao.com/')]
 
@@ -539,15 +544,16 @@ def add_hot_product(product_id, shop_name, additional_properties, update_id, upd
                           DB_OPS_CREATE_NEW)
 
 
-def update_task_status(task, status, update_id):
+def update_task_status(task, status, update_id, err_code=None, call_stack=None):
     logger = get_logger()
+    additional_properties = json_loads(task.additional_properties)
+    if err_code is not None:
+        additional_properties['err_code'] = err_code
+    if call_stack is not None:
+        additional_properties['call_stack'] = call_stack
+    task.additional_properties = json_dumps(additional_properties)
     task.update_id = update_id
     task.update_role = update_task_status.__name__
     task.status = status
     task.save()
     logger.info(f'update task id={task.id} status to {status}')
-
-
-def update_task_status_with_reason(task, status, reason, update_id):
-    task.additional_properties = json_dumps({'reason': reason})
-    update_task_status(task, status, update_id)
