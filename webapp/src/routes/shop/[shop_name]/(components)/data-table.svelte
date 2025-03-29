@@ -60,9 +60,9 @@
 			enableHiding: false
 		},
 		{
-			id: 'Product',
+			id: 'Product Cover',
 			accessorKey: 'product_cover',
-			header: 'Product',
+			header: 'Product Cover',
 			cell: ({ row }) => {
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const product_cover = getData();
@@ -70,7 +70,7 @@
 						render: () => `<a href="${row.original.product_link}" target="_blank"><img class="h-16 w-32 object-scale-down" src=${product_cover} /></a>`
 					};
 				});
-				return renderSnippet(statusSnippet, row.getValue('Product'));
+				return renderSnippet(statusSnippet, row.getValue('Product Cover'));
 			}
 		},
 		{
