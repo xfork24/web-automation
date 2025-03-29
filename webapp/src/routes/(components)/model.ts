@@ -202,3 +202,9 @@ export function statusToString(status: string) {
 	}
 	return task_status;
 }
+
+export function assert(condition: boolean, message: string) {
+	if (!condition) {
+		throw message || 'Assertion failed';
+	}
+}

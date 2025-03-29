@@ -10,7 +10,7 @@
 		getCoreRowModel,
 		getFilteredRowModel,
 		getPaginationRowModel,
-		getSortedRowModel
+		getSortedRowModel, type Row
 	} from '@tanstack/table-core';
 	import { createRawSnippet } from 'svelte';
 	import DataTableCheckbox from '../../../(components)/data-table-checkbox.svelte';
@@ -18,6 +18,7 @@
 	import DataTableActions from './data-table-actions.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Table from '$lib/components/ui/table';
 	import {
@@ -28,10 +29,76 @@
 	} from '$lib/components/ui/data-table';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import FunnelX from 'lucide-svelte/icons/funnel-x';
-	import { parseUUID4, type ShopSearchCrawlTask, timeConverter } from '../../../(components)/model';
+	import {
+		assert,
+		parseUUID4,
+		type ShopSearchCrawlTask,
+		timeConverter
+	} from '../../../(components)/model';
+	import { invalidateAll } from '$app/navigation';
 
 
 	let { data } = $props();
+
+	let open = $state(false);
+	let dialog_title = $state('Are you sure?');
+	let dialog_body = $state('');
+	let handler = $state(async function(_: Row<ShopSearchCrawlTask>[]) {
+	});
+
+	function beforeCreateSelectShopSearchDialog() {
+		dialog_body = 'This action will resubmit select shop search crawl task(s). The task(s) will be scheduled later.';
+		handler = createSelectShopSearchCrawlTask;
+	}
+
+	function beforeDeleteSelectShopSearchDialog() {
+		dialog_body = 'This action will try to delete select shop search crawl task(s). You must fix all external constraints before this operation can be done.';
+		handler = deleteSelectShopSearchCrawlTask;
+	}
+
+	async function createSelectShopSearchCrawlTask(rows: Row<ShopSearchCrawlTask>[]) {
+		try {
+			for (const row of rows) {
+				const response = await fetch('http://localhost:8000/api/v1/shop_search_task', {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json;charset=UTF-8'
+					},
+					body: JSON.stringify({
+						'shop_name': row.original.shop_name,
+						'update_id': data.user.name
+					})
+				});
+				const result = await response.json();
+				assert(result.code == 0, `create shop_search_crawl_task failed for shop ${row.original.shop_name}`);
+			}
+			open = false;
+			table.resetRowSelection(false);
+			await invalidateAll();
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
+
+	async function deleteSelectShopSearchCrawlTask(rows: Row<ShopSearchCrawlTask>[]) {
+		try {
+			for (const row of rows) {
+				const response = await fetch(`http://localhost:8000/api/v1/shop_search_task/${row.original.id}`, {
+					method: 'DELETE',
+					headers: {
+						'Content-Type': 'application/json;charset=UTF-8'
+					}
+				});
+				const result = await response.json();
+				assert(result.code == 0, `delete shop_search_crawl_task failed for shop ${row.original.shop_name}`);
+			}
+			open = false;
+			table.resetRowSelection(false);
+			await invalidateAll();
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
 
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
 	let sorting = $state<SortingState>([]);
@@ -293,6 +360,34 @@
 		<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()}>
 			<FunnelX />
 		</Button>
+
+		<Dialog.Root bind:open>
+			<Dialog.Trigger>
+				<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => beforeCreateSelectShopSearchDialog()}>
+					Resubmit Tasks
+				</Button>
+			</Dialog.Trigger>
+			<Dialog.Trigger>
+				<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => beforeDeleteSelectShopSearchDialog()}>
+					Delete Tasks
+				</Button>
+			</Dialog.Trigger>
+			<Dialog.Content>
+				<Dialog.Header>
+					<Dialog.Title>{dialog_title}</Dialog.Title>
+					<Dialog.Description>
+						{dialog_body}
+					</Dialog.Description>
+				</Dialog.Header>
+				<Dialog.Footer>
+					<Button type="reset" onclick={() => open = false}>Cancel</Button>
+					<Button type="submit" class="bg-red-500 hover:bg-red-500"
+									onclick={() => handler(table.getSelectedRowModel().rows)}>Continue
+					</Button>
+				</Dialog.Footer>
+			</Dialog.Content>
+		</Dialog.Root>
+
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}
