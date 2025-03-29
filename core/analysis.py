@@ -449,8 +449,7 @@ def run_llm_analyze_tasks(update_id):
         update_task_status(task, TASK_STATUS_IN_PROGRESS, update_id)
         try:
             if len(product_task_batch) >= LLM_TASK_BATCH_SIZE:
-                id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch],
-                                                           run_llm_analyze_tasks.__name__)
+                id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch])
                 for p, t in product_task_batch:
                     if p.id in id_set:
                         update_task_status(t, TASK_STATUS_DONE, update_id)
@@ -458,7 +457,7 @@ def run_llm_analyze_tasks(update_id):
                         update_task_status(t, TASK_STATUS_ERROR, update_id)
                 product_task_batch = []
                 time.sleep(LLM_ANALYZE_GAP_IN_SECONDS)
-            product_task_batch.append((Product(id=task.product_id, title=task.product_title), task))
+            product_task_batch.append((Product(id=task.product_id, task_id=task.id, title=task.product_title), task))
         except Exception:
             logger.error(
                 f'get unhandled exception while analyzing llm products {[p for p, t in product_task_batch]}, just continue')
@@ -471,8 +470,7 @@ def run_llm_analyze_tasks(update_id):
     # handle last batch
     if len(product_task_batch) > 0:
         try:
-            id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch],
-                                                       run_llm_analyze_tasks.__name__)
+            id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch])
             for p, t in product_task_batch:
                 if p.id in id_set:
                     update_task_status(t, TASK_STATUS_DONE, update_id)

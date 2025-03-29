@@ -27,14 +27,14 @@ def main():
             logger.info(f'product [{product.product_id}] llm analysis already updated, just ignore')
             continue
         if len(product_batch) == LLM_QUERY_BATCH_SIZE:
-            update_product_llm_analysis_batch(product_batch, UPDATE_ID)
+            update_product_llm_analysis_batch(product_batch)
             product_batch = []
             logger.info('wait LLM tokens ready for seconds')
             time.sleep(LLM_BATCH_WAIT_IN_SECONDS)
-        product_batch.append(Product(id=product.product_id, title=product.product_title))
+        product_batch.append(Product(id=product.product_id, task_id='no_task_id', title=product.product_title))
     # the last batch
     if len(product_batch) > 0:
-        update_product_llm_analysis_batch(product_batch, UPDATE_ID)
+        update_product_llm_analysis_batch(product_batch)
     cleanup()
 
 

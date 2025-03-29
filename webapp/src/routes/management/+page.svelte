@@ -2,6 +2,8 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import Tally_1 from 'lucide-svelte/icons/tally-1';
+
+	let { data } = $props();
 </script>
 
 <Sidebar.Inset>
@@ -25,6 +27,6 @@
 		</div>
 	</header>
 	<main>
-		<p>Management Page</p>
+		<div class="items-center justify-between px-4 text-4xl">{data.data}</div>
 	</main>
 </Sidebar.Inset>

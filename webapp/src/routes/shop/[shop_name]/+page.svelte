@@ -2,7 +2,7 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import Tally_1 from 'lucide-svelte/icons/tally-1';
-	import DataTable from './(components)/data-table.svelte';
+	import DataTable from '../../product/(components)/data-table.svelte';
 
 	let { data } = $props();
 

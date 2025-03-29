@@ -5,6 +5,7 @@
 	import { goto } from '$app/navigation';
 	import type { LLMAnalyzeTask } from '../../../(components)/model';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { invalidateAll } from '$app/navigation';
 
 	let { row, user } = $props();
 	let open = $state(false);
@@ -23,7 +24,6 @@
 		handler = deleteLLMAnalyzeTask;
 	}
 
-
 	async function createLLMAnalyzeTask(row: LLMAnalyzeTask) {
 		try {
 			const response = await fetch('http://localhost:8000/api/v1/llm_task', {
@@ -33,13 +33,14 @@
 				},
 				body: JSON.stringify({
 					'product_id': row.product_id,
-					'product_link': row.product_title,
+					'product_title': row.product_title,
 					'update_id': user.name
 				})
 			});
 			const result = await response.json();
 			if (result.code == 0) {
 				open = false;
+				await invalidateAll();
 				return;
 			}
 		} catch (error) {
@@ -58,6 +59,7 @@
 			const result = await response.json();
 			if (result.code == 0) {
 				open = false;
+				await invalidateAll();
 				return;
 			}
 		} catch (error) {

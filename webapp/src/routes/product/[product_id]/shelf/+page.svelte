@@ -3,9 +3,8 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import Tally_1 from 'lucide-svelte/icons/tally-1';
 
-	import { page } from '$app/state';
-
-	let product_id = page.params.product_id;
+	let { data } = $props();
+	const product_id = data.product_id;
 </script>
 
 <Sidebar.Inset>
@@ -33,6 +32,13 @@
 		</div>
 	</header>
 	<main>
-		<p>Product on shelf with sale information: {product_id}</p>
+		{#if data.product_info !== undefined }
+			<div class="items-center justify-between px-4 text-4xl">Product OnShelf for {product_id}</div>
+		{:else}
+			<div class="items-center justify-between px-4 text-4xl">Please select a valid product from <a
+				class="italic font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product'>All Products</a>
+				page, and navigate here by clicking "Product OnShelf" menu item.
+			</div>
+		{/if}
 	</main>
 </Sidebar.Inset>

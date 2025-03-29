@@ -2,7 +2,7 @@
 	import { Ellipsis } from 'lucide-svelte/icons';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { ShopCrawlTask } from '../../../(components)/model';
 
@@ -39,6 +39,7 @@
 			const result = await response.json();
 			if (result.code == 0) {
 				open = false;
+				await invalidateAll();
 				return;
 			}
 		} catch (error) {
@@ -57,6 +58,7 @@
 			const result = await response.json();
 			if (result.code == 0) {
 				open = false;
+				await invalidateAll();
 				return;
 			}
 		} catch (error) {

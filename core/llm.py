@@ -42,6 +42,7 @@ def close_llm_client():
 # 综合考虑，我们选择 #3 的写法
 class ProductLLMInfo(BaseModel):
     id: str
+    task_id: str
     keyword: constr(min_length=1, max_length=KEYWORD_NAME_MAX_LENGTH)
     category: constr(min_length=1, max_length=CATEGORY_NAME_MAX_LENGTH)
     digital: bool
@@ -54,6 +55,7 @@ class ProductLLMInfos(BaseModel):
 # Data model for LLM to parse
 class Product(BaseModel):
     id: str
+    task_id: str
     title: str
 
 
@@ -68,11 +70,11 @@ def parse_product_by_dsr1_70b(product: Product) -> ProductLLMInfo:
                        f" Keyword should be one word and its length should be less than {KEYWORD_NAME_MAX_LENGTH} characters.\n"
                        f" Category should be one word and its length should be less than {CATEGORY_NAME_MAX_LENGTH} characters.\n"
                        " Set digital to true if the product is a digital product and is not a physical product.\n"
-                       " Both keyword and category should be in Chinese.\n",
+                       " Both keyword and category should be in Chinese.\n"
         },
         {
             "role": "user",
-            "content": f"id={product.id},title={product.title}\n",
+            "content": f"id={product.id},task_id=\"{product.task_id}\",title={product.title}\n",
         },
     ]
     logger.info(f'send request to LLM: \n{request}')
@@ -114,11 +116,13 @@ def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductLLMInfos:
                        f" Keyword should be one word and its length should be less than {KEYWORD_NAME_MAX_LENGTH} characters.\n"
                        f" Category should be one word and its length should be less than {CATEGORY_NAME_MAX_LENGTH} characters.\n"
                        " Set digital to true if the product is a digital product and is not a physical product.\n"
-                       " Both keyword and category should be in Chinese.\n",
+                       " Both keyword and category should be in Chinese."
         },
         {
             "role": "user",
-            "content": ''.join([f'id=\"{product.id}\",title=\"{product.title}\"\n' for product in products]),
+            "content": ''.join(
+                [f'id=\"{product.id}\",task_id=\"{product.task_id}\",title=\"{product.title}\"\n' for product in
+                 products]),
         },
     ]
     logger.info(f'send request to LLM: \n{request}')
@@ -149,7 +153,7 @@ def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductLLMInfos:
     return ProductLLMInfos.model_validate_json(response)
 
 
-def update_product_llm_analysis_batch(products, update_id):
+def update_product_llm_analysis_batch(products):
     logger = get_logger()
     response = parse_product_list_by_dsr1_70b(products)
     ts = int(time.time())
@@ -167,7 +171,7 @@ def update_product_llm_analysis_batch(products, update_id):
         additional_properties = json_loads(exist_pi.additional_properties)
         additional_properties[LLM_ANALYSIS_KEY] = llm_analysis
         exist_pi.additional_properties = json_dumps(additional_properties)
-        exist_pi.update_id = update_id
+        exist_pi.update_id = record.task_id
         exist_pi.update_role = update_product_llm_analysis_batch.__name__
         exist_pi.update_ts = ts
         exist_pi.save()

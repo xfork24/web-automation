@@ -24,7 +24,7 @@ export const load = async ({ url }) => {
 
 		return {
 			shop_info: shop.data,
-			shop_products: products.data,
+			products: products.data,
 			shop_name: decodeURI(shop_name!)
 		};
 	} catch (error) {
