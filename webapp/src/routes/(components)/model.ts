@@ -170,3 +170,19 @@ export type TaskStatusResult = {
 	shop_search_crawl_task: TaskStatus;
 	llm_analyze_task: TaskStatus;
 }
+
+export function parseUUID4(value: string) {
+	const regexp = /^\w{32}$/g;
+	if (value.match(regexp)) {
+		return value.substring(0, 16);
+	} else {
+		return value;
+	}
+}
+
+export function timeConverter(ts: number) {
+	let a = new Date(ts * 1000);
+	const d = `${a.getFullYear()}/${String(a.getMonth()).padStart(2, '0')}/${String(a.getDate()).padStart(2, '0')}`;
+	const t = `${String(a.getHours()).padStart(2, '0')}:${String(a.getMinutes()).padStart(2, '0')}:${String(a.getSeconds()).padStart(2, '0')}`;
+	return [d, t];
+}

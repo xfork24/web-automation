@@ -6,13 +6,13 @@ from pathlib import Path
 from core.llm import *
 from core.crawler import *
 
-# 各任务的去重检查周期
-TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
-TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
-TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
-TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 604800
-TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 604800
-TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 604800
+# 各任务的去重检查周期（1天-5分钟）
+TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
+TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
+TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
+TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
+TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 86100
+TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 86100
 
 # 各任务的等待配置
 ALL_IN_ONE_SCAN_NAP_IN_SECONDS = 60
@@ -323,10 +323,10 @@ def run_search_crawler_task(update_id):
             crawl_taobao_search_results(task.search_key, task.num_of_pages, SALE_ORDER, task.id,
                                         target_product_ids)
         except Exception:
-            logger.error(
-                f'get unhandled exception while handling task id={task.id} with search_key={task.search_key}, num_of_pages={task.num_of_pages}, target_product_ids={task.target_product_ids}')
+            reason = f'get unhandled exception while handling task id={task.id} with search_key={task.search_key}, num_of_pages={task.num_of_pages}, target_product_ids={task.target_product_ids}: {traceback.format_exc()}'
+            logger.error(reason)
             traceback.print_exc()
-            update_task_status(task, TASK_STATUS_ERROR, update_id)
+            update_task_status_with_reason(task, TASK_STATUS_ERROR, reason, update_id)
             continue
         update_task_status(task, TASK_STATUS_DONE, update_id)
         time.sleep(SEARCH_CRAWL_GAP_IN_SECONDS)
@@ -351,19 +351,25 @@ def run_shop_crawler_tasks(update_id):
             target_product_ids = json_loads(task.target_product_ids)
             craw_taobao_shop_page(shop.shop_link, task.id, target_product_ids)
         except DoesNotExist:
-            logger.error(f'shop_info record with shop_name={task.shop_name} does not exist, just ignore')
+            reason = f'shop_info record with shop_name={task.shop_name} does not exist'
+            logger.error(reason)
+            update_task_status_with_reason(task, TASK_STATUS_ERROR, reason, update_id)
+            continue
+        except NotStandardShop:
+            reason = f'shop is not a taobao standard shop, shop_name={task.shop_name}'
+            logger.error(reason)
+            update_task_status_with_reason(task, TASK_STATUS_ARCHIVED, reason, update_id)
             continue
         except ShopSkuNumExceeded:
-            logger.error(f'num of sku items in shop_name={task.shop_name} exceeds limit, just ignore')
-            task.additional_properties = json_dumps(
-                {'reason': f'num of sku items in shop_name={task.shop_name} exceeds limit'})
-            update_task_status(task, TASK_STATUS_ARCHIVED, update_id)
+            reason = f'num of sku items in shop_name={task.shop_name} exceeds limit'
+            logger.error(reason)
+            update_task_status_with_reason(task, TASK_STATUS_ARCHIVED, reason, update_id)
             continue
         except Exception:
-            logger.error(
-                f'get unhandled exception while handling task id={task.id} with shop_name={task.shop_name}, shop_link={shop.shop_link}')
+            reason = f'get unhandled exception while handling task id={task.id} with shop_name={task.shop_name}: {traceback.format_exc()}'
+            logger.error(reason)
             traceback.print_exc()
-            update_task_status(task, TASK_STATUS_ERROR, update_id)
+            update_task_status_with_reason(task, TASK_STATUS_ERROR, reason, update_id)
             continue
         update_task_status(task, TASK_STATUS_DONE, update_id)
         time.sleep(SHOP_CRAWL_GAP_IN_SECONDS)
@@ -385,9 +391,10 @@ def run_shop_search_crawler_task(update_id):
             logger.info(f'handling shop search crawler task id={task.id} with shop_name={task.shop_name}')
             crawl_taobao_shop_link_by_search(task.shop_name, task.id)
         except Exception:
-            logger.error(f'get unhandled exception while handling task id={task.id} with shop_name={task.shop_name}')
+            reason = f'get unhandled exception while handling task id={task.id} with shop_name={task.shop_name}: {traceback.format_exc()}'
+            logger.error(reason)
             traceback.print_exc()
-            update_task_status(task, TASK_STATUS_ERROR, update_id)
+            update_task_status_with_reason(task, TASK_STATUS_ERROR, reason, update_id)
             continue
         update_task_status(task, TASK_STATUS_DONE, update_id)
         time.sleep(SHOP_SEARCH_CRAWL_GAP_IN_SECONDS)
@@ -410,10 +417,10 @@ def run_detail_crawler_tasks(update_id):
                 f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
             craw_taobao_detail_page(task.product_id, task.product_link, update_id)
         except Exception:
-            logger.error(
-                f'get unhandled exception while crawling task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
+            reason = f'get unhandled exception while crawling task id={task.id} with product_id={task.product_id}, product_link={task.product_link}: {traceback.format_exc()}'
+            logger.error(reason)
             traceback.print_exc()
-            update_task_status(task, TASK_STATUS_ERROR, update_id)
+            update_task_status_with_reason(task, TASK_STATUS_ERROR, reason, update_id)
             continue
         update_task_status(task, TASK_STATUS_DONE, update_id)
         time.sleep(DETAIL_CRAWL_GAP_IN_SECONDS)
@@ -445,11 +452,10 @@ def run_llm_analyze_tasks(update_id):
                 time.sleep(LLM_ANALYZE_GAP_IN_SECONDS)
             product_task_batch.append((Product(id=task.product_id, title=task.product_title), task))
         except Exception:
-            logger.error(
-                f'get unhandled exception while analyzing llm products {[p for p, t in product_task_batch]}')
+            reason = f'get unhandled exception while analyzing llm products {[p for p, t in product_task_batch]}: {traceback.format_exc()}'
+            logger.error(reason)
             traceback.print_exc()
-            [update_task_status(t, TASK_STATUS_ERROR, update_id) for _, t in product_task_batch]
-            product_task_batch = []
+            [update_task_status_with_reason(t, TASK_STATUS_ERROR, reason, update_id) for _, t in product_task_batch]
             continue
     # handle last batch
     if len(product_task_batch) > 0:
@@ -464,8 +470,8 @@ def run_llm_analyze_tasks(update_id):
             product_task_batch = []
             time.sleep(LLM_ANALYZE_GAP_IN_SECONDS)
         except Exception:
-            logger.error(
-                f'get unhandled exception while analyzing llm products {[p for p, t in product_task_batch]}')
+            reason = f'get unhandled exception while analyzing llm products {[p for p, t in product_task_batch]}: {traceback.format_exc()}'
+            logger.error(reason)
             traceback.print_exc()
-            [update_task_status(t, TASK_STATUS_ERROR, update_id) for _, t in product_task_batch]
+            [update_task_status_with_reason(t, TASK_STATUS_ERROR, reason, update_id) for _, t in product_task_batch]
     return

@@ -28,6 +28,7 @@
 		renderSnippet
 	} from '$lib/components/ui/data-table';
 	import type { OperationHistory } from '../../(components)/model';
+	import { parseUUID4, timeConverter } from '../../(components)/model';
 
 	let { data } = $props();
 
@@ -36,11 +37,6 @@
 	let columnFilters = $state<ColumnFiltersState>([]);
 	let rowSelection = $state<RowSelectionState>({});
 	let columnVisibility = $state<VisibilityState>({});
-
-	function timeConverter(ts: number) {
-		let a = new Date(ts * 1000);
-		return `${a.getFullYear()}/${String(a.getMonth()).padStart(2, '0')}/${String(a.getDate()).padStart(2, '0')} ${String(a.getHours()).padStart(2, '0')}:${String(a.getMinutes()).padStart(2, '0')}:${String(a.getSeconds()).padStart(2, '0')}`;
-	}
 
 	export const columns: ColumnDef<OperationHistory>[] = [
 		{
@@ -156,8 +152,9 @@
 			cell: ({ row }) => {
 				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
 					const operation_ts = getData();
+					const tm = timeConverter(operation_ts);
 					return {
-						render: () => `<div>${timeConverter(operation_ts)}</div>`
+						render: () => `<div><p>${tm[0]}</p><p>${tm[1]}</p></div>`
 					};
 				});
 				return renderSnippet(amountCellSnippet, row.getValue('Operation Time'));
@@ -174,8 +171,9 @@
 			cell: ({ row }) => {
 				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
 					const create_ts = getData();
+					const tm = timeConverter(create_ts);
 					return {
-						render: () => `<div>${timeConverter(create_ts)}</div>`
+						render: () => `<div><p>${tm[0]}</p><p>${tm[1]}</p></div>`
 					};
 				});
 				return renderSnippet(amountCellSnippet, row.getValue('Create Time'));
@@ -184,7 +182,16 @@
 		{
 			id: 'Operator ID',
 			accessorKey: 'update_id',
-			header: 'Operator ID'
+			header: 'Operator ID',
+			cell: ({ row }) => {
+				const amountCellSnippet = createRawSnippet<[string]>((getData) => {
+					const operator_id = getData();
+					return {
+						render: () => `<div>${parseUUID4(operator_id)}</div>`
+					};
+				});
+				return renderSnippet(amountCellSnippet, row.getValue('Operator ID'));
+			}
 		}
 	];
 
@@ -332,7 +339,7 @@
 				{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
 					<Table.Row>
 						{#each headerGroup.headers as header (header.id)}
-							<Table.Head class="[&:has([role=checkbox])]:pl-3">
+							<Table.Head class="text-center px-0.5 [&:has([role=checkbox])]:pl-3">
 								{#if !header.isPlaceholder}
 									<FlexRender
 										content={header.column.columnDef.header}
@@ -348,7 +355,7 @@
 				{#each table.getRowModel().rows as row (row.id)}
 					<Table.Row data-state={row.getIsSelected() && "selected"}>
 						{#each row.getVisibleCells() as cell (cell.id)}
-							<Table.Cell class="[&:has([role=checkbox])]:pl-3">
+							<Table.Cell class="text-center px-0.5 [&:has([role=checkbox])]:pl-3">
 								<FlexRender
 									content={cell.column.columnDef.cell}
 									context={cell.getContext()}

@@ -7,25 +7,28 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { getLocalTimeZone, today } from '@internationalized/date';
-	import { timeConverter } from '../(components)/util';
-	import type { ProductSale } from '../../(components)/model';
+	import { type ProductSale, timeConverter } from '../../(components)/model';
+	import DataTable from './(components)/data-table.svelte';
 
 	let { data } = $props();
+	let sales = $state(data.product_sales);
 
 	const product_id = data.product_id;
 	const product = data.product_info;
-
-	let sales = $state(data.product_sales);
 
 	let formatter = $state(new Intl.NumberFormat('zh-CN', {
 		style: 'currency',
 		currency: 'CNY'
 	}));
+	let create_tm = $state(['', '']);
+	let update_tm = $state(['', '']);
 	if (product != undefined) {
 		formatter = new Intl.NumberFormat('zh-CN', {
 			style: 'currency',
 			currency: product.price_unit
 		});
+		create_tm = timeConverter(product.create_ts);
+		update_tm = timeConverter(product.update_ts);
 	}
 
 	let end = today(getLocalTimeZone()).add({ days: 1 });
@@ -96,7 +99,7 @@
 					<img src={product.product_cover} alt="product cover" />
 				</div>
 				<div class="flex flex-wrap items-center gap-4 w-4/5">
-					<div class="grid grid-cols-3 gap-4 p-4">
+					<div class="grid grid-cols-2 auto-cols-auto gap-4 p-4">
 						<div class="flex flex-nowrap">
 							<div class="mr-2"><Label>Product ID: </Label></div>
 							{product.product_id}
@@ -112,7 +115,7 @@
 								 target="_blank">{product.product_title}</a>
 						</div>
 						<div class="flex flex-nowrap">
-							<div class="mr-2"><Label>Shop: </Label></div>
+							<div class="mr-2"><Label>Shop Name: </Label></div>
 							<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
 								 href={product.shop_link} target="_blank">{product.shop_name}</a>
 						</div>
@@ -130,11 +133,17 @@
 						</div>
 						<div class="flex flex-nowrap">
 							<div class="mr-2"><Label>Create Time: </Label></div>
-							{timeConverter(product.create_ts)}
+							<div>
+								<p>{create_tm[0]}</p>
+								<p>{create_tm[1]}</p>
+							</div>
 						</div>
 						<div class="flex flex-nowrap">
 							<div class="mr-2"><Label>Update Time: </Label></div>
-							{timeConverter(product.update_ts)}
+							<div>
+								<p>{update_tm[0]}</p>
+								<p>{update_tm[1]}</p>
+							</div>
 						</div>
 						<div class="flex flex-nowrap">
 							<div class="mr-2"><Label>Operator ID: </Label></div>
@@ -152,35 +161,13 @@
 					</div>
 				</div>
 				<div class="flex flex-wrap gap-4 px-4 w-3/4">
-					<Table.Root>
-						<Table.Caption>Product sale information for product: {product_id}</Table.Caption>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head class="w-[100px]">Display Price</Table.Head>
-								<Table.Head>Display Sale</Table.Head>
-								<Table.Head>Estimated Revenue</Table.Head>
-								<Table.Head>Create Time</Table.Head>
-								<Table.Head class="text-right">Operator ID</Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							<Table.Row>
-								{#each sales as sale (sale)}
-									<Table.Cell
-										class="font-medium">{formatter.format(Number.parseFloat(sale.display_price) / 100)}</Table.Cell>
-									<Table.Cell>{sale.display_sale}</Table.Cell>
-									<Table.Cell>{formatter.format(Number.parseFloat(sale.estimated_revenue) / 100)}</Table.Cell>
-									<Table.Cell>{timeConverter(sale.create_ts)}</Table.Cell>
-									<Table.Cell class="text-right">{product.update_id}</Table.Cell>
-								{/each}
-							</Table.Row>
-						</Table.Body>
-					</Table.Root>
+					<DataTable {sales} />
 				</div>
 			</div>
 		{:else}
 			<div class="items-center justify-between px-4 text-4xl">Please select a valid product from <a
-				class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product'>All Products</a> page
+				class="italic font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product'>All Products</a>
+				page
 				first.
 			</div>
 		{/if}

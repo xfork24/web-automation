@@ -546,3 +546,8 @@ def update_task_status(task, status, update_id):
     task.status = status
     task.save()
     logger.info(f'update task id={task.id} status to {status}')
+
+
+def update_task_status_with_reason(task, status, reason, update_id):
+    task.additional_properties = json_dumps({'reason': reason})
+    update_task_status(task, status, update_id)

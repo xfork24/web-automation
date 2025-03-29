@@ -28,8 +28,7 @@
 		renderSnippet
 	} from '$lib/components/ui/data-table';
 	import FunnelX from 'lucide-svelte/icons/funnel-x';
-	import type { ProductInfo } from '../../(components)/model';
-	import { timeConverter } from './util';
+	import { parseUUID4, type ProductInfo, timeConverter } from '../../(components)/model';
 
 	let { data } = $props();
 
@@ -68,7 +67,7 @@
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const product_cover = getData();
 					return {
-						render: () => `<a href="${row.original.product_link}" target="_blank"><img class="h-16 w-32 object-scale-down" src=${product_cover} /></a>`
+						render: () => `<a href="${row.original.product_link}" target="_blank"><img class="h-80 w-80 object-scale-down" src=${product_cover} /></a>`
 					};
 				});
 				return renderSnippet(statusSnippet, row.getValue('Product'));
@@ -89,9 +88,9 @@
 			}
 		},
 		{
-			id: 'Title',
+			id: 'Product Title',
 			accessorKey: 'product_title',
-			header: 'Title',
+			header: 'Product Title',
 			cell: ({ row }) => {
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const product_title = getData();
@@ -99,13 +98,13 @@
 						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${row.original.product_id}'>${product_title}</a>`
 					};
 				});
-				return renderSnippet(statusSnippet, row.getValue('Title'));
+				return renderSnippet(statusSnippet, row.getValue('Product Title'));
 			}
 		},
 		{
-			id: 'Shop',
+			id: 'Shop Name',
 			accessorKey: 'shop_name',
-			header: 'Shop',
+			header: 'Shop Name',
 			cell: ({ row }) => {
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const shop_name = getData();
@@ -113,7 +112,7 @@
 						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/shop/${shop_name}'>${shop_name}</a>`
 					};
 				});
-				return renderSnippet(statusSnippet, row.getValue('Shop'));
+				return renderSnippet(statusSnippet, row.getValue('Shop Name'));
 			}
 		},
 		{
@@ -187,8 +186,9 @@
 			cell: ({ row }) => {
 				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
 					const create_ts = getData();
+					const tm = timeConverter(create_ts);
 					return {
-						render: () => `<div>${timeConverter(create_ts)}</div>`
+						render: () => `<div><p>${tm[0]}</p><p>${tm[1]}</p></div>`
 					};
 				});
 				return renderSnippet(amountCellSnippet, row.getValue('Create Time'));
@@ -204,9 +204,10 @@
 				}),
 			cell: ({ row }) => {
 				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
-					const create_ts = getData();
+					const update_ts = getData();
+					const tm = timeConverter(update_ts);
 					return {
-						render: () => `<div>${timeConverter(create_ts)}</div>`
+						render: () => `<div><p>${tm[0]}</p><p>${tm[1]}</p></div>`
 					};
 				});
 				return renderSnippet(amountCellSnippet, row.getValue('Update Time'));
@@ -215,7 +216,16 @@
 		{
 			id: 'Operator ID',
 			accessorKey: 'update_id',
-			header: 'Operator ID'
+			header: 'Operator ID',
+			cell: ({ row }) => {
+				const amountCellSnippet = createRawSnippet<[string]>((getData) => {
+					const operator_id = getData();
+					return {
+						render: () => `<div>${parseUUID4(operator_id)}</div>`
+					};
+				});
+				return renderSnippet(amountCellSnippet, row.getValue('Operator ID'));
+			}
 		},
 		{
 			id: 'actions',
@@ -290,8 +300,8 @@
 
 	const filter_fields = [
 		{ value: 'product_id', label: 'Product ID' },
-		{ value: 'title', label: 'Title' },
-		{ value: 'shop', label: 'Shop' },
+		{ value: 'product_title', label: 'Product Title' },
+		{ value: 'shop_name', label: 'Shop Name' },
 		{ value: 'operator_id', label: 'Operator ID' }
 	];
 
@@ -369,7 +379,7 @@
 				{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
 					<Table.Row>
 						{#each headerGroup.headers as header (header.id)}
-							<Table.Head class="[&:has([role=checkbox])]:pl-3">
+							<Table.Head class="text-center px-0.5 [&:has([role=checkbox])]:pl-3">
 								{#if !header.isPlaceholder}
 									<FlexRender
 										content={header.column.columnDef.header}
@@ -385,7 +395,7 @@
 				{#each table.getRowModel().rows as row (row.id)}
 					<Table.Row data-state={row.getIsSelected() && "selected"}>
 						{#each row.getVisibleCells() as cell (cell.id)}
-							<Table.Cell class="[&:has([role=checkbox])]:pl-3">
+							<Table.Cell class="text-center px-0.5 [&:has([role=checkbox])]:pl-3">
 								<FlexRender
 									content={cell.column.columnDef.cell}
 									context={cell.getContext()}
