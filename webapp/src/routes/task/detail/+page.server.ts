@@ -1,4 +1,4 @@
-import { statusToString } from '../(components)/utils';
+import { statusToString } from '../../(components)/model';
 import type { DetailCrawlTask } from '../../(components)/model';
 
 export const load = async () => {
