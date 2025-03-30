@@ -16,6 +16,7 @@
 	import { createRawSnippet } from 'svelte';
 	import DataTableCheckbox from '../../(components)/data-table-checkbox.svelte';
 	import DataTableSortButton from '../../(components)/data-table-sort-button.svelte';
+	import DataTableActions from './data-table-actions.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -192,6 +193,12 @@
 				});
 				return renderSnippet(amountCellSnippet, row.getValue('Operator ID'));
 			}
+		},
+		{
+			id: 'actions',
+			enableHiding: false,
+			cell: ({ row }) =>
+				renderComponent(DataTableActions, { row: row.original, user: data.user })
 		}
 	];
 

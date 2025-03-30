@@ -85,7 +85,20 @@
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content>
 			<DropdownMenu.Group>
-				<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
+				<DropdownMenu.GroupHeading>Copy IDs</DropdownMenu.GroupHeading>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.id)}>
+					Copy ID
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.product_id)}>
+					Copy Product ID
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.update_id)}>
+					Copy Operator ID
+				</DropdownMenu.Item>
+			</DropdownMenu.Group>
+			<DropdownMenu.Separator />
+			<DropdownMenu.Group>
+				<DropdownMenu.GroupHeading>Other Actions</DropdownMenu.GroupHeading>
 				<Dialog.Trigger class="w-full">
 					<DropdownMenu.Item onclick={() => beforeCreateLLMDialog()}>
 						<span>Resubmit Task</span>

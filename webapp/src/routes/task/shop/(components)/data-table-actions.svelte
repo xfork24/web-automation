@@ -99,6 +99,19 @@
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content>
 			<DropdownMenu.Group>
+				<DropdownMenu.GroupHeading>Copy IDs</DropdownMenu.GroupHeading>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.id)}>
+					Copy ID
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.shop_name)}>
+					Copy Shop Name
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.update_id)}>
+					Copy Operator ID
+				</DropdownMenu.Item>
+			</DropdownMenu.Group>
+			<DropdownMenu.Separator />
+			<DropdownMenu.Group>
 				<DropdownMenu.GroupHeading>Navigate to</DropdownMenu.GroupHeading>
 				<DropdownMenu.Item onclick={() => onNavShopClicked(row.shop_name)}>
 					Taobao Shop Page

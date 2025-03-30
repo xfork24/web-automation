@@ -114,6 +114,16 @@
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content>
 			<DropdownMenu.Group>
+				<DropdownMenu.GroupHeading>Copy IDs</DropdownMenu.GroupHeading>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.shop_name)}>
+					Copy Shop Name
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.update_id)}>
+					Copy Operator ID
+				</DropdownMenu.Item>
+			</DropdownMenu.Group>
+			<DropdownMenu.Separator />
+			<DropdownMenu.Group>
 				<DropdownMenu.GroupHeading>Navigate to</DropdownMenu.GroupHeading>
 				<DropdownMenu.Item onclick={() => goto('/shop/' + row.shop_name)}>
 					Shop Detail Page
@@ -124,7 +134,7 @@
 			</DropdownMenu.Group>
 			<DropdownMenu.Separator />
 			<DropdownMenu.Group>
-				<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
+				<DropdownMenu.GroupHeading>Other Actions</DropdownMenu.GroupHeading>
 				<Dialog.Trigger class="w-full">
 					<DropdownMenu.Item onclick={() => beforeCrawlShopDialog()}>
 						<span>Crawl Shop</span>

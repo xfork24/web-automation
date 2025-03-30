@@ -85,6 +85,19 @@
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content>
 			<DropdownMenu.Group>
+				<DropdownMenu.GroupHeading>Copy IDs</DropdownMenu.GroupHeading>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.id)}>
+					Copy ID
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.product_id)}>
+					Copy Product ID
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.update_id)}>
+					Copy Operator ID
+				</DropdownMenu.Item>
+			</DropdownMenu.Group>
+			<DropdownMenu.Separator />
+			<DropdownMenu.Group>
 				<DropdownMenu.GroupHeading>Navigate to</DropdownMenu.GroupHeading>
 				<DropdownMenu.Item onclick={() => window.open(row.product_link, '_blank')}>
 					Taobao Product Page
@@ -92,7 +105,7 @@
 			</DropdownMenu.Group>
 			<DropdownMenu.Separator />
 			<DropdownMenu.Group>
-				<DropdownMenu.GroupHeading>Actions</DropdownMenu.GroupHeading>
+				<DropdownMenu.GroupHeading>Other Actions</DropdownMenu.GroupHeading>
 				<Dialog.Trigger class="w-full">
 					<DropdownMenu.Item onclick={() => beforeCrawlDetailDialog()}>
 						<span>Resubmit Task</span>
