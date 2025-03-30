@@ -182,7 +182,7 @@ export function parseUUID4(value: string) {
 
 export function timeConverter(ts: number) {
 	let a = new Date(ts * 1000);
-	const d = `${a.getFullYear()}/${String(a.getMonth()).padStart(2, '0')}/${String(a.getDate()).padStart(2, '0')}`;
+	const d = `${a.getFullYear()}/${String(a.getMonth() + 1).padStart(2, '0')}/${String(a.getDate()).padStart(2, '0')}`;
 	const t = `${String(a.getHours()).padStart(2, '0')}:${String(a.getMinutes()).padStart(2, '0')}:${String(a.getSeconds()).padStart(2, '0')}`;
 	return [d, t];
 }
