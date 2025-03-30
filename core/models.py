@@ -28,7 +28,6 @@ TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
 TASK_STATUS_ARCHIVED = 5
 
-TASK_RETRY_BEFORE_ARCHIVED = 10
 TASK_FAILED_UNEXPECTED_ERROR = 1
 TASK_FAILED_SHOP_NOT_STANDARD = 2
 TASK_FAILED_SHOP_SKU_EXCEEDS_LIMIT = 3
@@ -580,18 +579,17 @@ def update_task_info(task, update_id, status=None,
     logger = get_logger()
     original_json = task.to_dict()
     ts = int(time.time())
-    additional_properties = json_loads(task.additional_properties)
-    if ERRORS_KEY not in additional_properties:
-        additional_properties[ERRORS_KEY] = []
-    errors = additional_properties[ERRORS_KEY]
-    error_entity = {'update_time': ts}
     if err_code is not None:
-        error_entity['err_code'] = err_code
-    if call_stack is not None:
-        error_entity['call_stack'] = call_stack
-    errors.append(error_entity)
-    additional_properties[ERRORS_KEY] = errors
-    task.additional_properties = json_dumps(additional_properties)
+        additional_properties = json_loads(task.additional_properties)
+        if ERRORS_KEY not in additional_properties:
+            additional_properties[ERRORS_KEY] = []
+        errors = additional_properties[ERRORS_KEY]
+        error_entity = {'update_time': ts, 'err_code': err_code}
+        if call_stack is not None:
+            error_entity['call_stack'] = call_stack
+        errors.append(error_entity)
+        additional_properties[ERRORS_KEY] = errors
+        task.additional_properties = json_dumps(additional_properties)
     if target_product_ids is not None:
         task.target_product_ids = json_dumps(target_product_ids)
     if num_of_pages is not None:

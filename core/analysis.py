@@ -16,7 +16,8 @@ TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 86100
 
 # 各任务的等待配置
 ALL_IN_ONE_SCAN_NAP_IN_SECONDS = 60
-ALL_IN_ONE_TASK_ERROR_WAIT_IN_SECONDS = 3600
+TASK_RETRY_WAIT_IN_SECONDS = 1800
+TASK_RETRY_BEFORE_ARCHIVED = 5
 SEARCH_CRAWL_GAP_IN_SECONDS = 10
 SEARCH_SCAN_NAP_IN_SECONDS = 60
 SALE_ORDER = False
@@ -306,11 +307,11 @@ def run_all_in_one_crawler_task(update_id):
 # 返回是否继续执行这个task
 def handle_error_task(task, update_id):
     ts = int(time.time())
-    if task.try_count > TASK_RETRY_BEFORE_ARCHIVED:
-        # set task status to TASK_STATUS_ARCHIVED if try count > TASK_RETRY_BEFORE_ARCHIVED
+    if task.try_count >= TASK_RETRY_BEFORE_ARCHIVED:
+        # set task status to TASK_STATUS_ARCHIVED if try count >= TASK_RETRY_BEFORE_ARCHIVED, it's the 11th run.
         update_task_info(task, update_id, TASK_STATUS_ARCHIVED)
         return False
-    if task.status == TASK_STATUS_ERROR and task.update_ts > ts - ALL_IN_ONE_TASK_ERROR_WAIT_IN_SECONDS:
+    if task.status == TASK_STATUS_ERROR and task.update_ts > ts - TASK_RETRY_WAIT_IN_SECONDS:
         # wait at least ALL_IN_ONE_TASK_ERROR_WAIT_IN_SECONDS seconds for next try
         return False
     return True
