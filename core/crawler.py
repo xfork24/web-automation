@@ -493,13 +493,14 @@ def load_shop_and_products(shop_link):
 
 def craw_taobao_shop_sku(shop_sku_div, shop_name, shop_link, update_id, target_product_ids=None):
     logger = get_logger()
-    product_link = shop_sku_div.find_element(By.XPATH, 'a').get_attribute('href')
-    product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
-    product_id = parse_product_id_from_product_link(product_link)
     target_product_ids = target_product_ids or []
+    product_link = shop_sku_div.find_element(By.XPATH, 'a').get_attribute('href')
+    product_id = parse_product_id_from_product_link(product_link)
     if len(target_product_ids) > 0 and product_id not in target_product_ids:
         logger.info(f'parsed product_id={product_id} not in target_product_ids, ignore this product')
         return
+    scroll_window_to_element(shop_sku_div)
+    product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
     sku_id = parse_sku_id_from_product_link(product_link) or ''
     divs = shop_sku_div.find_elements(By.XPATH, './/div')
     title_div, price_div, sale_div = None, None, None

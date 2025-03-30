@@ -84,7 +84,7 @@ export type DetailCrawlTask = {
 	id: number;
 	product_id: string;
 	product_link: string;
-	status: string;
+	status: number;
 	try_count: number;
 	additional_properties: DetailCrawlTaskAdditionalProperties;
 	create_ts: number;
@@ -99,7 +99,7 @@ export type LLMAnalyzeTask = {
 	id: number;
 	product_id: string;
 	product_title: string;
-	status: string;
+	status: number;
 	try_count: number;
 	additional_properties: LLMAnalyzeTaskAdditionalProperties;
 	create_ts: number;
@@ -113,7 +113,7 @@ export type SearchCrawlTask = {
 	id: number;
 	search_key: string;
 	num_of_pages: string;
-	status: string;
+	status: number;
 	try_count: number;
 	target_product_ids: string;
 	additional_properties: AdditionalProperties;
@@ -128,7 +128,7 @@ type ShopCrawlTaskAdditionalProperties = {}
 export type ShopCrawlTask = {
 	id: number;
 	shop_name: string;
-	status: string;
+	status: number;
 	try_count: number;
 	target_product_ids: string;
 	additional_properties: ShopCrawlTaskAdditionalProperties;
@@ -143,7 +143,7 @@ export type ShopSearchCrawlTaskAdditionalProperties = {}
 export type ShopSearchCrawlTask = {
 	id: number;
 	shop_name: string;
-	status: string;
+	status: number;
 	try_count: number;
 	target_product_ids: string;
 	additional_properties: ShopSearchCrawlTaskAdditionalProperties;
@@ -187,17 +187,17 @@ export function timeConverter(ts: number) {
 	return [d, t];
 }
 
-export function statusToString(status: string) {
+export function statusToString(status: number) {
 	let task_status = '';
-	if (status == '1') {
+	if (status === 1) {
 		task_status = 'NEW';
-	} else if (status == '2') {
-		task_status = 'IN PROGRESS';
-	} else if (status == '3') {
+	} else if (status === 2) {
+		task_status = 'RUNNING';
+	} else if (status === 3) {
 		task_status = 'DONE';
-	} else if (status == '4') {
+	} else if (status === 4) {
 		task_status = 'ERROR';
-	} else if (status == '5') {
+	} else if (status === 5) {
 		task_status = 'ARCHIVED';
 	}
 	return task_status;

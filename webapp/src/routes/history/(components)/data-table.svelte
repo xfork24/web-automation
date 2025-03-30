@@ -130,10 +130,10 @@
 				const amountCellSnippet = createRawSnippet<[number]>((getData) => {
 					const operation = getData();
 					let ops = '';
-					if (operation == 1) {
-						ops = 'CREATE NEW';
-					} else if (operation == 2) {
-						ops = 'UPDATE EXIST';
+					if (operation === 1) {
+						ops = 'CREATE';
+					} else if (operation === 2) {
+						ops = 'UPDATE';
 					}
 					return {
 						render: () => `<div>${ops}</div>`
