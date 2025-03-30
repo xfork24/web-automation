@@ -7,12 +7,11 @@ from typing import List
 from groq import Groq
 
 from core.utils import *
-from core.models import ProductInfo, update_product_info
+from core.models import ProductInfo, update_product_info, LLM_ANALYSIS_KEY
 
 LLM_MODEL = 'deepseek-r1-distill-llama-70b'
 GROQ_KEY = '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'
 GROQ_TIMEOUT_IN_SECONDS = 60
-LLM_ANALYSIS_KEY = 'llm_analysis'
 MAX_KEYWORD_SIZE = 1
 MAX_CATEGORY_SIZE = 1
 KEYWORD_NAME_MAX_LENGTH = 32  # 这里给出足够的长度，因为有可能有长英文，大模型并不总会强制应用字符限制

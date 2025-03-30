@@ -45,6 +45,11 @@
 		handler = createSelectShopCrawlTask;
 	}
 
+	function beforeCrawlSelectShopInSearchDialog() {
+		dialog_body = 'This action will add select shop search crawl task(s). The task(s) will be scheduled later.';
+		handler = createSelectShopSearchCrawlTask;
+	}
+
 	function beforeDeleteSelectShopDialog() {
 		dialog_body = 'This action will try to delete selected shop(s). You must fix all external constraints before this operation can be done.';
 		handler = deleteSelectShop;
@@ -60,12 +65,36 @@
 					},
 					body: JSON.stringify({
 						'shop_name': row.original.shop_name,
-						'target_product_ids': '[]',
+						'target_product_ids': [],
 						'update_id': data.user.name
 					})
 				});
 				const result = await response.json();
 				assert(result.code == 0, `create shop_crawl_task failed for shop ${row.original.shop_name}`);
+			}
+			open = false;
+			table.resetRowSelection(false);
+			await invalidateAll();
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
+
+	async function createSelectShopSearchCrawlTask(rows: Row<ShopInfo>[]) {
+		try {
+			for (const row of rows) {
+				const response = await fetch('http://localhost:8000/api/v1/shop_search_task', {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json;charset=UTF-8'
+					},
+					body: JSON.stringify({
+						'shop_name': row.original.shop_name,
+						'update_id': data.user.name
+					})
+				});
+				const result = await response.json();
+				assert(result.code == 0, `create shop_search_crawl_task failed for shop ${row.original.shop_name}`);
 			}
 			open = false;
 			table.resetRowSelection(false);
@@ -371,12 +400,17 @@
 		<Dialog.Root bind:open>
 			<Dialog.Trigger>
 				<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => beforeCrawlSelectShopDialog()}>
-					Crawl Products
+					Crawl Shops
+				</Button>
+			</Dialog.Trigger>
+			<Dialog.Trigger>
+				<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => beforeCrawlSelectShopInSearchDialog()}>
+					Crawl Shops in Search
 				</Button>
 			</Dialog.Trigger>
 			<Dialog.Trigger>
 				<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => beforeDeleteSelectShopDialog()}>
-					Delete Products
+					Delete Shops
 				</Button>
 			</Dialog.Trigger>
 			<Dialog.Content>

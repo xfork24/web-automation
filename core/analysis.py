@@ -342,6 +342,10 @@ def run_shop_crawler_tasks(update_id):
                                          ShopCrawlTask.update_ts > start_ts).order_by(
         ShopCrawlTask.update_ts)
     for task in tasks:
+        # set task status to TASK_STATUS_ARCHIVED if try count > TASK_RETRY_BEFORE_ARCHIVED
+        if task.try_count > TASK_RETRY_BEFORE_ARCHIVED:
+            update_task_info(task, update_id, TASK_STATUS_ARCHIVED)
+            continue
         task.try_count = task.try_count + 1
         update_task_info(task, update_id, TASK_STATUS_IN_PROGRESS)
         try:
@@ -357,12 +361,12 @@ def run_shop_crawler_tasks(update_id):
             continue
         except NotStandardShop:
             logger.error(f'shop is not a taobao standard shop, shop_name={task.shop_name}, just continue')
-            update_task_info(task, update_id, TASK_STATUS_ARCHIVED,
+            update_task_info(task, update_id, TASK_STATUS_ERROR,
                              err_code=TASK_FAILED_SHOP_NOT_STANDARD)
             continue
         except ShopSkuNumExceeded:
             logger.error(f'num of sku items in shop_name={task.shop_name} exceeds limit, just continue')
-            update_task_info(task, update_id, TASK_STATUS_ARCHIVED,
+            update_task_info(task, update_id, TASK_STATUS_ERROR,
                              err_code=TASK_FAILED_SHOP_SKU_EXCEEDS_LIMIT)
             continue
         except Exception:

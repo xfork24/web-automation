@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronDown, Link } from 'lucide-svelte/icons';
+	import { ChevronDown } from 'lucide-svelte/icons';
 	import {
 		type ColumnDef,
 		type ColumnFiltersState,
@@ -31,8 +31,6 @@
 	import FunnelX from 'lucide-svelte/icons/funnel-x';
 	import { parseUUID4, type ProductInfo, timeConverter, assert } from '../../(components)/model';
 	import { invalidateAll } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { util } from 'zod';
 
 	let { data } = $props();
 
@@ -45,6 +43,11 @@
 	function beforeCrawlSelectProductDialog() {
 		dialog_body = 'This action will add select product crawl task(s). The task(s) will be scheduled later.';
 		handler = createSelectDetailCrawlTask;
+	}
+
+	function beforeCrawlSelectProductInShopDialog() {
+		dialog_body = 'This action will add select shop crawl task(s) for target products. The task(s) will be scheduled later.';
+		handler = createSelectShopCrawlTask;
 	}
 
 	function beforeDeleteSelectProductDialog() {
@@ -68,6 +71,31 @@
 				});
 				const result = await response.json();
 				assert(result.code == 0, `create detail_crawl_task failed for product ${row.original.product_id}`);
+			}
+			open = false;
+			table.resetRowSelection(false);
+			await invalidateAll();
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
+
+	async function createSelectShopCrawlTask(rows: Row<ProductInfo>[]) {
+		try {
+			for (const row of rows) {
+				const response = await fetch('http://localhost:8000/api/v1/shop_task', {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json;charset=UTF-8'
+					},
+					body: JSON.stringify({
+						'shop_name': row.original.shop_name,
+						'target_product_ids': [row.original.product_id],
+						'update_id': data.user.name
+					})
+				});
+				const result = await response.json();
+				assert(result.code == 0, `create shop_crawl_task failed for shop ${row.original.shop_name} with target product ids [${row.original.product_id}]`);
 			}
 			open = false;
 			table.resetRowSelection(false);
@@ -419,6 +447,11 @@
 			<Dialog.Trigger>
 				<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => beforeCrawlSelectProductDialog()}>
 					Crawl Products
+				</Button>
+			</Dialog.Trigger>
+			<Dialog.Trigger>
+				<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => beforeCrawlSelectProductInShopDialog()}>
+					Crawl Products in Shop
 				</Button>
 			</Dialog.Trigger>
 			<Dialog.Trigger>

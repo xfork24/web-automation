@@ -5,8 +5,8 @@
 
 from core import *
 
-SHOP_LINK = 'https://shop436316857.taobao.com/?spm=pc_detail.29232929.shop_block.dshopinfo.510e7dd6F8xYxA'
-PRODUCT_IDS = ['858551205874']
+SHOP_LINK = 'https://store.taobao.com/shop/view_shop.htm?appUid=RAzN8HWUgCsj43wpTmE5MoC24E1QAp6i9HGfVGmPTAze7Txd6dc&spm=a21n57.1.item.41'
+PRODUCT_IDS = ['901424048037']
 LOG_FILE_NAME = './logs/tb_shop_crawler.log'
 UPDATE_ID = 'tb_shop_crawler'
 

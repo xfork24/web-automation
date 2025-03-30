@@ -737,13 +737,8 @@ def create_shop_crawl_task():
                                              ShopCrawlTask.status != TASK_STATUS_DONE,
                                              ShopCrawlTask.status != TASK_STATUS_ARCHIVED,
                                              ShopCrawlTask.update_ts > start_ts)
-        exist = False
         target_product_ids = json_loads(payload.get('target_product_ids'))
-        for task in tasks:
-            if set(target_product_ids).issubset(set(json_loads(task.target_product_ids))):
-                exist = True
-        task_id = ''
-        if not exist or payload.get('force') == 'true':
+        if len(tasks) == 0 or payload.get('force') == 'true':
             task_id = add_shop_crawl_task(payload.get('shop_name'),
                                           target_product_ids,
                                           {},
@@ -751,7 +746,11 @@ def create_shop_crawl_task():
                                           create_shop_crawl_task.__name__)
         else:
             logger.info(
-                f'same task already exist for shop_name={payload.get("shop_name")}, target_product_ids={target_product_ids} and "force" is not set to "true", just ignore')
+                f'same task already exist for shop_name={payload.get("shop_name")} and "force" is not set to "true", just update one of existing tasks')
+            task = tasks[0]
+            task_id = task.id
+            target_product_ids = list(set(target_product_ids).union(set(json_loads(task.target_product_ids))))
+            update_task_info(task, payload.get('update_id'), target_product_ids=target_product_ids)
         return build_success_response({'task_id': task_id})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -850,14 +849,8 @@ def create_search_crawl_task():
                                                SearchCrawlTask.status != TASK_STATUS_DONE,
                                                SearchCrawlTask.status != TASK_STATUS_ARCHIVED,
                                                SearchCrawlTask.update_ts > start_ts)
-        exist = False
-        # 忽略num_of_pages的配置
         target_product_ids = json_loads(payload.get('target_product_ids'))
-        for task in tasks:
-            if set(target_product_ids).issubset(set(json_loads(task.target_product_ids))):
-                exist = True
-        task_id = ''
-        if not exist or payload.get('force') == 'true':
+        if len(tasks) == 0 or payload.get('force') == 'true':
             task_id = add_search_crawl_task(payload.get('search_key'),
                                             payload.get('num_of_pages'),
                                             target_product_ids,
@@ -866,7 +859,12 @@ def create_search_crawl_task():
                                             create_search_crawl_task.__name__)
         else:
             logger.info(
-                f'same task already exist for search_key={payload.get("search_key")}, target_product_ids={target_product_ids} and "force" is not set to "true", just ignore')
+                f'same task already exist for search_key={payload.get("search_key")} and "force" is not set to "true", just update one of existing tasks')
+            task = tasks[0]
+            task_id = task.id
+            target_product_ids = list(set(target_product_ids).union(set(json_loads(task.target_product_ids))))
+            update_task_info(task, payload.get('update_id'), target_product_ids=target_product_ids,
+                             num_of_pages=payload.get('num_of_pages'))
         return build_success_response({'task_id': task_id})
     except Exception as e:
         msg = f'get unhandled exception {e}'

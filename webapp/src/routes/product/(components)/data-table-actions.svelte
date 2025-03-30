@@ -22,6 +22,11 @@
 		handler = createDetailCrawlTask;
 	}
 
+	function beforeCrawlProductInShopDialog() {
+		dialog_body = 'This action will add a shop crawl task with target product. The task(s) will be scheduled later.';
+		handler = createShopCrawlTask;
+	}
+
 	function beforeDeleteProductDialog() {
 		dialog_body = 'This action will try to delete a product. You must fix all external constraints before this operation can be done.';
 		handler = deleteProduct;
@@ -37,6 +42,30 @@
 				body: JSON.stringify({
 					'product_id': row.product_id,
 					'product_link': row.product_link,
+					'update_id': user.name
+				})
+			});
+			const result = await response.json();
+			if (result.code == 0) {
+				open = false;
+				await invalidateAll();
+				return;
+			}
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
+
+	async function createShopCrawlTask(row: ProductInfo) {
+		try {
+			const response = await fetch('http://localhost:8000/api/v1/shop_task', {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json;charset=UTF-8'
+				},
+				body: JSON.stringify({
+					'shop_name': row.shop_name,
+					'target_product_ids': [row.product_id],
 					'update_id': user.name
 				})
 			});
@@ -102,6 +131,11 @@
 				<Dialog.Trigger class="w-full">
 					<DropdownMenu.Item onclick={() => beforeCrawlProductDialog()}>
 						<span>Crawl Product</span>
+					</DropdownMenu.Item>
+				</Dialog.Trigger>
+				<Dialog.Trigger class="w-full">
+					<DropdownMenu.Item onclick={() => beforeCrawlProductInShopDialog()}>
+						<span>Crawl Product in Shop</span>
 					</DropdownMenu.Item>
 				</Dialog.Trigger>
 				<Dialog.Trigger class="w-full">

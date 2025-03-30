@@ -16,6 +16,9 @@ from core.config import (
 from core.utils import get_logger
 from playhouse.shortcuts import model_to_dict
 
+LLM_ANALYSIS_KEY = 'llm_analysis'
+ERRORS_KEY = 'errors'
+
 DB_OPS_CREATE_NEW = 1
 DB_OPS_UPDATE_EXIST = 2
 
@@ -25,6 +28,7 @@ TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
 TASK_STATUS_ARCHIVED = 5
 
+TASK_RETRY_BEFORE_ARCHIVED = 10
 TASK_FAILED_UNEXPECTED_ERROR = 1
 TASK_FAILED_SHOP_NOT_STANDARD = 2
 TASK_FAILED_SHOP_SKU_EXCEEDS_LIMIT = 3
@@ -570,18 +574,28 @@ def add_hot_product(product_id, shop_name, additional_properties, update_id, upd
                           update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_task_info(task, update_id, status=None, target_product_ids=None, err_code=None, call_stack=None):
+def update_task_info(task, update_id, status=None,
+                     target_product_ids=None, num_of_pages=None,
+                     err_code=None, call_stack=None):
     logger = get_logger()
     original_json = task.to_dict()
     ts = int(time.time())
     additional_properties = json_loads(task.additional_properties)
+    if ERRORS_KEY not in additional_properties:
+        additional_properties[ERRORS_KEY] = []
+    errors = additional_properties[ERRORS_KEY]
+    error_entity = {}
     if err_code is not None:
-        additional_properties['err_code'] = err_code
+        error_entity['err_code'] = err_code
     if call_stack is not None:
-        additional_properties['call_stack'] = call_stack
+        error_entity['call_stack'] = call_stack
+    errors.append(error_entity)
+    additional_properties[ERRORS_KEY] = errors
     task.additional_properties = json_dumps(additional_properties)
     if target_product_ids is not None:
         task.target_product_ids = json_dumps(target_product_ids)
+    if num_of_pages is not None:
+        task.num_of_pages = num_of_pages
     task.status = status if status is not None else task.status
     task.update_id = update_id
     task.update_role = update_task_info.__name__
