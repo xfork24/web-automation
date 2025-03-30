@@ -14,6 +14,7 @@ from core.config import (
     DB_PORT,
     DB_CHARSET)
 from core.utils import get_logger
+from jsondiff import diff
 from playhouse.shortcuts import model_to_dict
 
 DB_OPS_CREATE_NEW = 1
@@ -226,10 +227,11 @@ class ShopSearchCrawlTask(BaseModel):
         table_name = 'shop_search_crawl_task'
 
 
-def update_product_info(product_id, sku_id, product_title, product_link, product_cover,
-                        shop_name, shop_link,
-                        price_unit, display_price, display_sale,
-                        title_imgs, page_imgs, offer_details, additional_properties, update_id, update_role):
+def update_product_info(product_id, update_id, update_role,
+                        sku_id='', product_title='', product_link='', product_cover='',
+                        shop_name='', shop_link='',
+                        price_unit='', display_price=-1, display_sale=-1,
+                        title_imgs=None, page_imgs=None, offer_details=None, additional_properties=None):
     # update product_info table
     logger = get_logger()
     ts = int(time.time())
@@ -238,6 +240,7 @@ def update_product_info(product_id, sku_id, product_title, product_link, product
     try:
         # if record already exists, update only if value is valid
         exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
+        original_json = exist_pi.to_dict()
         exist_pi.sku_id = sku_id if sku_id != '' else exist_pi.sku_id
         exist_pi.product_title = product_title if product_id != '' else exist_pi.product_title
         exist_pi.product_link = product_link if product_link != '' else exist_pi.product_link
@@ -269,8 +272,12 @@ def update_product_info(product_id, sku_id, product_title, product_link, product
         exist_pi.update_id = update_id
         exist_pi.update_role = update_role
         exist_pi.save()
+        updated_json = exist_pi.to_dict()
         logger.info(f'exist product info record updated: {exist_pi.to_dict()}')
-        add_operation_history(product_id, exist_pi.table_name(), None, update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
+        add_operation_history(product_id, exist_pi.table_name(),
+                              {'diff': diff(original_json, updated_json)},
+                              update_id, update_role, ts,
+                              DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_pi = ProductInfo()
         new_pi.product_id = product_id
@@ -306,16 +313,19 @@ def update_product_info(product_id, sku_id, product_title, product_link, product
         new_pi.update_role = update_role
         new_pi.save(force_insert=True)
         logger.info(f'new product info record inserted: {new_pi.to_dict()}')
-        add_operation_history(product_id, new_pi.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+        add_operation_history(product_id, new_pi.table_name(),
+                              {'diff': diff({}, new_pi.to_dict())},
+                              update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_shop_info(shop_name, shop_link, additional_properties, update_id, update_role):
+def update_shop_info(shop_name, update_id, update_role, shop_link='', additional_properties=None):
     # update shop_info table
     logger = get_logger()
     ts = int(time.time())
     try:
         # update only when value is valid
         exist_si = ShopInfo.get(ShopInfo.shop_name == shop_name)
+        original_json = exist_si.to_dict()
         shop_link_match = False
         for reg_exp in SHOP_LINK_KNOWN_RE_EXP_LIST:
             if re.match(reg_exp, shop_link):
@@ -331,8 +341,11 @@ def update_shop_info(shop_name, shop_link, additional_properties, update_id, upd
         exist_si.update_id = update_id
         exist_si.update_role = update_role
         exist_si.save()
+        updated_json = exist_si.to_dict()
         logger.info(f'exist shop info record updated: {exist_si.to_dict()}')
-        add_operation_history(shop_name, exist_si.table_name(), None, update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
+        add_operation_history(shop_name, exist_si.table_name(),
+                              {'diff': diff(original_json, updated_json)},
+                              update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_si = ShopInfo()
         new_si.shop_name = shop_name
@@ -347,7 +360,9 @@ def update_shop_info(shop_name, shop_link, additional_properties, update_id, upd
         new_si.update_role = update_role
         new_si.save(force_insert=True)
         logger.info(f'new shop info record inserted: {new_si.to_dict()}')
-        add_operation_history(shop_name, new_si.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+        add_operation_history(shop_name, new_si.table_name(),
+                              {'diff': diff({}, new_si.to_dict())},
+                              update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def add_product_sale(product_id, shop_name,
@@ -377,9 +392,11 @@ def add_product_sale(product_id, shop_name,
         new_ps.update_id = update_id
         new_ps.update_role = update_role
         new_ps.save(force_insert=True)
+        updated_json = new_ps.to_dict()
         logger.info(f'new product sale record inserted: {new_ps.to_dict()}')
-        add_operation_history(f'{product_id},{ts}', new_ps.table_name(), None, update_id, update_role, ts,
-                              DB_OPS_CREATE_NEW)
+        add_operation_history(f'{product_id},{ts}', new_ps.table_name(),
+                              {'diff': diff({}, updated_json)},
+                              update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
 def add_operation_history(pk, table_name, additional_properties, update_id, update_role, operation_ts, operation):
@@ -421,7 +438,9 @@ def add_detail_crawl_task(product_id, link, additional_properties, update_id, up
     new_dct.update_role = update_role
     new_dct.save(force_insert=True)
     logger.info(f'new detail crawl task record inserted: {new_dct.to_dict()}')
-    add_operation_history(pk, new_dct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_dct.table_name(),
+                          {'diff': diff({}, new_dct.to_dict())},
+                          update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
 
@@ -445,12 +464,13 @@ def add_shop_crawl_task(shop_name, target_product_ids, additional_properties, up
     new_sct.update_role = update_role
     new_sct.save(force_insert=True)
     logger.info(f'new shop crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_sct.table_name(),
+                          {'diff': diff({}, new_sct.to_dict())},
+                          update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
 
-def add_search_crawl_task(search_key, num_of_pages, target_product_ids, additional_properties, update_id,
-                          update_role):
+def add_search_crawl_task(search_key, num_of_pages, target_product_ids, additional_properties, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     pk = uuid4().hex
@@ -474,7 +494,9 @@ def add_search_crawl_task(search_key, num_of_pages, target_product_ids, addition
     new_sct.update_role = update_role
     new_sct.save(force_insert=True)
     logger.info(f'new search crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_sct.table_name(),
+                          {'diff': diff({}, new_sct.to_dict())},
+                          update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
 
@@ -498,7 +520,9 @@ def add_llm_analyze_task(product_id, product_title, additional_properties, updat
     new_lat.update_role = update_role
     new_lat.save(force_insert=True)
     logger.info(f'new llm analyze task record inserted: {new_lat.to_dict()}')
-    add_operation_history(pk, new_lat.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_lat.table_name(),
+                          {'diff': diff({}, new_lat.to_dict())},
+                          update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
 
@@ -521,7 +545,9 @@ def add_shop_search_crawl_task(shop_name, additional_properties, update_id, upda
     new_sct.update_role = update_role
     new_sct.save(force_insert=True)
     logger.info(f'new shop search crawl task record inserted: {new_sct.to_dict()}')
-    add_operation_history(pk, new_sct.table_name(), None, update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    add_operation_history(pk, new_sct.table_name(),
+                          {'diff': diff({}, new_sct.to_dict())},
+                          update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
 
@@ -540,20 +566,30 @@ def add_hot_product(product_id, shop_name, additional_properties, update_id, upd
     new_hp.update_role = update_role
     new_hp.save(force_insert=True)
     logger.info(f'new hot product record inserted: {new_hp.to_dict()}')
-    add_operation_history(f'{product_id},{ts}', new_hp.table_name(), None, update_id, update_role, ts,
-                          DB_OPS_CREATE_NEW)
+    add_operation_history(f'{product_id},{ts}', new_hp.table_name(),
+                          {'diff': diff({}, new_hp.to_dict())},
+                          update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_task_status(task, status, update_id, err_code=None, call_stack=None):
+def update_task_info(task, update_id, target_product_ids=None, status=None, err_code=None, call_stack=None):
     logger = get_logger()
+    original_json = task.to_dict()
+    ts = int(time.time())
     additional_properties = json_loads(task.additional_properties)
     if err_code is not None:
         additional_properties['err_code'] = err_code
     if call_stack is not None:
         additional_properties['call_stack'] = call_stack
     task.additional_properties = json_dumps(additional_properties)
+    if target_product_ids is not None:
+        task.target_product_ids = json_dumps(target_product_ids)
+    task.status = status if status is not None else task.status
     task.update_id = update_id
-    task.update_role = update_task_status.__name__
-    task.status = status
+    task.update_role = update_task_info.__name__
+    task.update_ts = ts
     task.save()
+    updated_json = task.to_dict()
     logger.info(f'update task id={task.id} status to {status}')
+    add_operation_history(task.id, task.table_name(),
+                          {'diff': diff(original_json, updated_json)},
+                          update_id, update_task_info.__name__, ts, DB_OPS_UPDATE_EXIST)

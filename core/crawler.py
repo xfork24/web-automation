@@ -414,13 +414,13 @@ def save_taobao_search_result(product_id, sku_id, product_title, product_link, p
     # save shop info
     update_role = save_taobao_search_result.__name__
     # save shop info
-    update_shop_info(shop_name, shop_link, None, update_id, update_role)
+    update_shop_info(shop_name, update_id, update_role, shop_link, None)
     # save product info
-    update_product_info(product_id, sku_id, product_title, product_link, product_cover,
+    update_product_info(product_id, update_id, update_role,
+                        sku_id, product_title, product_link, product_cover,
                         shop_name, shop_link,
                         price_unit, display_price, display_sale,
-                        None, None, None, None,
-                        update_id, update_role)
+                        None, None, None, None)
     # save product sales info,
     # remember there can be same product in different search pages,
     # we only add one sale record for same product in one search process.
@@ -444,7 +444,7 @@ def craw_taobao_shop_page(shop_link, update_id, target_product_ids=None):
         elif re.match(SHOP_NAME_RE_EXP, cls_name):
             shop_name = div.find_element(By.XPATH, 'span').text
     assert (shop_name is not None)
-    update_shop_info(shop_name, shop_link, None, update_id, craw_taobao_shop_page.__name__)
+    update_shop_info(shop_name, update_id, craw_taobao_shop_page.__name__, shop_link, None)
     for sku_div in sku_divs:
         try:
             craw_taobao_shop_sku(sku_div, shop_name, shop_link, update_id, target_product_ids)
@@ -543,11 +543,11 @@ def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link,
                 f'\t\tdisplay_sale={display_sale}\n'
                 f'\t\tupdate_id={update_id}\n')
     update_role = save_taobao_shop_sku_result.__name__
-    update_product_info(product_id, sku_id, product_title, product_link, product_cover,
+    update_product_info(product_id, update_id, update_role,
+                        sku_id, product_title, product_link, product_cover,
                         shop_name, shop_link,
                         price_unit, display_price, display_sale,
-                        None, None, None, None,
-                        update_id, update_role)
+                        None, None, None, None)
     add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None, update_id, update_role)
 
 
@@ -584,8 +584,7 @@ def crawl_taobao_shop_link_by_search(shop_name, update_id):
                 break
     if shop_link is not None:
         logger.info(f'update shop_name={shop_name} and shop_link={shop_link}')
-        update_shop_info(shop_name, shop_link, None, update_id,
-                         crawl_taobao_shop_link_by_search.__name__)
+        update_shop_info(shop_name, update_id, crawl_taobao_shop_link_by_search.__name__, shop_link, None)
 
 
 def parse_price_span(price_span, product_id):
@@ -850,14 +849,14 @@ def save_taobao_detail_result(product_id, sku_id, product_title, product_link,
                 f'\t\toffer_details={offer_details}\n'
                 f'\t\tupdate_id={update_id}\n')
     update_role = save_taobao_detail_result.__name__
-    update_product_info(product_id, sku_id, product_title, product_link, '',
+    update_product_info(product_id, update_id, update_role,
+                        sku_id, product_title, product_link, '',
                         shop_name, shop_link,
                         price_unit, display_price, display_sale,
-                        title_images, main_images, offer_details, None,
-                        update_id, update_role)
+                        title_images, main_images, offer_details, None)
     add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None,
                      update_id, update_role)
-    update_shop_info(shop_name, shop_link, None, update_id, update_role)
+    update_shop_info(shop_name, update_id, update_role, shop_link, None)
 
 
 Driver = init_webdriver(WebDriverType.ChromDriver)

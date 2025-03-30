@@ -7,7 +7,7 @@ from typing import List
 from groq import Groq
 
 from core.utils import *
-from core.models import ProductInfo
+from core.models import ProductInfo, update_product_info
 
 LLM_MODEL = 'deepseek-r1-distill-llama-70b'
 GROQ_KEY = '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'
@@ -156,7 +156,6 @@ def parse_product_list_by_dsr1_70b(products: List[Product]) -> ProductLLMInfos:
 def update_product_llm_analysis_batch(products):
     logger = get_logger()
     response = parse_product_list_by_dsr1_70b(products)
-    ts = int(time.time())
     # 神奇的LLM有时并不会处理所有记录
     id_set = set()
     for record in response.infos:
@@ -170,9 +169,6 @@ def update_product_llm_analysis_batch(products):
         exist_pi = ProductInfo.get(ProductInfo.product_id == record.id)
         additional_properties = json_loads(exist_pi.additional_properties)
         additional_properties[LLM_ANALYSIS_KEY] = llm_analysis
-        exist_pi.additional_properties = json_dumps(additional_properties)
-        exist_pi.update_id = record.task_id
-        exist_pi.update_role = update_product_llm_analysis_batch.__name__
-        exist_pi.update_ts = ts
-        exist_pi.save()
+        update_product_info(record.id, record.task_id, update_product_llm_analysis_batch.__name__,
+                            additional_properties=additional_properties)
     return id_set
