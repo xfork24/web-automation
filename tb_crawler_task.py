@@ -28,4 +28,4 @@ if __name__ == '__main__':
         except Exception as e:
             logger.error(f'get unhandled exception while execute run_all_in_one_crawler_task, {e}')
             traceback.print_exc()
-        time.sleep(ALL_IN_ONE_SCAN_NAP_IN_SECONDS)
+        time.sleep(TASK_SCAN_WAIT_IN_SECONDS)

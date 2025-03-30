@@ -139,16 +139,7 @@
 		{
 			id: 'Product ID',
 			accessorKey: 'product_id',
-			header: 'Product ID',
-			cell: ({ row }) => {
-				const statusSnippet = createRawSnippet<[string]>((getData) => {
-					const product_id = getData();
-					return {
-						render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${product_id}'>${product_id}</a>`
-					};
-				});
-				return renderSnippet(statusSnippet, row.getValue('Product ID'));
-			}
+			header: 'Product ID'
 		},
 		{
 			id: 'Product Title',

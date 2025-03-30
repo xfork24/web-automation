@@ -159,7 +159,7 @@
 				const statusSnippet = createRawSnippet<[string]>((getData) => {
 					const target_product_ids = JSON.parse(getData());
 					let snippet = ``;
-					target_product_ids.forEach((product_id: string) => snippet += `<a class='font-medium text-blue-600 dark:text-blue-500 hover:underline' href='/product/${product_id}'>${product_id}</a>`);
+					target_product_ids.forEach((product_id: string) => snippet += `<p><a class='font-medium text-blue-600 dark:text-blue-500 hover:underline' href='/product/${product_id}'>${product_id}</a></p>`);
 					return {
 						render: () => `<div>${snippet}</div>`
 					};
