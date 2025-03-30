@@ -571,7 +571,7 @@ def add_hot_product(product_id, shop_name, additional_properties, update_id, upd
                           update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_task_info(task, update_id, target_product_ids=None, status=None, err_code=None, call_stack=None):
+def update_task_info(task, update_id, status=None, target_product_ids=None, err_code=None, call_stack=None):
     logger = get_logger()
     original_json = task.to_dict()
     ts = int(time.time())
