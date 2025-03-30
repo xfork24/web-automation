@@ -8,6 +8,7 @@ import pytesseract
 from json import dumps, loads
 from PIL import Image
 from core.exceptions import PriceOCRError
+from jsondiff import diff
 
 TESSERACT_PRICE_OCR_CONFIG = '--psm 7 --oem 1 tessedit_char_whitelist=0123456789.'
 PYOCR_PRICE_ALLOW_LIST = '0123456789.'
@@ -83,3 +84,7 @@ def json_dumps(content):
 
 def json_loads(content):
     return loads(content)
+
+
+def json_diff(a, b):
+    return diff(a, b, marshal=True)

@@ -14,7 +14,6 @@ from core.config import (
     DB_PORT,
     DB_CHARSET)
 from core.utils import get_logger
-from jsondiff import diff
 from playhouse.shortcuts import model_to_dict
 
 DB_OPS_CREATE_NEW = 1
@@ -275,7 +274,7 @@ def update_product_info(product_id, update_id, update_role,
         updated_json = exist_pi.to_dict()
         logger.info(f'exist product info record updated: {exist_pi.to_dict()}')
         add_operation_history(product_id, exist_pi.table_name(),
-                              {'diff': diff(original_json, updated_json)},
+                              {'diff': json_diff(original_json, updated_json)},
                               update_id, update_role, ts,
                               DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
@@ -314,7 +313,7 @@ def update_product_info(product_id, update_id, update_role,
         new_pi.save(force_insert=True)
         logger.info(f'new product info record inserted: {new_pi.to_dict()}')
         add_operation_history(product_id, new_pi.table_name(),
-                              {'diff': diff({}, new_pi.to_dict())},
+                              {'diff': json_diff({}, new_pi.to_dict())},
                               update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
@@ -344,7 +343,7 @@ def update_shop_info(shop_name, update_id, update_role, shop_link='', additional
         updated_json = exist_si.to_dict()
         logger.info(f'exist shop info record updated: {exist_si.to_dict()}')
         add_operation_history(shop_name, exist_si.table_name(),
-                              {'diff': diff(original_json, updated_json)},
+                              {'diff': json_diff(original_json, updated_json)},
                               update_id, update_role, ts, DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_si = ShopInfo()
@@ -361,7 +360,7 @@ def update_shop_info(shop_name, update_id, update_role, shop_link='', additional
         new_si.save(force_insert=True)
         logger.info(f'new shop info record inserted: {new_si.to_dict()}')
         add_operation_history(shop_name, new_si.table_name(),
-                              {'diff': diff({}, new_si.to_dict())},
+                              {'diff': json_diff({}, new_si.to_dict())},
                               update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
@@ -395,7 +394,7 @@ def add_product_sale(product_id, shop_name,
         updated_json = new_ps.to_dict()
         logger.info(f'new product sale record inserted: {new_ps.to_dict()}')
         add_operation_history(f'{product_id},{ts}', new_ps.table_name(),
-                              {'diff': diff({}, updated_json)},
+                              {'diff': json_diff({}, updated_json)},
                               update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
@@ -439,7 +438,7 @@ def add_detail_crawl_task(product_id, link, additional_properties, update_id, up
     new_dct.save(force_insert=True)
     logger.info(f'new detail crawl task record inserted: {new_dct.to_dict()}')
     add_operation_history(pk, new_dct.table_name(),
-                          {'diff': diff({}, new_dct.to_dict())},
+                          {'diff': json_diff({}, new_dct.to_dict())},
                           update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
@@ -465,7 +464,7 @@ def add_shop_crawl_task(shop_name, target_product_ids, additional_properties, up
     new_sct.save(force_insert=True)
     logger.info(f'new shop crawl task record inserted: {new_sct.to_dict()}')
     add_operation_history(pk, new_sct.table_name(),
-                          {'diff': diff({}, new_sct.to_dict())},
+                          {'diff': json_diff({}, new_sct.to_dict())},
                           update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
@@ -495,7 +494,7 @@ def add_search_crawl_task(search_key, num_of_pages, target_product_ids, addition
     new_sct.save(force_insert=True)
     logger.info(f'new search crawl task record inserted: {new_sct.to_dict()}')
     add_operation_history(pk, new_sct.table_name(),
-                          {'diff': diff({}, new_sct.to_dict())},
+                          {'diff': json_diff({}, new_sct.to_dict())},
                           update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
@@ -521,7 +520,7 @@ def add_llm_analyze_task(product_id, product_title, additional_properties, updat
     new_lat.save(force_insert=True)
     logger.info(f'new llm analyze task record inserted: {new_lat.to_dict()}')
     add_operation_history(pk, new_lat.table_name(),
-                          {'diff': diff({}, new_lat.to_dict())},
+                          {'diff': json_diff({}, new_lat.to_dict())},
                           update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
@@ -546,7 +545,7 @@ def add_shop_search_crawl_task(shop_name, additional_properties, update_id, upda
     new_sct.save(force_insert=True)
     logger.info(f'new shop search crawl task record inserted: {new_sct.to_dict()}')
     add_operation_history(pk, new_sct.table_name(),
-                          {'diff': diff({}, new_sct.to_dict())},
+                          {'diff': json_diff({}, new_sct.to_dict())},
                           update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
@@ -567,7 +566,7 @@ def add_hot_product(product_id, shop_name, additional_properties, update_id, upd
     new_hp.save(force_insert=True)
     logger.info(f'new hot product record inserted: {new_hp.to_dict()}')
     add_operation_history(f'{product_id},{ts}', new_hp.table_name(),
-                          {'diff': diff({}, new_hp.to_dict())},
+                          {'diff': json_diff({}, new_hp.to_dict())},
                           update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
@@ -591,5 +590,5 @@ def update_task_info(task, update_id, status=None, target_product_ids=None, err_
     updated_json = task.to_dict()
     logger.info(f'update task id={task.id} status to {status}')
     add_operation_history(task.id, task.table_name(),
-                          {'diff': diff(original_json, updated_json)},
+                          {'diff': json_diff(original_json, updated_json)},
                           update_id, update_task_info.__name__, ts, DB_OPS_UPDATE_EXIST)
