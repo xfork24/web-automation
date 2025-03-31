@@ -440,20 +440,6 @@ def create_hot_product():
 def delete_hot_product_by_id_and_ts(product_id, create_ts):
     logger = get_logger()
     try:
-        x = HotProduct.delete().where(HotProduct.product_id == product_id,
-                                      HotProduct.create_ts == create_ts).execute()
-        return build_success_response(
-            {'product_id': product_id if x == 1 else '', 'create_ts': create_ts if x == 1 else ''})
-    except Exception as e:
-        msg = f'get unhandled exception {e}'
-        logger.error(msg)
-        return build_server_error_response(msg)
-
-
-@api.delete('/api/v1/hot_product/<product_id>/<create_ts>')
-def delete_hot_product_by_id_and_ts(product_id, create_ts):
-    logger = get_logger()
-    try:
         if 'update_id' not in request.args.keys():
             logger.info(
                 f'get delete_hot_product_by_id_and_ts request for product_id={product_id}, create_ts={create_ts} without update_id set')
@@ -695,6 +681,22 @@ def delete_detail_crawl_task_by_id(task_id):
         return build_server_error_response(msg)
 
 
+@api.post('/api/v1/detail_task/<task_id>/archive')
+def archive_detail_crawl_task_by_id(task_id):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get archive_detail_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        task = DetailCrawlTask.get(DetailCrawlTask.id == task_id)
+        update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
+        return build_success_response({})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 # supported query params:
 # product_id = XXX
 # status = XXX
@@ -804,6 +806,22 @@ def delete_shop_crawl_task_by_id(task_id):
             return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
         x = delete_shop_crawl_task(task_id, request.args['update_id'])
         return build_success_response({'delete': x})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.post('/api/v1/shop_task/<task_id>/archive')
+def archive_shop_crawl_task_by_id(task_id):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get archive_shop_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        task = ShopCrawlTask.get(ShopCrawlTask.id == task_id)
+        update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
+        return build_success_response({})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -927,6 +945,22 @@ def delete_search_crawl_task_by_id(task_id):
         return build_server_error_response(msg)
 
 
+@api.post('/api/v1/search_task/<task_id>/archive')
+def archive_search_crawl_task_by_id(task_id):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get archive_search_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        task = SearchCrawlTask.get(SearchCrawlTask.id == task_id)
+        update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
+        return build_success_response({})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 # supported query params:
 # search_key = XXX
 # status = XXX
@@ -1038,6 +1072,22 @@ def delete_llm_analyze_task_by_id(task_id):
         return build_server_error_response(msg)
 
 
+@api.post('/api/v1/llm_task/<task_id>/archive')
+def archive_llm_analyze_task_by_id(task_id):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get archive_llm_analyze_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        task = LLMAnalyzeTask.get(LLMAnalyzeTask.id == task_id)
+        update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
+        return build_success_response({})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 # supported query params:
 # product_id = XXX
 # status = XXX
@@ -1142,6 +1192,22 @@ def delete_shop_search_crawl_task_by_id(task_id):
             return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
         x = delete_shop_search_crawl_task(task_id, request.args['update_id'])
         return build_success_response({'delete': x})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.post('/api/v1/shop_search_task/<task_id>/archive')
+def archive_shop_search_crawl_task_by_id(task_id):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get archive_shop_search_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        task = ShopSearchCrawlTask.get(ShopSearchCrawlTask.id == task_id)
+        update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
+        return build_success_response({})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)

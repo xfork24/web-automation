@@ -208,6 +208,9 @@ export function statusToString(status: number) {
 
 export function parseTaskReason(task: any) {
 	const additionalProperties: AdditionalProperties = JSON.parse(task.additional_properties);
+	if ([1, 2, 3].includes(task.status)) {
+		return 'SUCCESS';
+	}
 	if (additionalProperties.errors == undefined) {
 		return 'SUCCESS';
 	} else {

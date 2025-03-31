@@ -18,6 +18,11 @@
 		handler = createShopCrawlTask;
 	}
 
+	function beforeArchiveShopCrawlDialog() {
+		dialog_body = 'This action will try to archive a shop crawl task. Archived tasks will no longer be scheduled.';
+		handler = archiveShopCrawlTask;
+	}
+
 	function beforeDeleteShopCrawlDialog() {
 		dialog_body = 'This action will try to delete a shop crawl task. You must fix all external constraints before this operation can be done.';
 		handler = deleteShopCrawlTask;
@@ -35,6 +40,25 @@
 					'target_product_ids': row.target_product_ids,
 					'update_id': user.name
 				})
+			});
+			const result = await response.json();
+			if (result.code == 0) {
+				open = false;
+				await invalidateAll();
+				return;
+			}
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
+
+	async function archiveShopCrawlTask(row: ShopCrawlTask) {
+		try {
+			const response = await fetch(`http://localhost:8000/api/v1/shop_task/${row.id}/archive?update_id=${user.name}`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json;charset=UTF-8'
+				}
 			});
 			const result = await response.json();
 			if (result.code == 0) {
@@ -123,6 +147,11 @@
 				<Dialog.Trigger class="w-full">
 					<DropdownMenu.Item onclick={() => beforeCreateShopCrawlDialog()}>
 						<span>Resubmit Task</span>
+					</DropdownMenu.Item>
+				</Dialog.Trigger>
+				<Dialog.Trigger class="w-full">
+					<DropdownMenu.Item onclick={() => beforeArchiveShopCrawlDialog()}>
+						<span>Archive Task</span>
 					</DropdownMenu.Item>
 				</Dialog.Trigger>
 				<Dialog.Trigger class="w-full">

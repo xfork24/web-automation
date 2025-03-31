@@ -46,6 +46,11 @@
 		handler = createSelectShopCrawlTask;
 	}
 
+	function beforeArchiveSelectShopDialog() {
+		dialog_body = 'This action will try to archive select shop crawl task(s). Archived tasks will no longer be scheduled.';
+		handler = archiveSelectShopCrawlTask;
+	}
+
 	function beforeDeleteSelectShopDialog() {
 		dialog_body = 'This action will try to delete select shop crawl task(s). You must fix all external constraints before this operation can be done.';
 		handler = deleteSelectShopCrawlTask;
@@ -67,6 +72,26 @@
 				});
 				const result = await response.json();
 				assert(result.code == 0, `create shop_crawl_task failed for shop ${row.original.shop_name}`);
+			}
+			open = false;
+			table.resetRowSelection(false);
+			await invalidateAll();
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
+
+	async function archiveSelectShopCrawlTask(rows: Row<ShopCrawlTask>[]) {
+		try {
+			for (const row of rows) {
+				const response = await fetch(`http://localhost:8000/api/v1/shop_task/${row.original.id}/archive?update_id=${data.user.name}`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json;charset=UTF-8'
+					}
+				});
+				const result = await response.json();
+				assert(result.code == 0, `archive shop_crawl_task failed for shop ${row.original.shop_name}`);
 			}
 			open = false;
 			table.resetRowSelection(false);
@@ -385,6 +410,11 @@
 			<Dialog.Trigger>
 				<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => beforeCreateSelectShopDialog()}>
 					Resubmit Tasks
+				</Button>
+			</Dialog.Trigger>
+			<Dialog.Trigger>
+				<Button variant="destructive" class="max-w-xs mr-4" onclick={ () => beforeArchiveSelectShopDialog()}>
+					Archive Tasks
 				</Button>
 			</Dialog.Trigger>
 			<Dialog.Trigger>

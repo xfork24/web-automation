@@ -19,6 +19,11 @@
 		handler = createLLMAnalyzeTask;
 	}
 
+	function beforeArchiveLLMDialog() {
+		dialog_body = 'This action will archive an LLM analyze task. Archived tasks will no longer be scheduled.';
+		handler = archiveLLMAnalyzeTask;
+	}
+
 	function beforeDeleteLLMDialog() {
 		dialog_body = 'This action will try to delete an LLM analyze task. You must fix all external constraints before this operation can be done.';
 		handler = deleteLLMAnalyzeTask;
@@ -36,6 +41,25 @@
 					'product_title': row.product_title,
 					'update_id': user.name
 				})
+			});
+			const result = await response.json();
+			if (result.code == 0) {
+				open = false;
+				await invalidateAll();
+				return;
+			}
+		} catch (error) {
+			console.error(`Error in function: ${error}`);
+		}
+	}
+
+	async function archiveLLMAnalyzeTask(row: LLMAnalyzeTask) {
+		try {
+			const response = await fetch(`http://localhost:8000/api/v1/llm_task/${row.id}/archive?update_id=${user.name}`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json;charset=UTF-8'
+				}
 			});
 			const result = await response.json();
 			if (result.code == 0) {
@@ -102,6 +126,11 @@
 				<Dialog.Trigger class="w-full">
 					<DropdownMenu.Item onclick={() => beforeCreateLLMDialog()}>
 						<span>Resubmit Task</span>
+					</DropdownMenu.Item>
+				</Dialog.Trigger>
+				<Dialog.Trigger class="w-full">
+					<DropdownMenu.Item onclick={() => beforeArchiveLLMDialog()}>
+						<span>Archive Task</span>
 					</DropdownMenu.Item>
 				</Dialog.Trigger>
 				<Dialog.Trigger class="w-full">
