@@ -64,8 +64,8 @@ def parse_task_status_query(query):
     for q in query:
         if q.status == TASK_STATUS_NEW:
             result['NEW'] = q.count
-        elif q.status == TASK_STATUS_IN_PROGRESS:
-            result['IN_PROGRESS'] = q.count
+        elif q.status == TASK_STATUS_RUNNING:
+            result['RUNNING'] = q.count
         elif q.status == TASK_STATUS_DONE:
             result['DONE'] = q.count
         elif q.status == TASK_STATUS_ERROR:
@@ -74,8 +74,8 @@ def parse_task_status_query(query):
             result['ARCHIVED'] = q.count
     if 'NEW' not in result.keys():
         result['NEW'] = 0
-    if 'IN_PROGRESS' not in result.keys():
-        result['IN_PROGRESS'] = 0
+    if 'RUNNING' not in result.keys():
+        result['RUNNING'] = 0
     if 'DONE' not in result.keys():
         result['DONE'] = 0
     if 'ERROR' not in result.keys():
@@ -90,7 +90,7 @@ def get_product_by_id(product_id):
     logger = get_logger()
     try:
         p = ProductInfo.get(ProductInfo.product_id == product_id)
-        return build_success_response({'data': p.to_dict()})
+        return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'product_id={product_id} not found'
         logger.info(f'invalid product_id={product_id}, not found')
@@ -166,7 +166,7 @@ def query_products():
             query = ProductInfo.select().order_by(sort).limit(limit).offset(offset)
         else:
             query = ProductInfo.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+        data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -198,7 +198,7 @@ def get_shop_by_name(shop_name):
             'total_sale': int(p[0].total_sale) if p[0].total_sale is not None else -1,
             'total_revenue': int(p[0].total_revenue) if p[0].total_revenue is not None else -1
         }
-        item.update(p[0].to_dict())
+        item.update(p[0].to_json())
         return build_success_response({'data': item})
     except DoesNotExist:
         msg = f'shop_name={shop_name} not found'
@@ -300,7 +300,7 @@ def query_shops():
                 'total_sale': int(q.total_sale) if q.total_sale is not None else -1,
                 'total_revenue': int(q.total_revenue) if q.total_revenue is not None else -1
             }
-            item.update(q.to_dict())
+            item.update(q.to_json())
             data.append(item)
         return build_success_response({'data': data})
     except Exception as e:
@@ -314,7 +314,7 @@ def get_product_sale_by_id_and_ts(product_id, create_ts):
     logger = get_logger()
     try:
         p = ProductSale.get(ProductSale.product_id == product_id, ProductSale.create_ts == int(create_ts))
-        return build_success_response({'data': p.to_dict()})
+        return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'product_id={product_id} and create_ts={create_ts} not found'
         logger.info(f'invalid product_id={product_id} and create_ts={create_ts} not found')
@@ -395,7 +395,7 @@ def query_product_sales():
             query = ProductSale.select().order_by(sort).limit(limit).offset(offset)
         else:
             query = ProductSale.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+        data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -408,7 +408,7 @@ def get_hot_product_by_id_and_ts(product_id, create_ts):
     logger = get_logger()
     try:
         p = HotProduct.get(HotProduct.product_id == product_id, HotProduct.create_ts == int(create_ts))
-        return build_success_response({'data': p.to_dict()})
+        return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'product_id={product_id} and create_ts={create_ts} not found'
         logger.info(f'invalid product_id={product_id} and create_ts={create_ts} not found')
@@ -498,7 +498,7 @@ def query_hot_products():
             query = HotProduct.select().order_by(sort).limit(limit).offset(offset)
         else:
             query = HotProduct.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+        data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -511,7 +511,7 @@ def get_operation_history_by_id(history_id):
     logger = get_logger()
     try:
         p = OperationHistory.get(OperationHistory.id == history_id)
-        return build_success_response({'data': p.to_dict()})
+        return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'id={history_id} not found'
         logger.info(f'invalid id={history_id}, not found')
@@ -571,7 +571,7 @@ def query_operation_histories():
             query = OperationHistory.select().order_by(sort).limit(limit).offset(offset)
         else:
             query = OperationHistory.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+        data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -628,7 +628,7 @@ def get_detail_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
         p = DetailCrawlTask.get(DetailCrawlTask.id == task_id)
-        return build_success_response({'data': p.to_dict()})
+        return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'id={task_id} not found'
         logger.info(f'invalid id={task_id}, not found')
@@ -742,7 +742,7 @@ def get_detail_crawl_tasks():
             query = DetailCrawlTask.select().order_by(sort).limit(limit).offset(offset)
         else:
             query = DetailCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+        data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -755,7 +755,7 @@ def get_shop_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
         p = ShopCrawlTask.get(ShopCrawlTask.id == task_id)
-        return build_success_response({'data': p.to_dict()})
+        return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'id={task_id} not found'
         logger.info(f'invalid id={task_id}, not found')
@@ -873,7 +873,7 @@ def get_shop_crawl_tasks():
             query = ShopCrawlTask.select().order_by(sort).limit(limit).offset(offset)
         else:
             query = ShopCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+        data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -886,7 +886,7 @@ def get_search_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
         p = SearchCrawlTask.get(SearchCrawlTask.id == task_id)
-        return build_success_response({'data': p.to_dict()})
+        return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'id={task_id} not found'
         logger.info(f'invalid id={task_id}, not found')
@@ -1006,7 +1006,7 @@ def get_search_crawl_tasks():
             query = SearchCrawlTask.select().order_by(sort).limit(limit).offset(offset)
         else:
             query = SearchCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+        data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -1019,7 +1019,7 @@ def get_llm_analyze_task_by_id(task_id):
     logger = get_logger()
     try:
         p = LLMAnalyzeTask.get(LLMAnalyzeTask.id == task_id)
-        return build_success_response({'data': p.to_dict()})
+        return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'id={task_id} not found'
         logger.info(f'invalid id={task_id}, not found')
@@ -1133,7 +1133,7 @@ def get_llm_analyze_tasks():
             query = LLMAnalyzeTask.select().order_by(sort).limit(limit).offset(offset)
         else:
             query = LLMAnalyzeTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+        data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -1146,7 +1146,7 @@ def get_shop_search_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
         p = ShopSearchCrawlTask.get(ShopSearchCrawlTask.id == task_id)
-        return build_success_response({'data': p.to_dict()})
+        return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'id={task_id} not found'
         logger.info(f'invalid id={task_id}, not found')
@@ -1259,7 +1259,7 @@ def get_shop_search_crawl_tasks():
             query = ShopSearchCrawlTask.select().order_by(sort).limit(limit).offset(offset)
         else:
             query = ShopSearchCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
-        data = [q.to_dict() for q in query]
+        data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'

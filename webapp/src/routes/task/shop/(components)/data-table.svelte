@@ -182,8 +182,8 @@
 			accessorKey: 'target_product_ids',
 			header: 'Target Product IDs',
 			cell: ({ row }) => {
-				const statusSnippet = createRawSnippet<[string]>((getData) => {
-					const target_product_ids = JSON.parse(getData());
+				const statusSnippet = createRawSnippet<[string[]]>((getData) => {
+					const target_product_ids = getData();
 					let snippet = ``;
 					target_product_ids.forEach((product_id: string) => snippet += `<p><a class='font-medium text-blue-600 dark:text-blue-500 hover:underline' href='/product/${product_id}'>${product_id}</a></p>`);
 					return {
@@ -274,9 +274,9 @@
 			header: 'Operator ID',
 			cell: ({ row }) => {
 				const amountCellSnippet = createRawSnippet<[string]>((getData) => {
-					const operator_id = getData();
+					const update_id = getData();
 					return {
-						render: () => `<div>${parseUUID4(operator_id)}</div>`
+						render: () => `<div>${parseUUID4(update_id)}</div>`
 					};
 				});
 				return renderSnippet(amountCellSnippet, row.getValue('Operator ID'));

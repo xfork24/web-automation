@@ -118,7 +118,7 @@ export type SearchCrawlTask = {
 	status_str: string;
 	reason: string;
 	try_count: number;
-	target_product_ids: string;
+	target_product_ids: string[];
 	additional_properties: AdditionalProperties;
 	create_ts: number;
 	update_ts: number;
@@ -133,7 +133,7 @@ export type ShopCrawlTask = {
 	status_str: string;
 	reason: string;
 	try_count: number;
-	target_product_ids: string;
+	target_product_ids: string[];
 	additional_properties: AdditionalProperties;
 	create_ts: number;
 	update_ts: number;
@@ -148,7 +148,6 @@ export type ShopSearchCrawlTask = {
 	status_str: string;
 	reason: string;
 	try_count: number;
-	target_product_ids: string;
 	additional_properties: AdditionalProperties;
 	create_ts: number;
 	update_ts: number;
@@ -161,7 +160,7 @@ export type TaskStatus = {
 	title: string;
 	link: string;
 	NEW: number;
-	IN_PROGRESS: number;
+	RUNNING: number;
 	DONE: number;
 	ERROR: number;
 	ARCHIVED: number;
@@ -207,7 +206,7 @@ export function statusToString(status: number) {
 }
 
 export function parseTaskReason(task: any) {
-	const additionalProperties: AdditionalProperties = JSON.parse(task.additional_properties);
+	const additionalProperties: AdditionalProperties = task.additional_properties;
 	if ([1, 2, 3].includes(task.status)) {
 		return 'SUCCESS';
 	}

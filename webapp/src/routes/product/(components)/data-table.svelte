@@ -303,9 +303,9 @@
 			header: 'Operator ID',
 			cell: ({ row }) => {
 				const amountCellSnippet = createRawSnippet<[string]>((getData) => {
-					const operator_id = getData();
+					const update_id = getData();
 					return {
-						render: () => `<div>${parseUUID4(operator_id)}</div>`
+						render: () => `<div>${parseUUID4(update_id)}</div>`
 					};
 				});
 				return renderSnippet(amountCellSnippet, row.getValue('Operator ID'));
@@ -386,7 +386,7 @@
 		{ value: 'product_id', label: 'Product ID' },
 		{ value: 'product_title', label: 'Product Title' },
 		{ value: 'shop_name', label: 'Shop Name' },
-		{ value: 'operator_id', label: 'Operator ID' }
+		{ value: 'update_id', label: 'Operator ID' }
 	];
 
 	let value = $state('product_id');

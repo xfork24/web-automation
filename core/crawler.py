@@ -359,7 +359,13 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
             if re.match(SEARCH_IMAGE_WRAPPER_RE_EXP, cls_name):
                 image_wrapper = item
         assert (sku_title_wrapper is not None and price_wrapper is not None and image_wrapper is not None)
-        product_title = sku_title_wrapper.find_element(By.XPATH, 'div/span').text
+        product_title = ''
+        title_spans = sku_title_wrapper.find_elements(By.XPATH, 'div/span/span')
+        if len(title_spans) > 0:
+            for title_span in title_spans:
+                product_title += title_span.text
+        else:
+            product_title = sku_title_wrapper.find_elements(By.XPATH, 'div/span').text
         product_cover = image_wrapper.find_element(By.XPATH, 'img').get_attribute('src')
         price_unit_span, display_sale_span = None, None
         for span in price_wrapper.find_elements(By.XPATH, 'div/span'):

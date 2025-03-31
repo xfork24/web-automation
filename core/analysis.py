@@ -6,7 +6,7 @@ from pathlib import Path
 from core.llm import *
 from core.crawler import *
 
-# 各任务的去重检查周期（1天-5分钟）
+# 各任务的去重检查周期（1天减去5分钟）
 TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
 TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
 TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
@@ -154,6 +154,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
         # 处理无销售数量问题，同时添加搜索任务和店铺任务
         if pi.display_sale == -1 or pi.estimated_revenue == -1:
             # 添加搜索任务
+            logger.info(f'handle display_sale for product_id={pi.product_id}')
             if fix_product_sale and fix_product_sale_by_search:
                 # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
                 tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == pi.product_title,
@@ -330,7 +331,7 @@ def run_search_crawler_task(update_id):
         if not handle_error_task(task, update_id):
             continue
         task.try_count = task.try_count + 1
-        update_task_info(task, update_id, TASK_STATUS_IN_PROGRESS)
+        update_task_info(task, update_id, TASK_STATUS_RUNNING)
         try:
             logger.info(
                 f'handling search crawl task id={task.id} with search_key={task.search_key}, num_of_pages={task.num_of_pages}, target_product_ids={task.target_product_ids}')
@@ -362,7 +363,7 @@ def run_shop_crawler_tasks(update_id):
         if not handle_error_task(task, update_id):
             continue
         task.try_count = task.try_count + 1
-        update_task_info(task, update_id, TASK_STATUS_IN_PROGRESS)
+        update_task_info(task, update_id, TASK_STATUS_RUNNING)
         try:
             logger.info(
                 f'handling shop crawl task id={task.id} with shop_name={task.shop_name}, target_product_ids={task.target_product_ids}')
@@ -409,7 +410,7 @@ def run_shop_search_crawler_task(update_id):
         if not handle_error_task(task, update_id):
             continue
         task.try_count = task.try_count + 1
-        update_task_info(task, update_id, TASK_STATUS_IN_PROGRESS)
+        update_task_info(task, update_id, TASK_STATUS_RUNNING)
         try:
             logger.info(f'handling shop search crawler task id={task.id} with shop_name={task.shop_name}')
             crawl_taobao_shop_link_by_search(task.shop_name, task.id)
@@ -438,7 +439,7 @@ def run_detail_crawler_tasks(update_id):
         if not handle_error_task(task, update_id):
             continue
         task.try_count = task.try_count + 1
-        update_task_info(task, update_id, TASK_STATUS_IN_PROGRESS)
+        update_task_info(task, update_id, TASK_STATUS_RUNNING)
         try:
             logger.info(
                 f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
@@ -468,7 +469,7 @@ def run_llm_analyze_tasks(update_id):
     for task in tasks:
         # We don't do any handle_error_task(task, update_id) here
         task.try_count = task.try_count + 1
-        update_task_info(task, update_id, TASK_STATUS_IN_PROGRESS)
+        update_task_info(task, update_id, TASK_STATUS_RUNNING)
         try:
             if len(product_task_batch) >= LLM_TASK_BATCH_SIZE:
                 id_set = update_product_llm_analysis_batch([p for p, t in product_task_batch])
