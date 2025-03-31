@@ -369,7 +369,7 @@
 	<div class="flex items-center py-4">
 		<div class="max-w-xs mr-4">
 			<Select.Root type="single" name="favoriteFruit" bind:value>
-				<Select.Trigger class="w-[180px]">
+				<Select.Trigger class="w-[150px]">
 					{triggerContent}
 				</Select.Trigger>
 				<Select.Content>

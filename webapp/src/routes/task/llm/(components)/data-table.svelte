@@ -165,7 +165,16 @@
 		{
 			id: 'Product ID',
 			accessorKey: 'product_id',
-			header: 'Product ID'
+			header: 'Product ID',
+			cell: ({ row }) => {
+				const amountCellSnippet = createRawSnippet<[string]>((getData) => {
+					const product_id = getData();
+					return {
+						render: () => `<div>${product_id}</div>`
+					};
+				});
+				return renderSnippet(amountCellSnippet, row.getValue('Product ID'));
+			}
 		},
 		{
 			id: 'Product Title',
@@ -366,7 +375,7 @@
 	<div class="flex items-center py-4">
 		<div class="max-w-xs mr-4">
 			<Select.Root type="single" name="favoriteFruit" bind:value>
-				<Select.Trigger class="w-[180px]">
+				<Select.Trigger class="w-[150px]">
 					{triggerContent}
 				</Select.Trigger>
 				<Select.Content>
