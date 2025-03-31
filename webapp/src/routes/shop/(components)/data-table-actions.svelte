@@ -78,7 +78,7 @@
 
 	async function deleteShop(row: ShopInfo) {
 		try {
-			const response = await fetch(`http://localhost:8000/api/v1/shop/${row.shop_name}`, {
+			const response = await fetch(`http://localhost:8000/api/v1/shop/${row.shop_name}?update_id=${user.name}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json;charset=UTF-8'

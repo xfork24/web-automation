@@ -16,6 +16,7 @@ from core.analysis import (
 TASK_STATUS_QUERY_PERIOD = 604800
 DB_QUERY_DEFAULT_LIMIT = 100
 ERROR_CODE_SERVER_ERROR = -1
+ERROR_CODE_CLIENT_ERROR = -1
 ERROR_CODE_NOT_FOUND = -11
 
 api = Flask(__name__)
@@ -25,6 +26,13 @@ def build_success_response(resp):
     resp['code'] = 0
     resp['msg'] = 'success'
     return json_dumps(resp)
+
+
+def build_client_error_response(msg):
+    return json_dumps({
+        'code': ERROR_CODE_CLIENT_ERROR,
+        'msg': msg
+    })
 
 
 def build_server_error_response(msg):
@@ -97,8 +105,11 @@ def get_product_by_id(product_id):
 def delete_product_by_id(product_id):
     logger = get_logger()
     try:
-        x = ProductInfo.delete().where(ProductInfo.product_id == product_id).execute()
-        return build_success_response({'product_id': product_id if x == 1 else ''})
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get delete_product_by_id request for product_id={product_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request product_id={product_id}')
+        x = delete_product(product_id, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -199,12 +210,15 @@ def get_shop_by_name(shop_name):
         return build_server_error_response(msg)
 
 
-@api.delete('/api/v1/shop/<shop_name>')
+@api.delete('/api/v1/product/<shop_name>')
 def delete_shop_by_name(shop_name):
     logger = get_logger()
     try:
-        x = ShopInfo.delete().where(ShopInfo.shop_name == shop_name).execute()
-        return build_success_response({'shop_name': shop_name if x == 1 else ''})
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get delete_product_by_name request for shop_name={shop_name} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request shop_name={shop_name}')
+        x = delete_shop(shop_name, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -315,10 +329,13 @@ def get_product_sale_by_id_and_ts(product_id, create_ts):
 def delete_product_sale_by_id_and_ts(product_id, create_ts):
     logger = get_logger()
     try:
-        x = ProductSale.delete().where(ProductSale.product_id == product_id,
-                                       ProductSale.create_ts == create_ts).execute()
-        return build_success_response(
-            {'product_id': product_id if x == 1 else '', 'create_ts': create_ts if x == 1 else ''})
+        if 'update_id' not in request.args.keys():
+            logger.info(
+                f'get delete_product_sale_by_id_and_ts request for product_id={product_id}, create_ts={create_ts} without update_id set')
+            return build_client_error_response(
+                f'update_id not set for delete request product_id={product_id}, create_ts={create_ts}')
+        x = delete_product_sale(product_id, create_ts, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -427,6 +444,23 @@ def delete_hot_product_by_id_and_ts(product_id, create_ts):
                                       HotProduct.create_ts == create_ts).execute()
         return build_success_response(
             {'product_id': product_id if x == 1 else '', 'create_ts': create_ts if x == 1 else ''})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/hot_product/<product_id>/<create_ts>')
+def delete_hot_product_by_id_and_ts(product_id, create_ts):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(
+                f'get delete_hot_product_by_id_and_ts request for product_id={product_id}, create_ts={create_ts} without update_id set')
+            return build_client_error_response(
+                f'update_id not set for delete request product_id={product_id}, create_ts={create_ts}')
+        x = delete_hot_product(product_id, create_ts, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -647,11 +681,14 @@ def create_detail_crawl_task():
 
 
 @api.delete('/api/v1/detail_task/<task_id>')
-def delete_detail_crawl_task(task_id):
+def delete_detail_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
-        x = DetailCrawlTask.delete().where(DetailCrawlTask.id == task_id).execute()
-        return build_success_response({'task_id': task_id if x == 1 else ''})
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get delete_detail_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        x = delete_detail_crawl_task(task_id, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -759,11 +796,14 @@ def create_shop_crawl_task():
 
 
 @api.delete('/api/v1/shop_task/<task_id>')
-def delete_shop_crawl_task(task_id):
+def delete_shop_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
-        x = ShopCrawlTask.delete().where(ShopCrawlTask.id == task_id).execute()
-        return build_success_response({'task_id': task_id if x == 1 else ''})
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get delete_shop_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        x = delete_shop_crawl_task(task_id, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -873,11 +913,14 @@ def create_search_crawl_task():
 
 
 @api.delete('/api/v1/search_task/<task_id>')
-def delete_search_crawl_task(task_id):
+def delete_search_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
-        x = SearchCrawlTask.delete().where(SearchCrawlTask.id == task_id).execute()
-        return build_success_response({'task_id': task_id if x == 1 else ''})
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get delete_search_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        x = delete_search_crawl_task(task_id, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -981,11 +1024,14 @@ def create_llm_analyze_task():
 
 
 @api.delete('/api/v1/llm_task/<task_id>')
-def delete_llm_analyze_task(task_id):
+def delete_llm_analyze_task_by_id(task_id):
     logger = get_logger()
     try:
-        x = LLMAnalyzeTask.delete().where(LLMAnalyzeTask.id == task_id).execute()
-        return build_success_response({'task_id': task_id if x == 1 else ''})
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get delete_llm_analyze_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        x = delete_llm_analyze_task(task_id, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -1088,11 +1134,14 @@ def create_shop_search_task():
 
 
 @api.delete('/api/v1/shop_search_task/<task_id>')
-def delete_shop_search_crawl_task(task_id):
+def delete_shop_search_crawl_task_by_id(task_id):
     logger = get_logger()
     try:
-        x = ShopSearchCrawlTask.delete().where(ShopSearchCrawlTask.id == task_id).execute()
-        return build_success_response({'task_id': task_id if x == 1 else ''})
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get delete_shop_search_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        x = delete_shop_search_crawl_task(task_id, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)

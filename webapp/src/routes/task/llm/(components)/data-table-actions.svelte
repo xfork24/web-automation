@@ -50,7 +50,7 @@
 
 	async function deleteLLMAnalyzeTask(row: LLMAnalyzeTask) {
 		try {
-			const response = await fetch(`http://localhost:8000/api/v1/llm_task/${row.id}`, {
+			const response = await fetch(`http://localhost:8000/api/v1/llm_task/${row.id}?update_id=${user.name}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json;charset=UTF-8'

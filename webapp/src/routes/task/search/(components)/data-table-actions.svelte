@@ -50,7 +50,7 @@
 
 	async function deleteSearchCrawlTask(row: SearchCrawlTask) {
 		try {
-			const response = await fetch(`http://localhost:8000/api/v1/search_task/${row.id}`, {
+			const response = await fetch(`http://localhost:8000/api/v1/search_task/${row.id}?update_id=${user.name}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json;charset=UTF-8'

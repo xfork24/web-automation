@@ -21,6 +21,7 @@ ERRORS_KEY = 'errors'
 
 DB_OPS_CREATE_NEW = 1
 DB_OPS_UPDATE_EXIST = 2
+DB_OPS_DELETE_RECORD = 3
 
 TASK_STATUS_NEW = 1
 TASK_STATUS_IN_PROGRESS = 2
@@ -604,3 +605,178 @@ def update_task_info(task, update_id, status=None,
     add_operation_history(task.id, task.table_name(),
                           {'diff': json_diff(original_json, updated_json)},
                           update_id, update_task_info.__name__, ts, DB_OPS_UPDATE_EXIST)
+
+
+def delete_product(product_id, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
+        original_json = exist_pi.to_dict()
+        x = ProductInfo.delete().where(ProductInfo.product_id == product_id).execute()
+        add_operation_history(product_id, exist_pi.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_product.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'product with product_id={product_id} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and product_id={product_id} can not be deleted')
+        return 0
+
+
+def delete_shop(shop_name, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_si = ShopInfo.get(ShopInfo.shop_name == shop_name)
+        original_json = exist_si.to_dict()
+        x = ShopInfo.delete().where(ShopInfo.shop_name == shop_name).execute()
+        add_operation_history(shop_name, exist_si.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_shop.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'shop with shop_name={shop_name} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and shop_name={shop_name} can not be deleted')
+        return 0
+
+
+def delete_product_sale(product_id, create_ts, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_ps = ProductSale.get(ProductSale.product_id == product_id,
+                                   ProductSale.create_ts == create_ts)
+        original_json = exist_ps.to_dict()
+        x = ProductSale.delete().where(ProductSale.product_id == product_id,
+                                       ProductSale.create_ts == create_ts).execute()
+        add_operation_history(f'{product_id},{create_ts}', exist_ps.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_product_sale.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'product sale with product_id={product_id}, create_ts={create_ts} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and product_id={product_id}, create_ts={create_ts} can not be deleted')
+        return 0
+
+
+def delete_hot_product(product_id, create_ts, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_hp = HotProduct.get(HotProduct.product_id == product_id,
+                                  HotProduct.create_ts == create_ts)
+        original_json = exist_hp.to_dict()
+        x = HotProduct.delete().where(HotProduct.product_id == product_id,
+                                      HotProduct.create_ts == create_ts).execute()
+        add_operation_history(f'{product_id},{create_ts}', exist_hp.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_hot_product.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'hot product with product_id={product_id}, create_ts={create_ts} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and product_id={product_id}, create_ts={create_ts} can not be deleted')
+        return 0
+
+
+def delete_detail_crawl_task(task_id, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_dct = DetailCrawlTask.get(DetailCrawlTask.task_id == task_id)
+        original_json = exist_dct.to_dict()
+        x = DetailCrawlTask.delete().where(DetailCrawlTask.task_id == task_id).execute()
+        add_operation_history(task_id, exist_dct.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_detail_crawl_task.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'shop with task_id={task_id} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and task_id={task_id} can not be deleted')
+        return 0
+
+
+def delete_shop_crawl_task(task_id, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_sct = ShopCrawlTask.get(ShopCrawlTask.task_id == task_id)
+        original_json = exist_sct.to_dict()
+        x = ShopCrawlTask.delete().where(ShopCrawlTask.task_id == task_id).execute()
+        add_operation_history(task_id, exist_sct.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_shop_crawl_task.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'shop with task_id={task_id} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and task_id={task_id} can not be deleted')
+        return 0
+
+
+def delete_search_crawl_task(task_id, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_sct = SearchCrawlTask.get(SearchCrawlTask.task_id == task_id)
+        original_json = exist_sct.to_dict()
+        x = SearchCrawlTask.delete().where(SearchCrawlTask.task_id == task_id).execute()
+        add_operation_history(task_id, exist_sct.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_search_crawl_task.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'shop with task_id={task_id} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and task_id={task_id} can not be deleted')
+        return 0
+
+
+def delete_llm_analyze_task(task_id, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_lat = LLMAnalyzeTask.get(LLMAnalyzeTask.task_id == task_id)
+        original_json = exist_lat.to_dict()
+        x = LLMAnalyzeTask.delete().where(LLMAnalyzeTask.task_id == task_id).execute()
+        add_operation_history(task_id, exist_lat.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_llm_analyze_task.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'shop with task_id={task_id} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and task_id={task_id} can not be deleted')
+        return 0
+
+
+def delete_shop_search_crawl_task(task_id, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_sct = ShopSearchCrawlTask.get(ShopSearchCrawlTask.task_id == task_id)
+        original_json = exist_sct.to_dict()
+        x = ShopSearchCrawlTask.delete().where(ShopSearchCrawlTask.task_id == task_id).execute()
+        add_operation_history(task_id, exist_sct.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_shop_search_crawl_task.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'shop with task_id={task_id} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and task_id={task_id} can not be deleted')
+        return 0

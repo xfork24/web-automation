@@ -82,7 +82,7 @@
 
 	async function deleteProduct(row: ProductInfo) {
 		try {
-			const response = await fetch(`http://localhost:8000/api/v1/product/${row.product_id}`, {
+			const response = await fetch(`http://localhost:8000/api/v1/product/${row.product_id}?update_id=${user.name}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json;charset=UTF-8'

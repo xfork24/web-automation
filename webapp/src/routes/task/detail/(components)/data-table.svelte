@@ -79,7 +79,7 @@
 	async function deleteSelectDetailCrawlTask(rows: Row<DetailCrawlTask>[]) {
 		try {
 			for (const row of rows) {
-				const response = await fetch(`http://localhost:8000/api/v1/detail_task/${row.original.id}`, {
+				const response = await fetch(`http://localhost:8000/api/v1/detail_task/${row.original.id}?update_id=${data.user.name}`, {
 					method: 'DELETE',
 					headers: {
 						'Content-Type': 'application/json;charset=UTF-8'
