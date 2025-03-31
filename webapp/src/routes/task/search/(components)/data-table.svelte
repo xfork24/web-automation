@@ -101,7 +101,7 @@
 	let sorting = $state<SortingState>([]);
 	let columnFilters = $state<ColumnFiltersState>([]);
 	let rowSelection = $state<RowSelectionState>({});
-	let columnVisibility = $state<VisibilityState>({});
+	let columnVisibility = $state<VisibilityState>({ 'Operator ID': false });
 
 	export const columns: ColumnDef<SearchCrawlTask>[] = [
 		{
@@ -188,7 +188,7 @@
 		},
 		{
 			id: 'Status',
-			accessorKey: 'status',
+			accessorKey: 'status_str',
 			header: 'Status',
 			cell: ({ row }) => {
 				const statusSnippet = createRawSnippet<[number]>((getData) => {
@@ -199,6 +199,11 @@
 				});
 				return renderSnippet(statusSnippet, row.getValue('Status'));
 			}
+		},
+		{
+			id: 'Reason',
+			accessorKey: 'reason',
+			header: 'Reason'
 		},
 		{
 			id: 'Attempts',
@@ -345,7 +350,8 @@
 		{ value: 'id', label: 'ID' },
 		{ value: 'search_key', label: 'Search Key' },
 		{ value: 'target_product_ids', label: 'Target Product IDs' },
-		{ value: 'status', label: 'Status' }
+		{ value: 'status', label: 'Status' },
+		{ value: 'reason', label: 'Reason' }
 	];
 
 	let value = $state('id');

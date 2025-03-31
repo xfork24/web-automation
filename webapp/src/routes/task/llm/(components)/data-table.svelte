@@ -99,7 +99,7 @@
 	let sorting = $state<SortingState>([]);
 	let columnFilters = $state<ColumnFiltersState>([]);
 	let rowSelection = $state<RowSelectionState>({});
-	let columnVisibility = $state<VisibilityState>({});
+	let columnVisibility = $state<VisibilityState>({ 'Operator ID': false });
 
 	export const columns: ColumnDef<LLMAnalyzeTask>[] = [
 		{
@@ -157,7 +157,7 @@
 		},
 		{
 			id: 'Status',
-			accessorKey: 'status',
+			accessorKey: 'status_str',
 			header: 'Status',
 			cell: ({ row }) => {
 				const statusSnippet = createRawSnippet<[number]>((getData) => {
@@ -168,6 +168,11 @@
 				});
 				return renderSnippet(statusSnippet, row.getValue('Status'));
 			}
+		},
+		{
+			id: 'Reason',
+			accessorKey: 'reason',
+			header: 'Reason'
 		},
 		{
 			id: 'Attempts',
@@ -314,7 +319,8 @@
 		{ value: 'id', label: 'ID' },
 		{ value: 'product_id', label: 'Product ID' },
 		{ value: 'product_title', label: 'Product Title' },
-		{ value: 'status', label: 'Status' }
+		{ value: 'status', label: 'Status' },
+		{ value: 'reason', label: 'Reason' }
 	];
 
 	let value = $state('id');

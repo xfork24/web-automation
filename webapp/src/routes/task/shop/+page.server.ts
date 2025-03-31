@@ -1,4 +1,4 @@
-import { statusToString } from '../../(components)/model';
+import { parseTaskReason, statusToString } from '../../(components)/model';
 import type { ShopCrawlTask } from '../../(components)/model';
 
 export const load = async () => {
@@ -11,7 +11,8 @@ export const load = async () => {
 		});
 		let body = await response.json();
 		body.data.forEach((item: ShopCrawlTask) => {
-			item.status = statusToString(item.status);
+			item.status_str = statusToString(item.status);
+			item.reason = parseTaskReason(item);
 		});
 		return {
 			content: body.data

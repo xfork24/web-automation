@@ -584,7 +584,7 @@ def update_task_info(task, update_id, status=None,
         if ERRORS_KEY not in additional_properties:
             additional_properties[ERRORS_KEY] = []
         errors = additional_properties[ERRORS_KEY]
-        error_entity = {'update_time': ts, 'err_code': err_code}
+        error_entity = {'update_ts': ts, 'err_code': err_code}
         if call_stack is not None:
             error_entity['call_stack'] = call_stack
         errors.append(error_entity)
