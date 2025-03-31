@@ -411,14 +411,14 @@
       </Select.Root>
     </div>
     <Input
-        class="max-w-xs mr-4"
-        onchange={(e) => {
+      class="max-w-xs mr-4"
+      onchange={(e) => {
         table.getColumn(triggerContent)?.setFilterValue(e.currentTarget.value);
       }}
-        oninput={(e) =>
+      oninput={(e) =>
         table.getColumn(triggerContent)?.setFilterValue(e.currentTarget.value)}
-        placeholder="Filter {triggerContent}..."
-        value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
+      placeholder="Filter {triggerContent}..."
+      value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
     />
     <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
       <FunnelX/>
@@ -470,7 +470,7 @@
           .getAllColumns()
           .filter((col) => col.getCanHide()) as column (column)}
           <DropdownMenu.CheckboxItem
-              bind:checked={
+            bind:checked={
               () => column.getIsVisible(), (v) => column.toggleVisibility(!!v)
             }
           >
@@ -489,8 +489,8 @@
               <Table.Head class="text-center px-0.5 [&:has([role=checkbox])]:pl-3">
                 {#if !header.isPlaceholder}
                   <FlexRender
-                      content={header.column.columnDef.header}
-                      context={header.getContext()}
+                    content={header.column.columnDef.header}
+                    context={header.getContext()}
                   />
                 {/if}
               </Table.Head>
@@ -504,8 +504,8 @@
             {#each row.getVisibleCells() as cell (cell.id)}
               <Table.Cell class="text-center px-0.5 [&:has([role=checkbox])]:pl-3">
                 <FlexRender
-                    content={cell.column.columnDef.cell}
-                    context={cell.getContext()}
+                  content={cell.column.columnDef.cell}
+                  context={cell.getContext()}
                 />
               </Table.Cell>
             {/each}
@@ -527,18 +527,18 @@
     </div>
     <div class="space-x-2">
       <Button
-          disabled={!table.getCanPreviousPage()}
-          onclick={() => table.previousPage()}
-          size="sm"
-          variant="outline"
+        disabled={!table.getCanPreviousPage()}
+        onclick={() => table.previousPage()}
+        size="sm"
+        variant="outline"
       >
         Previous
       </Button>
       <Button
-          disabled={!table.getCanNextPage()}
-          onclick={() => table.nextPage()}
-          size="sm"
-          variant="outline"
+        disabled={!table.getCanNextPage()}
+        onclick={() => table.nextPage()}
+        size="sm"
+        variant="outline"
       >
         Next
       </Button>

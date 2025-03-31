@@ -201,8 +201,8 @@
               <Table.Head class="text-center px-0.5 [&:has([role=checkbox])]:pl-3">
                 {#if !header.isPlaceholder}
                   <FlexRender
-                      content={header.column.columnDef.header}
-                      context={header.getContext()}
+                    content={header.column.columnDef.header}
+                    context={header.getContext()}
                   />
                 {/if}
               </Table.Head>
@@ -216,8 +216,8 @@
             {#each row.getVisibleCells() as cell (cell.id)}
               <Table.Cell class="[&:has([role=checkbox])]:pl-3">
                 <FlexRender
-                    content={cell.column.columnDef.cell}
-                    context={cell.getContext()}
+                  content={cell.column.columnDef.cell}
+                  context={cell.getContext()}
                 />
               </Table.Cell>
             {/each}
@@ -239,18 +239,18 @@
     </div>
     <div class="space-x-2">
       <Button
-          disabled={!table.getCanPreviousPage()}
-          onclick={() => table.previousPage()}
-          size="sm"
-          variant="outline"
+        disabled={!table.getCanPreviousPage()}
+        onclick={() => table.previousPage()}
+        size="sm"
+        variant="outline"
       >
         Previous
       </Button>
       <Button
-          disabled={!table.getCanNextPage()}
-          onclick={() => table.nextPage()}
-          size="sm"
-          variant="outline"
+        disabled={!table.getCanNextPage()}
+        onclick={() => table.nextPage()}
+        size="sm"
+        variant="outline"
       >
         Next
       </Button>

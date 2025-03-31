@@ -72,43 +72,43 @@
 </script>
 
 <Sidebar.Inset>
-    <header class="flex h-16 shrink-0 items-center gap-2">
-        <div class="flex items-center gap-2 px-4">
-            <Sidebar.Trigger/>
-            <Breadcrumb.Root>
-                <Breadcrumb.List>
-                    <Breadcrumb.Separator>
-                        <Tally_1/>
-                    </Breadcrumb.Separator>
-                    <Breadcrumb.Item>
-                        <Breadcrumb.Link href="/">Home</Breadcrumb.Link>
-                    </Breadcrumb.Item>
-                    <Breadcrumb.Separator/>
-                    <Breadcrumb.Item>
-                        <Breadcrumb.Link href="/task">Tasks</Breadcrumb.Link>
-                    </Breadcrumb.Item>
-                </Breadcrumb.List>
-            </Breadcrumb.Root>
+  <header class="flex h-16 shrink-0 items-center gap-2">
+    <div class="flex items-center gap-2 px-4">
+      <Sidebar.Trigger/>
+      <Breadcrumb.Root>
+        <Breadcrumb.List>
+          <Breadcrumb.Separator>
+            <Tally_1/>
+          </Breadcrumb.Separator>
+          <Breadcrumb.Item>
+            <Breadcrumb.Link href="/">Home</Breadcrumb.Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Separator/>
+          <Breadcrumb.Item>
+            <Breadcrumb.Link href="/task">Tasks</Breadcrumb.Link>
+          </Breadcrumb.Item>
+        </Breadcrumb.List>
+      </Breadcrumb.Root>
+    </div>
+  </header>
+  <main>
+    <div class="items-center justify-between px-4">
+      <div class="text-4xl">All Tasks Overview</div>
+      <div class="flex py-4">
+        <div class="items-center justify-between w-1/4">
+          <RangeCalendar bind:value class="rounded-md border"/>
+          <div class="flex justify-end gap-4 py-4">
+            <Button class="bg-red-500 hover:bg-red-500" onclick={() => resetCalendar()} type="reset">Reset
+            </Button>
+            <Button onclick={() => onQueryTaskStatus()} type="submit">Apply</Button>
+          </div>
         </div>
-    </header>
-    <main>
-        <div class="items-center justify-between px-4">
-            <div class="text-4xl">All Tasks Overview</div>
-            <div class="flex py-4">
-                <div class="items-center justify-between w-1/4">
-                    <RangeCalendar bind:value class="rounded-md border"/>
-                    <div class="flex justify-end gap-4 py-4">
-                        <Button class="bg-red-500 hover:bg-red-500" onclick={() => resetCalendar()} type="reset">Reset
-                        </Button>
-                        <Button onclick={() => onQueryTaskStatus()} type="submit">Apply</Button>
-                    </div>
-                </div>
-                <div class="flex flex-wrap items-center gap-4 px-4 w-3/4">
-                    {#each tasks as data (data.key)}
-                        <TaskCard {data}/>
-                    {/each}
-                </div>
-            </div>
+        <div class="flex flex-wrap items-center gap-4 px-4 w-3/4">
+          {#each tasks as data (data.key)}
+            <TaskCard {data}/>
+          {/each}
         </div>
-    </main>
+      </div>
+    </div>
+  </main>
 </Sidebar.Inset>

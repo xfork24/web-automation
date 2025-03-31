@@ -36,7 +36,7 @@
       <div class="items-center justify-between px-4 text-4xl">Product OnShelf for {product_id}</div>
     {:else}
       <div class="items-center justify-between px-4 text-4xl">Please select a valid product from <a
-          class="italic font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product'>All Products</a>
+        class="italic font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product'>All Products</a>
         page, and navigate here by clicking "Product OnShelf" menu item.
       </div>
     {/if}

@@ -40,7 +40,7 @@
       </div>
     {:else}
       <div class="items-center justify-between px-4 text-4xl">Please select a valid shop from <a
-          class="italic font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/shop'>All Shops</a> page
+        class="italic font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/shop'>All Shops</a> page
         first.
       </div>
     {/if}

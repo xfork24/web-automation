@@ -106,122 +106,122 @@
 
 <Sidebar.Root collapsible="icon">
 
-    <!-- Header -->
-    <Sidebar.Header>
-        <Sidebar.Menu>
-            <Sidebar.MenuItem>
-                <DropdownMenu.Root>
-                    <DropdownMenu.Trigger>
-                        {#snippet child({props})}
-                            <Sidebar.MenuButton {...props}>
-                                <House/>
-                                {workspace}
-                                <ChevronDown class="ml-auto"/>
-                            </Sidebar.MenuButton>
-                        {/snippet}
-                    </DropdownMenu.Trigger>
-                    <DropdownMenu.Content class="w-[--bits-dropdown-menu-anchor-width]">
-                        {#each valid_workspaces as valid_workspace (valid_workspace.title)}
-                            <DropdownMenu.Item onclick={()=> workspace = valid_workspace.title}>
-                                {#snippet child({props})}
-                                    <a href={valid_workspace.url} {...props}>
-                                        <span>{valid_workspace.title}</span>
-                                    </a>
-                                {/snippet}
-                            </DropdownMenu.Item>
-                        {/each}
-                    </DropdownMenu.Content>
-                </DropdownMenu.Root>
-            </Sidebar.MenuItem>
-        </Sidebar.Menu>
-    </Sidebar.Header>
+  <!-- Header -->
+  <Sidebar.Header>
+    <Sidebar.Menu>
+      <Sidebar.MenuItem>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            {#snippet child({props})}
+              <Sidebar.MenuButton {...props}>
+                <House/>
+                {workspace}
+                <ChevronDown class="ml-auto"/>
+              </Sidebar.MenuButton>
+            {/snippet}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content class="w-[--bits-dropdown-menu-anchor-width]">
+            {#each valid_workspaces as valid_workspace (valid_workspace.title)}
+              <DropdownMenu.Item onclick={()=> workspace = valid_workspace.title}>
+                {#snippet child({props})}
+                  <a href={valid_workspace.url} {...props}>
+                    <span>{valid_workspace.title}</span>
+                  </a>
+                {/snippet}
+              </DropdownMenu.Item>
+            {/each}
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+      </Sidebar.MenuItem>
+    </Sidebar.Menu>
+  </Sidebar.Header>
 
-    <!-- Content -->
-    <Sidebar.Content>
-        <Sidebar.Group>
-            <Sidebar.GroupContent>
-                <Sidebar.Menu>
-                    {#each sidebar_items as sidebar_item (sidebar_item.title)}
-                        {#if sidebar_item.group}
-                            <Collapsible.Root class="group/collapsible">
-                                <Sidebar.MenuItem>
-                                    <Collapsible.Trigger>
-                                        {#snippet child({props})}
-                                            <Sidebar.MenuButton {...props}>
-                                                <sidebar_item.icon/>
-                                                <span>{sidebar_item.title}</span>
-                                                <ChevronRight class="ml-auto"/>
-                                            </Sidebar.MenuButton>
-                                        {/snippet}
-                                    </Collapsible.Trigger>
-                                    <Collapsible.Content>
-                                        <Sidebar.MenuSub>
-                                            {#if sidebar_item.items}
-                                                {#each sidebar_item.items as item (item.title)}
-                                                    <Sidebar.MenuSubItem>
-                                                        <Sidebar.MenuSubButton isActive={active_url === item.url}>
-                                                            {#snippet child({props})}
-                                                                <a href={item.url} {...props}>
-                                                                    <span>{item.title}</span>
-                                                                </a>
-                                                            {/snippet}
-                                                        </Sidebar.MenuSubButton>
-                                                    </Sidebar.MenuSubItem>
-                                                {/each}
-                                            {/if}
-                                        </Sidebar.MenuSub>
-                                    </Collapsible.Content>
-                                </Sidebar.MenuItem>
-                            </Collapsible.Root>
-                        {:else}
-                            <Sidebar.MenuItem>
-                                <Sidebar.MenuButton isActive={active_url === sidebar_item.url}>
-                                    {#snippet child({props})}
-                                        <a href={sidebar_item.url} {...props}>
-                                            <sidebar_item.icon/>
-                                            <span>{sidebar_item.title}</span>
-                                        </a>
-                                    {/snippet}
-                                </Sidebar.MenuButton>
-                            </Sidebar.MenuItem>
-                        {/if}
-                    {/each}
-                </Sidebar.Menu>
-            </Sidebar.GroupContent>
-        </Sidebar.Group>
-    </Sidebar.Content>
-
-    <!-- Footer -->
-    <Sidebar.Footer>
+  <!-- Content -->
+  <Sidebar.Content>
+    <Sidebar.Group>
+      <Sidebar.GroupContent>
         <Sidebar.Menu>
-            <Sidebar.MenuItem>
-                <DropdownMenu.Root>
-                    <DropdownMenu.Trigger>
-                        {#snippet child({props})}
-                            <Sidebar.MenuButton
-                                    {...props}
-                                    class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                            >
-                                <User/>
-                                {data.user.name}
-                                <ChevronUp class="ml-auto"/>
-                            </Sidebar.MenuButton>
-                        {/snippet}
-                    </DropdownMenu.Trigger>
-                    <DropdownMenu.Content
-                            class="w-[--bits-dropdown-menu-anchor-width]"
-                            side="top"
-                    >
-                        <DropdownMenu.Item>
-                            {#snippet child({props})}
-                                <a href="/user/{data.user.id}" {...props}>
-                                    <span>{data.user.name}</span>
+          {#each sidebar_items as sidebar_item (sidebar_item.title)}
+            {#if sidebar_item.group}
+              <Collapsible.Root class="group/collapsible">
+                <Sidebar.MenuItem>
+                  <Collapsible.Trigger>
+                    {#snippet child({props})}
+                      <Sidebar.MenuButton {...props}>
+                        <sidebar_item.icon/>
+                        <span>{sidebar_item.title}</span>
+                        <ChevronRight class="ml-auto"/>
+                      </Sidebar.MenuButton>
+                    {/snippet}
+                  </Collapsible.Trigger>
+                  <Collapsible.Content>
+                    <Sidebar.MenuSub>
+                      {#if sidebar_item.items}
+                        {#each sidebar_item.items as item (item.title)}
+                          <Sidebar.MenuSubItem>
+                            <Sidebar.MenuSubButton isActive={active_url === item.url}>
+                              {#snippet child({props})}
+                                <a href={item.url} {...props}>
+                                  <span>{item.title}</span>
                                 </a>
-                            {/snippet}
-                        </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                </DropdownMenu.Root>
-            </Sidebar.MenuItem>
+                              {/snippet}
+                            </Sidebar.MenuSubButton>
+                          </Sidebar.MenuSubItem>
+                        {/each}
+                      {/if}
+                    </Sidebar.MenuSub>
+                  </Collapsible.Content>
+                </Sidebar.MenuItem>
+              </Collapsible.Root>
+            {:else}
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton isActive={active_url === sidebar_item.url}>
+                  {#snippet child({props})}
+                    <a href={sidebar_item.url} {...props}>
+                      <sidebar_item.icon/>
+                      <span>{sidebar_item.title}</span>
+                    </a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            {/if}
+          {/each}
         </Sidebar.Menu>
-    </Sidebar.Footer>
+      </Sidebar.GroupContent>
+    </Sidebar.Group>
+  </Sidebar.Content>
+
+  <!-- Footer -->
+  <Sidebar.Footer>
+    <Sidebar.Menu>
+      <Sidebar.MenuItem>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            {#snippet child({props})}
+              <Sidebar.MenuButton
+                {...props}
+                class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              >
+                <User/>
+                {data.user.name}
+                <ChevronUp class="ml-auto"/>
+              </Sidebar.MenuButton>
+            {/snippet}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content
+            class="w-[--bits-dropdown-menu-anchor-width]"
+            side="top"
+          >
+            <DropdownMenu.Item>
+              {#snippet child({props})}
+                <a href="/user/{data.user.id}" {...props}>
+                  <span>{data.user.name}</span>
+                </a>
+              {/snippet}
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+      </Sidebar.MenuItem>
+    </Sidebar.Menu>
+  </Sidebar.Footer>
 </Sidebar.Root>
