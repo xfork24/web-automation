@@ -35,6 +35,7 @@ TASK_FAILED_SHOP_NOT_STANDARD = 2
 TASK_FAILED_SHOP_SKU_EXCEEDS_LIMIT = 3
 TASK_FAILED_SHOP_NOT_EXIST = 4
 TASK_FAILED_SHOP_LINK_NOT_FOUND = 5
+TASK_FAILED_SHOP_NOT_FOUND_IN_SEARCH = 6
 
 SHOP_LINK_KNOWN_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
                                re.compile('^https://shop\\w+.taobao.com/')]

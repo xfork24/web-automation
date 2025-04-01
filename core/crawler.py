@@ -50,6 +50,7 @@ SEARCH_SKU_SALE_RE_EXP = re.compile('^realSales--\\w+')
 
 # shop search related controls
 SHOP_SEARCH_TITLE_RE_EXP = re.compile('^title--\\w+')
+SHOP_SEARCH_TIPS_RE_EXP = re.compile('^tips--\\w+')
 
 # product detail related controls
 DETAIL_OFFER_ITEMS_RE_EXP = re.compile('^skuItem--\\w+')
@@ -585,6 +586,14 @@ def crawl_taobao_shop_link_by_search(shop_name, update_id):
     time.sleep(SEARCH_WAIT_IN_SECONDS)
     shop_wrapper_div = Driver.find_element(By.ID, 'srp_shopLayout_shopContentWrapper')
     assert (shop_wrapper_div is not None)
+    for div in shop_wrapper_div.find_elements(By.XPATH, 'div/div'):
+        cls_name = div.get_attribute('class')
+        if cls_name is None:
+            continue
+        if re.match(SHOP_SEARCH_TIPS_RE_EXP, cls_name) and div.text == '“没有找到相关宝贝”':
+            msg = f'can not find shop_name={shop_name} by shop search'
+            logger.error(msg)
+            raise ShopNotFoundInSearch(msg)
     shop_link = None
     for shop_a in shop_wrapper_div.find_elements(By.XPATH, 'a'):
         shop_divs = shop_a.find_elements(By.XPATH, './/div')

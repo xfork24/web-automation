@@ -234,6 +234,10 @@ export function parseTaskReason(task: any) {
         v = 'SHOP_SKU_EXCEEDS';
       } else if (max === 4) {
         v = 'SHOP_NOT_EXIST';
+      } else if (max === 5) {
+        v = 'SHOP_LINK_NOT_FOUND';
+      } else if (max === 6) {
+        v = 'SHOP_NOT_FOUND_IN_SEARCH';
       } else {
         v = 'UNDEFINED';
       }

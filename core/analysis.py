@@ -424,6 +424,11 @@ def run_shop_search_crawler_task(update_id):
         try:
             logger.info(f'handling shop search crawler task id={task.id} with shop_name={task.shop_name}')
             crawl_taobao_shop_link_by_search(task.shop_name, task.id)
+        except ShopNotFoundInSearch:
+            logger.error(f'shop_name={task.shop_name} not found in shop search, task_id={task.id}')
+            update_task_info(task, update_id, TASK_STATUS_ERROR,
+                             err_code=TASK_FAILED_SHOP_NOT_FOUND_IN_SEARCH)
+            continue
         except Exception:
             logger.error(
                 f'get unhandled exception while handling task id={task.id} with shop_name={task.shop_name}, just continue')

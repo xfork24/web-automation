@@ -15,3 +15,7 @@ class ShopLinkNotFound(RuntimeError):
 
 class ShopSkuNumExceeded(RuntimeError):
     pass
+
+
+class ShopNotFoundInSearch(RuntimeError):
+    pass
