@@ -215,7 +215,7 @@
         {#each table.getRowModel().rows as row (row.id)}
           <Table.Row data-state={row.getIsSelected() && "selected"}>
             {#each row.getVisibleCells() as cell (cell.id)}
-              <Table.Cell class="[&:has([role=checkbox])]:pl-3">
+              <Table.Cell class="text-center px-0.5 [&:has([role=checkbox])]:pl-3">
                 <FlexRender
                   content={cell.column.columnDef.cell}
                   context={cell.getContext()}

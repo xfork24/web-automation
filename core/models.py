@@ -17,6 +17,7 @@ from core.utils import get_logger
 from json import JSONDecodeError
 from playhouse.shortcuts import model_to_dict
 
+SHOP_COVER_DEFAULT_LINK = 'https://img.alicdn.com/imgextra/i1/O1CN01pz5irY1bhDKceJor2_!!6000000003496-2-tps-144-144.png_320x320q75.jpg_.webp'
 LLM_ANALYSIS_KEY = 'llm_analysis'
 ERRORS_KEY = 'errors'
 
@@ -34,8 +35,9 @@ TASK_FAILED_UNEXPECTED_ERROR = 1
 TASK_FAILED_SHOP_NOT_STANDARD = 2
 TASK_FAILED_SHOP_SKU_EXCEEDS_LIMIT = 3
 TASK_FAILED_SHOP_NOT_EXIST = 4
-TASK_FAILED_SHOP_LINK_NOT_FOUND = 5
+TASK_FAILED_SHOP_LINK_NOT_ACCESSIBLE = 5
 TASK_FAILED_SHOP_NOT_FOUND_IN_SEARCH = 6
+TASK_FAILED_SHOP_LINK_NOT_FOUND = 7
 
 SHOP_LINK_KNOWN_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
                                re.compile('^https://shop\\w+.taobao.com/')]
@@ -80,6 +82,7 @@ class BaseModel(Model):
 class ShopInfo(BaseModel):
     shop_name = CharField(max_length=128, primary_key=True)
     shop_link = CharField(max_length=512)
+    shop_cover = CharField(max_length=512)
     additional_properties = TextField()
     create_ts = IntegerField()
     update_ts = IntegerField(index=True)
@@ -346,7 +349,7 @@ def update_product_info(product_id, update_id, update_role,
                               update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_shop_info(shop_name, update_id, update_role, shop_link='', additional_properties=None):
+def update_shop_info(shop_name, update_id, update_role, shop_link='', shop_cover='', additional_properties=None):
     # update shop_info table
     logger = get_logger()
     ts = int(time.time())
@@ -363,6 +366,8 @@ def update_shop_info(shop_name, update_id, update_role, shop_link='', additional
             exist_si.shop_link = shop_link
         else:
             logger.info(f'find shop_name={shop_name} with unknown link={shop_link}, exist record not updated')
+        if shop_cover != '':
+            exist_si.shop_cover = shop_cover
         if additional_properties is not None:
             exist_si.additional_properties = json_dumps(additional_properties)
         exist_si.update_ts = ts
@@ -378,6 +383,7 @@ def update_shop_info(shop_name, update_id, update_role, shop_link='', additional
         new_si = ShopInfo()
         new_si.shop_name = shop_name
         new_si.shop_link = shop_link
+        new_si.shop_cover = SHOP_COVER_DEFAULT_LINK if shop_cover == '' else shop_cover
         if additional_properties is not None:
             new_si.additional_properties = json_dumps(additional_properties)
         else:

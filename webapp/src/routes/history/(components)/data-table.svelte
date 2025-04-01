@@ -276,16 +276,15 @@
   });
 
   const filter_fields = [
-    {value: 'id', label: 'ID'},
     {value: 'primary_key', label: 'Primary Key'},
     {value: 'table', label: 'Table'},
     {value: 'update_id', label: 'Operator ID'}
   ];
 
-  let value = $state('id');
+  let value = $state('primary_key');
 
   const triggerContent = $derived(
-    filter_fields.find((f) => f.value === value)?.label ?? 'ID'
+    filter_fields.find((f) => f.value === value)?.label ?? 'Primary Key'
   );
 
   function clearAllTableFilters() {

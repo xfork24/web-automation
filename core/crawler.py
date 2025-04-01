@@ -19,6 +19,7 @@ from core.models import *
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
+TB_SHOP_BROWSE_TITLE_NAME = '店铺浏览-淘宝网'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_LOGIN_AUTH_TITLE_NAME = '登录-身份验证'
 LOGIN_CHECK_WAIT_IN_SECONDS = 5
@@ -29,6 +30,7 @@ SHOP_PAGE_WAIT_IN_SECONDS = 5
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 SHOP_PAGE_MAX_SKU_NUM = 100
+SHOP_PAGE_LOAD_MAX_COUNT = 10
 
 # search page related controls
 SEARCH_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
@@ -37,6 +39,7 @@ SEARCH_DESC_WRAPPER_RE_EXP = re.compile('^[\\s\\S]*descWrapper--\\w+')
 SEARCH_IMAGE_WRAPPER_RE_EXP = re.compile('^imageSwitch--\\w+')
 SEARCH_PRICE_WRAPPER_RE_EXP = re.compile('^priceWrapper--\\w+')
 SEARCH_SKU_UNIT_RE_EXP = re.compile('^unit--\\w+')
+SEARCH_SKU_SALE_RE_EXP = re.compile('^realSales--\\w+')
 
 # shop page related controls
 SHOP_SKU_CARD_RE_EXP = re.compile('^cardContainer--\\w+')
@@ -47,9 +50,10 @@ SHOP_SKU_CARD_TITLE_RE_EXP = re.compile('^title--\\w+')
 SHOP_SKU_CARD_PRICE_RE_EXP = re.compile('^price--\\w+')
 SHOP_SKU_CARD_SALE_RE_EXP = re.compile('^count--\\w+')
 SHOP_SALE_ORDER_TAGS_RE_EXP = re.compile('^tagsContainer--\\w+')
-SEARCH_SKU_SALE_RE_EXP = re.compile('^realSales--\\w+')
+SHOP_IMG_WRAPPER_RE_EXP = re.compile('^shopLogoUrlWrapper--\\w+')
 
 # shop search related controls
+SHOP_SEARCH_IMG_RE_EXP = re.compile('^imgWrapper--\\w+')
 SHOP_SEARCH_TITLE_RE_EXP = re.compile('^title--\\w+')
 SHOP_SEARCH_TIPS_RE_EXP = re.compile('^tips--\\w+')
 
@@ -343,9 +347,9 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
             cls_name = item.get_attribute('class')
             if cls_name is None:
                 continue
-            if re.match(SEARCH_MAIN_PIC_AND_DESC_RE_EXP, cls_name):
+            elif re.match(SEARCH_MAIN_PIC_AND_DESC_RE_EXP, cls_name):
                 sku_summary = item
-            if re.match(SEARCH_SHOP_INFO_RE_EXP, cls_name):
+            elif re.match(SEARCH_SHOP_INFO_RE_EXP, cls_name):
                 shop_summary = item
         assert (sku_summary is not None and shop_summary is not None)
         sku_items = sku_summary.find_elements(By.XPATH, 'div')
@@ -354,11 +358,11 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
             cls_name = item.get_attribute('class')
             if cls_name is None:
                 continue
-            if re.match(SEARCH_DESC_WRAPPER_RE_EXP, cls_name):
+            elif re.match(SEARCH_DESC_WRAPPER_RE_EXP, cls_name):
                 sku_title_wrapper = item
-            if re.match(SEARCH_PRICE_WRAPPER_RE_EXP, cls_name):
+            elif re.match(SEARCH_PRICE_WRAPPER_RE_EXP, cls_name):
                 price_wrapper = item
-            if re.match(SEARCH_IMAGE_WRAPPER_RE_EXP, cls_name):
+            elif re.match(SEARCH_IMAGE_WRAPPER_RE_EXP, cls_name):
                 image_wrapper = item
         assert (sku_title_wrapper is not None and price_wrapper is not None and image_wrapper is not None)
         product_title = sku_title_wrapper.find_element(By.XPATH, 'div/span').text
@@ -421,7 +425,7 @@ def save_taobao_search_result(product_id, sku_id, product_title, product_link, p
     # save shop info
     update_role = save_taobao_search_result.__name__
     # save shop info
-    update_shop_info(shop_name, update_id, update_role, shop_link, None)
+    update_shop_info(shop_name, update_id, update_role, shop_link, '', None)
     # save product info
     update_product_info(product_id, update_id, update_role,
                         sku_id, product_title, product_link, product_cover,
@@ -441,12 +445,13 @@ def craw_taobao_shop_page(shop_link, sale_order, update_id, target_product_ids=N
     load_shop_and_products(shop_link, sale_order)
     divs = Driver.find_elements(By.XPATH, '//div')
     shop_name = None
+    shop_cover = ''
     sku_divs = []
     for div in divs:
         cls_name = div.get_attribute('class')
         if cls_name is None:
             continue
-        if re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
+        elif re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
             sku_divs.append(div)
         elif re.match(SHOP_NAME_RE_EXP, cls_name):
             child_spans = div.find_elements(By.XPATH, 'span')
@@ -454,8 +459,10 @@ def craw_taobao_shop_page(shop_link, sale_order, update_id, target_product_ids=N
                 shop_name = div.text
             else:
                 shop_name = child_spans[0].text
+        elif re.match(SHOP_IMG_WRAPPER_RE_EXP, cls_name):
+            shop_cover = div.find_element(By.XPATH, 'img').get_attribute('src')
     assert (shop_name is not None)
-    update_shop_info(shop_name, update_id, craw_taobao_shop_page.__name__, shop_link, None)
+    update_shop_info(shop_name, update_id, craw_taobao_shop_page.__name__, shop_link, shop_cover, None)
     for sku_div in sku_divs:
         try:
             craw_taobao_shop_sku(sku_div, shop_name, shop_link, update_id, target_product_ids)
@@ -470,13 +477,18 @@ def load_shop_and_products(shop_link, sale_order):
     logger.info(f'navigate to shop_link={shop_link} and wait for seconds')
     Driver.get(shop_link)
     time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
+    if Driver.title == TB_SHOP_BROWSE_TITLE_NAME or Driver.title == TB_HOMEPAGE_TITLE_NAME:
+        # "没有找到相应的店铺信息" 页面
+        msg = f'shop_link={shop_link} not found'
+        logger.error(msg)
+        raise ShopLinkNotFound(msg)
     if len(Driver.find_elements(By.ID, 'banner')) > 0 and len(Driver.find_elements(By.ID, 'err')) > 0:
         tip = Driver.find_element(By.ID, 'err').find_elements(By.XPATH, 'div/p')[0].text
         if tip == '抱歉！页面无法访问……':
             # "抱歉！页面无法访问" 页面
             msg = f'shop_link={shop_link} can not be accessed now'
             logger.error(msg)
-            raise ShopLinkNotFound(msg)
+            raise ShopLinkNotAccessible(msg)
     # 如果找到销量排序按钮，点击按销量排序
     if sale_order:
         divs = Driver.find_elements(By.XPATH, '//div')
@@ -484,14 +496,18 @@ def load_shop_and_products(shop_link, sale_order):
             cls_name = div.get_attribute('class')
             if cls_name is None:
                 continue
-            if re.match(SHOP_SALE_ORDER_TAGS_RE_EXP, cls_name):
+            elif re.match(SHOP_SALE_ORDER_TAGS_RE_EXP, cls_name):
                 tag_divs = div.find_elements(By.XPATH, 'div/div')
                 for tag_div in tag_divs:
                     if tag_div.find_element(By.XPATH, 'span').text == '销量':
                         element_click(tag_div)
                         break
                 break
+    load_count = 0
     while True:
+        if load_count >= SHOP_PAGE_LOAD_MAX_COUNT:
+            logger.info('may not scrolled to the end of shop page, max load_count exceeded')
+            break
         divs = Driver.find_elements(By.XPATH, '//div')
         num_of_skus = 0
         sku_exceeded = False
@@ -501,13 +517,13 @@ def load_shop_and_products(shop_link, sale_order):
             cls_name = div.get_attribute('class')
             if cls_name is None:
                 continue
-            if re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
+            elif re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
                 num_of_skus += 1
                 if num_of_skus > SHOP_PAGE_MAX_SKU_NUM:
-                    logger.info('not scrolled to the end of shop page, max sku exceeded')
+                    logger.info('may not scrolled to the end of shop page, max sku exceeded')
                     sku_exceeded = True
                     break
-            if re.match(SHOP_LOAD_STATUS_RE_EXP, cls_name):
+            elif re.match(SHOP_LOAD_STATUS_RE_EXP, cls_name):
                 if div.text == '没有更多商品':
                     logger.info('scrolled to the end of shop page')
                     loaded = True
@@ -525,6 +541,7 @@ def load_shop_and_products(shop_link, sale_order):
             logger.error(msg)
             raise NotStandardShop(msg)
         scroll_window_to_element(load_more_flag_div)
+        load_count += 1
 
 
 def craw_taobao_shop_sku(shop_sku_div, shop_name, shop_link, update_id, target_product_ids=None):
@@ -545,7 +562,7 @@ def craw_taobao_shop_sku(shop_sku_div, shop_name, shop_link, update_id, target_p
         cls_name = div.get_attribute('class')
         if cls_name is None:
             continue
-        if re.match(SHOP_SKU_CARD_TITLE_RE_EXP, cls_name):
+        elif re.match(SHOP_SKU_CARD_TITLE_RE_EXP, cls_name):
             title_div = div
         elif re.match(SHOP_SKU_CARD_PRICE_RE_EXP, cls_name):
             price_div = div
@@ -614,23 +631,29 @@ def crawl_taobao_shop_link_by_search(shop_name, update_id):
         cls_name = div.get_attribute('class')
         if cls_name is None:
             continue
-        if re.match(SHOP_SEARCH_TIPS_RE_EXP, cls_name) and div.text == '“没有找到相关宝贝”':
+        elif re.match(SHOP_SEARCH_TIPS_RE_EXP, cls_name) and div.text == '“没有找到相关宝贝”':
             msg = f'can not find shop_name={shop_name} by shop search'
             logger.error(msg)
             raise ShopNotFoundInSearch(msg)
     shop_link = None
+    shop_cover = ''
     for shop_a in shop_wrapper_div.find_elements(By.XPATH, 'a'):
         shop_divs = shop_a.find_elements(By.XPATH, './/div')
+        shop_found = False
         for shop_div in shop_divs:
             cls_name = shop_div.get_attribute('class')
             if cls_name is None:
                 continue
-            if re.match(SHOP_SEARCH_TITLE_RE_EXP, cls_name) and shop_name == shop_div.text.strip():
+            elif re.match(SHOP_SEARCH_TITLE_RE_EXP, cls_name) and shop_name == shop_div.text.strip():
                 shop_link = shop_a.get_attribute('href')
-                break
+                shop_found = True
+            elif re.match(SHOP_SEARCH_IMG_RE_EXP, cls_name):
+                shop_cover = shop_div.find_element(By.XPATH, 'img').get_attribute('src')
+        if shop_found:
+            break
     if shop_link is not None:
         logger.info(f'update shop_name={shop_name} and shop_link={shop_link}')
-        update_shop_info(shop_name, update_id, crawl_taobao_shop_link_by_search.__name__, shop_link, None)
+        update_shop_info(shop_name, update_id, crawl_taobao_shop_link_by_search.__name__, shop_link, shop_cover, None)
 
 
 def parse_price_span(price_span, product_id):
@@ -709,7 +732,7 @@ def craw_taobao_detail_offer_details(offer_items_divs_wrapper, price_div):
             cls_name = inner_div.get_attribute('class')
             if cls_name is None:
                 continue
-            if re.match(DETAIL_OFFER_INNER_ITEMS_RE_EXP, cls_name):
+            elif re.match(DETAIL_OFFER_INNER_ITEMS_RE_EXP, cls_name):
                 content_div = inner_div
                 break
         assert (content_div is not None)
@@ -752,7 +775,7 @@ def crawl_taobao_detail_main_images_v8(page_image_v8_div):
         cls_name = main_img.get_attribute('class')
         if cls_name is None:
             continue
-        if re.match(DETAIL_MAIN_IMGS_SINGLE_IMG_V8_RE_EXP, cls_name):
+        elif re.match(DETAIL_MAIN_IMGS_SINGLE_IMG_V8_RE_EXP, cls_name):
             # we only get pic links and ignore other format
             try:
                 data_src = main_img.find_element(By.XPATH, 'img').get_attribute('data-src')
@@ -902,7 +925,7 @@ def save_taobao_detail_result(product_id, sku_id, product_title, product_link,
                         title_images, main_images, offer_details, None)
     add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None,
                      update_id, update_role)
-    update_shop_info(shop_name, update_id, update_role, shop_link, None)
+    update_shop_info(shop_name, update_id, update_role, shop_link, '', None)
 
 
 Driver = init_webdriver(WebDriverType.ChromDriver)

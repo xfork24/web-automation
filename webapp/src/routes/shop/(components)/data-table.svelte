@@ -152,6 +152,20 @@
       enableHiding: false
     },
     {
+      id: 'Shop Cover',
+      accessorKey: 'shop_cover',
+      header: 'Shop Cover',
+      cell: ({row}) => {
+        const statusSnippet = createRawSnippet<[string]>((getData) => {
+          const shop_cover = getData();
+          return {
+            render: () => `<a href="${row.original.shop_link}" target="_blank"><img class="h-16 w-16 object-scale-down" src=${shop_cover} /></a>`
+          };
+        });
+        return renderSnippet(statusSnippet, row.getValue('Shop Cover'));
+      }
+    },
+    {
       id: 'Shop Name',
       accessorKey: 'shop_name',
       header: 'Shop Name',

@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS shop_info
 (
     shop_name             varchar(128) NOT NULL,
     shop_link             varchar(512) NOT NULL,
+    shop_cover            varchar(512) NOT NULL,
     additional_properties text         NOT NULL,
     create_ts             int          NOT NULL,
     update_ts             int          NOT NULL,

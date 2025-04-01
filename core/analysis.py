@@ -144,8 +144,9 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
             if not shop_link_match:
                 logger.info(f'handle shop link issue for shop_name={si.shop_name} with shop_link={si.shop_link}')
                 task = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == si.shop_name,
+                                                          ShopSearchCrawlTask.status != TASK_STATUS_DONE,
                                                           ShopSearchCrawlTask.update_ts > shop_search_start_ts).order_by(
-                    ShopSearchCrawlTask.update_ts).limit(1)
+                    ShopSearchCrawlTask.update_ts)
                 if task.count() == 0:
                     add_shop_search_crawl_task(si.shop_name, None, update_id, update_role)
     logger.info('handling product issues with display_sale==-1 or estimated_revenue==-1 ...')
@@ -196,6 +197,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
             llm_start_ts = ts - TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS
             if LLM_ANALYSIS_KEY not in json_loads(pi.additional_properties):
                 tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == pi.product_id,
+                                                      LLMAnalyzeTask.status != TASK_STATUS_DONE,
                                                       LLMAnalyzeTask.update_ts > llm_start_ts).order_by(
                     LLMAnalyzeTask.update_ts)
                 logger.info(f'handle LLM analysis for product_id={pi.product_id}, product_title={pi.product_title}')
@@ -381,15 +383,20 @@ def run_shop_crawler_tasks(update_id):
             update_task_info(task, update_id, TASK_STATUS_ERROR,
                              err_code=TASK_FAILED_SHOP_NOT_EXIST)
             continue
+        except ShopLinkNotFound:
+            logger.error(f'shop link not found with shop_name={task.shop_name}, just continue')
+            update_task_info(task, update_id, TASK_STATUS_ERROR,
+                             err_code=TASK_FAILED_SHOP_LINK_NOT_FOUND)
+            continue
         except NotStandardShop:
             logger.error(f'shop is not a taobao standard shop, shop_name={task.shop_name}, just continue')
             update_task_info(task, update_id, TASK_STATUS_ERROR,
                              err_code=TASK_FAILED_SHOP_NOT_STANDARD)
             continue
-        except ShopLinkNotFound:
+        except ShopLinkNotAccessible:
             logger.error(f'shop link can not be accessed now, shop_name={task.shop_name}, just continue')
             update_task_info(task, update_id, TASK_STATUS_ERROR,
-                             err_code=TASK_FAILED_SHOP_LINK_NOT_FOUND)
+                             err_code=TASK_FAILED_SHOP_LINK_NOT_ACCESSIBLE)
             continue
         except Exception:
             logger.error(

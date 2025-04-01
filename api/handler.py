@@ -180,6 +180,7 @@ def get_shop_by_name(shop_name):
     try:
         p = ShopInfo.select(ShopInfo.shop_name,
                             ShopInfo.shop_link,
+                            ShopInfo.shop_cover,
                             ShopInfo.additional_properties,
                             ShopInfo.create_ts,
                             ShopInfo.update_ts,
@@ -270,6 +271,7 @@ def query_shops():
         if len(select_exps) == 0:
             query = ShopInfo.select(ShopInfo.shop_name,
                                     ShopInfo.shop_link,
+                                    ShopInfo.shop_cover,
                                     ShopInfo.additional_properties,
                                     ShopInfo.create_ts,
                                     ShopInfo.update_ts,
@@ -283,6 +285,7 @@ def query_shops():
         else:
             query = ShopInfo.select(ShopInfo.shop_name,
                                     ShopInfo.shop_link,
+                                    ShopInfo.shop_cover,
                                     ShopInfo.additional_properties,
                                     ShopInfo.create_ts,
                                     ShopInfo.update_ts,

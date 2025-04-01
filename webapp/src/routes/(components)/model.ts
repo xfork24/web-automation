@@ -70,6 +70,7 @@ export type ProductSale = {
 export type ShopInfo = {
   shop_name: string;
   shop_link: string;
+  shop_cover: string;
   avg_price: number;
   total_sale: number;
   total_revenue: number;
