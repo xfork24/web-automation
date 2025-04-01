@@ -250,17 +250,20 @@ def update_product_info(product_id, update_id, update_role,
     # update product_info table
     logger = get_logger()
     ts = int(time.time())
-    estimated_revenue = display_price * display_sale
-    estimated_revenue = -1 if estimated_revenue < 0 else estimated_revenue
     try:
         # if record already exists, update only if value is valid
         exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
         original_json = exist_pi.to_json()
-        exist_pi.sku_id = sku_id if sku_id != '' else exist_pi.sku_id
-        exist_pi.product_title = product_title if product_id != '' else exist_pi.product_title
-        exist_pi.product_link = product_link if product_link != '' else exist_pi.product_link
-        exist_pi.product_cover = product_cover if product_cover != '' else exist_pi.product_cover
-        exist_pi.shop_name = shop_name if shop_name != '' else exist_pi.shop_name
+        if sku_id != '':
+            exist_pi.sku_id = sku_id
+        if product_title != '':
+            exist_pi.product_title = product_title
+        if product_link != '':
+            exist_pi.product_link = product_link
+        if product_cover != '':
+            exist_pi.product_cover = product_cover
+        if shop_name != '':
+            exist_pi.shop_name = shop_name
         shop_link_match = False
         for reg_exp in SHOP_LINK_KNOWN_RE_EXP_LIST:
             if re.match(reg_exp, shop_link):
@@ -270,11 +273,16 @@ def update_product_info(product_id, update_id, update_role,
             exist_pi.shop_link = shop_link
         else:
             logger.info(f'find shop_name={shop_name} with unknown link={shop_link}, exist record not updated')
-        exist_pi.price_unit = price_unit if price_unit != '' else exist_pi.price_unit
-        exist_pi.display_price = display_price if display_price != -1 else exist_pi.display_price
-        exist_pi.display_sale = display_sale if display_sale != -1 else exist_pi.display_sale
-        if estimated_revenue != -1:
-            exist_pi.estimated_revenue = estimated_revenue
+        if price_unit != '':
+            exist_pi.price_unit = price_unit
+        if display_price != -1:
+            exist_pi.display_price = display_price
+        if display_sale != -1:
+            exist_pi.display_sale = display_sale
+        if exist_pi.display_price >= 0 and exist_pi.display_sale >= 0:
+            exist_pi.estimated_revenue = exist_pi.display_price * exist_pi.display_sale
+        else:
+            exist_pi.estimated_revenue = -1
         if title_imgs is not None:
             exist_pi.title_imgs = json_dumps(title_imgs)
         if page_imgs is not None:
@@ -305,7 +313,10 @@ def update_product_info(product_id, update_id, update_role,
         new_pi.price_unit = price_unit
         new_pi.display_price = display_price
         new_pi.display_sale = display_sale
-        new_pi.estimated_revenue = estimated_revenue
+        if new_pi.display_price >= 0 and new_pi.display_sale >= 0:
+            new_pi.estimated_revenue = new_pi.display_price * new_pi.display_sale
+        else:
+            new_pi.estimated_revenue = -1
         if title_imgs is not None:
             new_pi.title_imgs = json_dumps(title_imgs)
         else:
@@ -635,6 +646,10 @@ def delete_product(product_id, update_id):
         detail_crawl_tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == product_id)
         for detail_crawl_task in detail_crawl_tasks:
             delete_detail_crawl_task(detail_crawl_task.id, update_id)
+        # 关联删除所有llm_analyze_task
+        llm_analyze_tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == product_id)
+        for llm_analyze_task in llm_analyze_tasks:
+            delete_llm_analyze_task(llm_analyze_task.id, update_id)
         # 删除product_info
         exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
         original_json = exist_pi.to_json()

@@ -4,8 +4,8 @@
 
 from core import *
 
-SEARCH_KEYS = ['歌曲剪辑消音伴奏降调加主旋律背景配乐音乐音频制作处理混音修音']
-NUM_OF_PAGES_TO_PARSE = 3
+SEARCH_KEYS = ['哪吒咤2之魔童闹海']
+NUM_OF_PAGES_TO_PARSE = 1
 SALE_ORDER = False
 UPDATE_ID = 'tb_search_crawler'
 LOG_FILE_NAME = './logs/tb_search_crawler.log'
