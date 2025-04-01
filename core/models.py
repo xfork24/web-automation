@@ -64,7 +64,8 @@ class BaseModel(Model):
             try:
                 if not isinstance(v, str):
                     continue
-                jsonv[k] = json_loads(v)
+                if re.match(re.compile('^[[{][\\s\\S]*[]}]$'), v):
+                    jsonv[k] = json_loads(v)
             except JSONDecodeError:
                 continue
         x.update(jsonv)
@@ -143,7 +144,7 @@ class HotProduct(BaseModel):
 
 
 class OperationHistory(BaseModel):
-    id = CharField(max_length=32)
+    id = IntegerField()
     pk = CharField(max_length=128)
     table_name = CharField(max_length=32)
     additional_properties = TextField()
@@ -622,6 +623,19 @@ def delete_product(product_id, update_id):
     logger = get_logger()
     ts = int(time.time())
     try:
+        # 关联删除所有hot_product
+        hot_products = HotProduct.select().where(HotProduct.product_id == product_id)
+        for hot_product in hot_products:
+            delete_hot_product(hot_product.product_id, hot_product.create_ts, update_id)
+        # 关联删除所有product_sale
+        product_sales = ProductSale.select().where(ProductSale.product_id == product_id)
+        for product_sale in product_sales:
+            delete_product_sale(product_sale.product_id, product_sale.create_ts, update_id)
+        # 关联删除所有detail_crawl_task
+        detail_crawl_tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == product_id)
+        for detail_crawl_task in detail_crawl_tasks:
+            delete_detail_crawl_task(detail_crawl_task.id, update_id)
+        # 删除product_info
         exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
         original_json = exist_pi.to_json()
         x = ProductInfo.delete().where(ProductInfo.product_id == product_id).execute()
@@ -641,6 +655,19 @@ def delete_shop(shop_name, update_id):
     logger = get_logger()
     ts = int(time.time())
     try:
+        # 关联删除所有product_info
+        product_infos = ProductInfo.select().where(ProductInfo.shop_name == shop_name)
+        for product_info in product_infos:
+            delete_product(product_info.product_id, update_id)
+        # 关联删除所有shop_crawl_task
+        shop_crawl_tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == shop_name)
+        for shop_crawl_task in shop_crawl_tasks:
+            delete_shop_crawl_task(shop_crawl_task.id, update_id)
+        # 关联删除所有shop_search_crawl_task
+        shop_search_crawl_tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == shop_name)
+        for shop_search_crawl_task in shop_search_crawl_tasks:
+            delete_shop_search_crawl_task(shop_search_crawl_task.id, update_id)
+        # 删除shop_info
         exist_si = ShopInfo.get(ShopInfo.shop_name == shop_name)
         original_json = exist_si.to_json()
         x = ShopInfo.delete().where(ShopInfo.shop_name == shop_name).execute()

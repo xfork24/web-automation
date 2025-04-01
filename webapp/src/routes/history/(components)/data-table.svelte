@@ -80,7 +80,7 @@
       header: 'Primary Key',
       cell: ({row}) => {
         const statusSnippet = createRawSnippet<[string]>((getData) => {
-          const pk = getData();
+          let pk = getData();
           let link = '';
           if (row.original.table_name == 'product_info') {
             link = `/product/${pk}`;
@@ -101,9 +101,17 @@
           } else if (row.original.table_name == 'llm_analyze_task') {
             link = `/task/llm?id=${pk}`;
           }
-          return {
-            render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href=${link}>${pk}</a>`
-          };
+          pk = parseUUID4(pk);
+          if (pk.search(',') != -1) {
+            const parts = pk.split(',');
+            return {
+              render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href=${link}><p>${parts[0]}</p><p>${parts[1]}</p></a>`
+            };
+          } else {
+            return {
+              render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href=${link}>${pk}</a>`
+            };
+          }
         });
         return renderSnippet(statusSnippet, row.getValue('Primary Key'));
       }

@@ -6,12 +6,13 @@ from pathlib import Path
 from core.llm import *
 from core.crawler import *
 
-# 各任务的去重检查周期（1天减去5分钟）
-TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
-TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
-TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
-TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 86100
-TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 86100
+# 各任务的去重检查周期，所有任务都是检查所有（100年），通过自动归档机制自动处理
+TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 3153600000
+TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 3153600000
+TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 3153600000
+TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 3153600000
+TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 3153600000
+# hot product 日更（1天减去5分钟）
 TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 86100
 
 # 各任务的等待配置
@@ -140,6 +141,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
                     shop_link_match = True
                     break
             if not shop_link_match:
+                logger.info(f'handle shop link issue for shop_name={si.shop_name} with shop_link={si.shop_link}')
                 task = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == si.shop_name,
                                                           ShopSearchCrawlTask.update_ts > shop_search_start_ts).order_by(
                     ShopSearchCrawlTask.update_ts).limit(1)
@@ -154,8 +156,8 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
         # 处理无销售数量问题，同时添加搜索任务和店铺任务
         if pi.display_sale == -1 or pi.estimated_revenue == -1:
             # 添加搜索任务
-            logger.info(f'handle display_sale for product_id={pi.product_id}')
             if fix_product_sale and fix_product_sale_by_search:
+                logger.info(f'handle display_sale issue by search for product_id={pi.product_id}')
                 # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
                 tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == pi.product_title,
                                                        SearchCrawlTask.status != TASK_STATUS_DONE,
@@ -172,6 +174,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
                     add_search_crawl_task(pi.product_title, 1, [pi.product_id], None, update_id, update_role)
             # 同时也添加店铺搜索任务
             if fix_product_sale and fix_product_sale_by_shop:
+                logger.info(f'handle display_sale issue by shop for product_id={pi.product_id}')
                 # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
                 tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
                                                      ShopCrawlTask.status != TASK_STATUS_DONE,
@@ -194,6 +197,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
                 tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == pi.product_id,
                                                       LLMAnalyzeTask.update_ts > llm_start_ts).order_by(
                     LLMAnalyzeTask.update_ts)
+                logger.info(f'handle LLM analysis for product_id={pi.product_id}, product_title={pi.product_title}')
                 if tasks.count() == 0:
                     add_llm_analyze_task(pi.product_id, pi.product_title, None, update_id, update_role)
 
@@ -303,13 +307,14 @@ def run_all_in_one_crawler_task(update_id):
     run_shop_search_crawler_task(update_id)
     run_shop_crawler_tasks(update_id)
     run_llm_analyze_tasks(update_id)
+    run_detail_crawler_tasks(update_id)
 
 
 # 返回是否继续执行这个task
 def handle_error_task(task, update_id):
     ts = int(time.time())
     if task.try_count >= TASK_RETRY_BEFORE_ARCHIVED:
-        # set task status to TASK_STATUS_ARCHIVED if try count >= TASK_RETRY_BEFORE_ARCHIVED, it's the 11th run.
+        # set task status to TASK_STATUS_ARCHIVED if try count >= TASK_RETRY_BEFORE_ARCHIVED
         update_task_info(task, update_id, TASK_STATUS_ARCHIVED)
         return False
     if task.status == TASK_STATUS_ERROR and task.update_ts > ts - TASK_RETRY_WAIT_IN_SECONDS:
