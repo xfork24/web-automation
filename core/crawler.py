@@ -28,7 +28,7 @@ DETAIL_PAGE_WAIT_IN_SECONDS = 5
 SHOP_PAGE_WAIT_IN_SECONDS = 5
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
-SHOP_PAGE_MAX_SKU_NUM = 500
+SHOP_PAGE_MAX_SKU_NUM = 100
 
 # search page related controls
 SEARCH_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
@@ -449,7 +449,11 @@ def craw_taobao_shop_page(shop_link, sale_order, update_id, target_product_ids=N
         if re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
             sku_divs.append(div)
         elif re.match(SHOP_NAME_RE_EXP, cls_name):
-            shop_name = div.find_element(By.XPATH, 'span').text
+            child_spans = div.find_elements(By.XPATH, 'span')
+            if len(child_spans) == 0:
+                shop_name = div.text
+            else:
+                shop_name = child_spans[0].text
     assert (shop_name is not None)
     update_shop_info(shop_name, update_id, craw_taobao_shop_page.__name__, shop_link, None)
     for sku_div in sku_divs:
@@ -466,8 +470,6 @@ def load_shop_and_products(shop_link, sale_order):
     logger.info(f'navigate to shop_link={shop_link} and wait for seconds')
     Driver.get(shop_link)
     time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
-    num_of_skus = 0
-    sku_exceeded = False
     if len(Driver.find_elements(By.ID, 'banner')) > 0 and len(Driver.find_elements(By.ID, 'err')) > 0:
         tip = Driver.find_element(By.ID, 'err').find_elements(By.XPATH, 'div/p')[0].text
         if tip == '抱歉！页面无法访问……':
@@ -491,6 +493,8 @@ def load_shop_and_products(shop_link, sale_order):
                 break
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
+        num_of_skus = 0
+        sku_exceeded = False
         load_more_flag_div = None
         loaded = False
         for div in divs:
