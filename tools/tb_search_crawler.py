@@ -6,7 +6,6 @@ from core import *
 
 SEARCH_KEYS = ['哪吒咤2之魔童闹海']
 NUM_OF_PAGES_TO_PARSE = 1
-SALE_ORDER = False
 UPDATE_ID = 'tb_search_crawler'
 LOG_FILE_NAME = './logs/tb_search_crawler.log'
 
@@ -17,7 +16,7 @@ def main():
     login_taobao()
     for key in SEARCH_KEYS:
         try:
-            crawl_taobao_search_results(key, NUM_OF_PAGES_TO_PARSE, SALE_ORDER, UPDATE_ID)
+            crawl_taobao_search_results(key, NUM_OF_PAGES_TO_PARSE, SEARCH_SALE_ORDER, UPDATE_ID)
         except Exception as e:
             logger.error(f'get unhandled exception {e}, just continue')
             traceback.print_exc()

@@ -21,7 +21,8 @@ TASK_RETRY_WAIT_IN_SECONDS = 3600
 TASK_RETRY_BEFORE_ARCHIVED = 5
 SEARCH_CRAWL_GAP_IN_SECONDS = 10
 SEARCH_SCAN_NAP_IN_SECONDS = 60
-SALE_ORDER = False
+SEARCH_SALE_ORDER = False
+SHOP_SALE_ORDER = False
 SHOP_CRAWL_GAP_IN_SECONDS = 10
 SHOP_SCAN_NAP_IN_SECONDS = 60
 SHOP_SEARCH_CRAWL_GAP_IN_SECONDS = 10
@@ -341,7 +342,7 @@ def run_search_crawler_task(update_id):
             logger.info(
                 f'handling search crawl task id={task.id} with search_key={task.search_key}, num_of_pages={task.num_of_pages}, target_product_ids={task.target_product_ids}')
             target_product_ids = json_loads(task.target_product_ids)
-            crawl_taobao_search_results(task.search_key, task.num_of_pages, SALE_ORDER, task.id,
+            crawl_taobao_search_results(task.search_key, task.num_of_pages, SEARCH_SALE_ORDER, task.id,
                                         target_product_ids)
         except Exception:
             logger.error(
@@ -374,7 +375,7 @@ def run_shop_crawler_tasks(update_id):
                 f'handling shop crawl task id={task.id} with shop_name={task.shop_name}, target_product_ids={task.target_product_ids}')
             shop = ShopInfo.get(ShopInfo.shop_name == task.shop_name)
             target_product_ids = json_loads(task.target_product_ids)
-            craw_taobao_shop_page(shop.shop_link, task.id, target_product_ids)
+            craw_taobao_shop_page(shop.shop_link, SHOP_SALE_ORDER, task.id, target_product_ids)
         except DoesNotExist:
             logger.error(f'shop_info record with shop_name={task.shop_name} does not exist, just continue')
             update_task_info(task, update_id, TASK_STATUS_ERROR,
@@ -389,11 +390,6 @@ def run_shop_crawler_tasks(update_id):
             logger.error(f'shop link can not be accessed now, shop_name={task.shop_name}, just continue')
             update_task_info(task, update_id, TASK_STATUS_ERROR,
                              err_code=TASK_FAILED_SHOP_LINK_NOT_FOUND)
-            continue
-        except ShopSkuNumExceeded:
-            logger.error(f'num of sku items in shop_name={task.shop_name} exceeds limit, just continue')
-            update_task_info(task, update_id, TASK_STATUS_ERROR,
-                             err_code=TASK_FAILED_SHOP_SKU_EXCEEDS_LIMIT)
             continue
         except Exception:
             logger.error(

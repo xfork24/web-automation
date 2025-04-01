@@ -46,6 +46,7 @@ SHOP_LOAD_MORE_FLAG_RE_EXP = re.compile('^loadmoreFlag--\\w+')
 SHOP_SKU_CARD_TITLE_RE_EXP = re.compile('^title--\\w+')
 SHOP_SKU_CARD_PRICE_RE_EXP = re.compile('^price--\\w+')
 SHOP_SKU_CARD_SALE_RE_EXP = re.compile('^count--\\w+')
+SHOP_SALE_ORDER_TAGS_RE_EXP = re.compile('^tagsContainer--\\w+')
 SEARCH_SKU_SALE_RE_EXP = re.compile('^realSales--\\w+')
 
 # shop search related controls
@@ -435,9 +436,9 @@ def save_taobao_search_result(product_id, sku_id, product_title, product_link, p
                      update_id, update_role)
 
 
-def craw_taobao_shop_page(shop_link, update_id, target_product_ids=None):
+def craw_taobao_shop_page(shop_link, sale_order, update_id, target_product_ids=None):
     logger = get_logger()
-    load_shop_and_products(shop_link)
+    load_shop_and_products(shop_link, sale_order)
     divs = Driver.find_elements(By.XPATH, '//div')
     shop_name = None
     sku_divs = []
@@ -460,12 +461,13 @@ def craw_taobao_shop_page(shop_link, update_id, target_product_ids=None):
             continue
 
 
-def load_shop_and_products(shop_link):
+def load_shop_and_products(shop_link, sale_order):
     logger = get_logger()
     logger.info(f'navigate to shop_link={shop_link} and wait for seconds')
     Driver.get(shop_link)
     time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
     num_of_skus = 0
+    sku_exceeded = False
     if len(Driver.find_elements(By.ID, 'banner')) > 0 and len(Driver.find_elements(By.ID, 'err')) > 0:
         tip = Driver.find_element(By.ID, 'err').find_elements(By.XPATH, 'div/p')[0].text
         if tip == '抱歉！页面无法访问……':
@@ -473,6 +475,20 @@ def load_shop_and_products(shop_link):
             msg = f'shop_link={shop_link} can not be accessed now'
             logger.error(msg)
             raise ShopLinkNotFound(msg)
+    # 如果找到销量排序按钮，点击按销量排序
+    if sale_order:
+        divs = Driver.find_elements(By.XPATH, '//div')
+        for div in divs:
+            cls_name = div.get_attribute('class')
+            if cls_name is None:
+                continue
+            if re.match(SHOP_SALE_ORDER_TAGS_RE_EXP, cls_name):
+                tag_divs = div.find_elements(By.XPATH, 'div/div')
+                for tag_div in tag_divs:
+                    if tag_div.find_element(By.XPATH, 'span').text == '销量':
+                        element_click(tag_div)
+                        break
+                break
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
         load_more_flag_div = None
@@ -484,14 +500,17 @@ def load_shop_and_products(shop_link):
             if re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
                 num_of_skus += 1
                 if num_of_skus > SHOP_PAGE_MAX_SKU_NUM:
-                    raise ShopSkuNumExceeded()
+                    logger.info('not scrolled to the end of shop page, max sku exceeded')
+                    sku_exceeded = True
+                    break
             if re.match(SHOP_LOAD_STATUS_RE_EXP, cls_name):
                 if div.text == '没有更多商品':
+                    logger.info('scrolled to the end of shop page')
                     loaded = True
                     break
             elif re.match(SHOP_LOAD_MORE_FLAG_RE_EXP, cls_name):
                 load_more_flag_div = div
-        if loaded:
+        if loaded or sku_exceeded:
             scroll_window((0, 0))
             break
         # 有些特殊店铺没有 load_more_flag_div, 会触发此处断言。这种店铺是完全定制的页面（非淘宝模板）
@@ -509,9 +528,10 @@ def craw_taobao_shop_sku(shop_sku_div, shop_name, shop_link, update_id, target_p
     target_product_ids = target_product_ids or []
     product_link = shop_sku_div.find_element(By.XPATH, 'a').get_attribute('href')
     product_id = parse_product_id_from_product_link(product_link)
-    if len(target_product_ids) > 0 and product_id not in target_product_ids:
-        logger.info(f'parsed product_id={product_id} not in target_product_ids, ignore this product')
-        return
+    if len(target_product_ids) == 0 or product_id in target_product_ids:
+        logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
+    else:
+        logger.info(f'parsed product_id={product_id} not in target_product_ids={target_product_ids}, crawl it too')
     scroll_window_to_element(shop_sku_div)
     product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
     sku_id = parse_sku_id_from_product_link(product_link) or ''

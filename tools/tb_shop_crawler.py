@@ -16,7 +16,7 @@ def main():
     logger = get_logger()
     login_taobao()
     try:
-        craw_taobao_shop_page(SHOP_LINK, UPDATE_ID, PRODUCT_IDS)
+        craw_taobao_shop_page(SHOP_LINK, SHOP_SALE_ORDER, UPDATE_ID, PRODUCT_IDS)
     except Exception as e:
         logger.error(f'get unhandled exception {e}, just continue')
         traceback.print_exc()
