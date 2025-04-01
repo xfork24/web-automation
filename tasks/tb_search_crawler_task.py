@@ -12,6 +12,6 @@ if __name__ == '__main__':
     login_taobao()
     while True:
         # scan search_crawl_task and get all unfinished tasks
-        task_ts = run_search_crawler_task(UPDATE_ID)
-        analyze_and_generate_fix_tasks(task_ts, UPDATE_ID)
+        run_search_crawler_task(UPDATE_ID)
+        analyze_and_generate_fix_tasks(UPDATE_ID)
         time.sleep(SEARCH_SCAN_NAP_IN_SECONDS)

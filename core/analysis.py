@@ -6,12 +6,13 @@ from pathlib import Path
 from core.llm import *
 from core.crawler import *
 
-# 各任务的去重检查周期，所有任务都是检查所有（100年），通过自动归档机制自动处理
-TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 3153600000
-TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 3153600000
-TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 3153600000
-TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 3153600000
-TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 3153600000
+# 各任务的去重检查周期，所有任务都是检查所有（10年），通过自动归档机制自动处理
+TB_ISSUE_CHECK_PERIOD_IN_SECONDS = 315360000
+TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
+TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
+TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
+TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
+TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 315360000
 # hot product 日更（1天减去5分钟）
 TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 86100
 
@@ -121,7 +122,7 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
 # 1. display_sale和estimated_revenue为-1，表示我们目前没获取到这些信息
 # 2. 缺失大模型分析结果，默认所有商品信息都没有这个信息
 # 通过生成对应task的方式来获取这些信息
-def analyze_and_generate_fix_tasks(batch_ts, update_id,
+def analyze_and_generate_fix_tasks(update_id,
                                    fix_shop_title=True,
                                    fix_product_sale=True,
                                    fix_product_sale_by_search=False,
@@ -134,7 +135,8 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
     if fix_shop_title:
         logger.info('handling shop issues with invalid link ...')
         shop_search_start_ts = ts - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
-        si_query = ShopInfo.select().where(ShopInfo.update_ts > batch_ts).order_by(ShopInfo.update_ts)
+        si_query = ShopInfo.select().where(ShopInfo.update_ts > ts - TB_ISSUE_CHECK_PERIOD_IN_SECONDS).order_by(
+            ShopInfo.update_ts)
         for si in si_query:
             shop_link_match = False
             for reg_exp in SHOP_LINK_KNOWN_RE_EXP_LIST:
@@ -152,7 +154,7 @@ def analyze_and_generate_fix_tasks(batch_ts, update_id,
     logger.info('handling product issues with display_sale==-1 or estimated_revenue==-1 ...')
     search_start_ts = ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
     shop_start_ts = ts - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
-    pi_query = ProductInfo.select().where(ProductInfo.update_ts > batch_ts).order_by(
+    pi_query = ProductInfo.select().where(ProductInfo.update_ts > ts - TB_ISSUE_CHECK_PERIOD_IN_SECONDS).order_by(
         ProductInfo.update_ts)
     for pi in pi_query:
         # 处理无销售数量问题，同时添加搜索任务和店铺任务
@@ -305,8 +307,8 @@ def download_hot_product_resources(force_download=False):
 
 
 def run_all_in_one_crawler_task(update_id):
-    task_ts = run_search_crawler_task(update_id)
-    analyze_and_generate_fix_tasks(task_ts, update_id)
+    run_search_crawler_task(update_id)
+    analyze_and_generate_fix_tasks(update_id)
     run_shop_search_crawler_task(update_id)
     run_shop_crawler_tasks(update_id)
     run_llm_analyze_tasks(update_id)
