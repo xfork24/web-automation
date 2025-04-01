@@ -189,6 +189,7 @@
       }
     }
   });
+  table.setPageSize(7);
 </script>
 
 <div class="w-full">
