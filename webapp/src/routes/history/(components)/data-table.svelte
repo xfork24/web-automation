@@ -142,6 +142,8 @@
             ops = 'CREATE';
           } else if (operation === 2) {
             ops = 'UPDATE';
+          } else if (operation === 3) {
+            ops = "DELETE";
           }
           return {
             render: () => `<div>${ops}</div>`

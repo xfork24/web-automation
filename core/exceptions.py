@@ -9,5 +9,9 @@ class NotStandardShop(RuntimeError):
     pass
 
 
+class ShopLinkNotFound(RuntimeError):
+    pass
+
+
 class ShopSkuNumExceeded(RuntimeError):
     pass

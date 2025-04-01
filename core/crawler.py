@@ -465,6 +465,13 @@ def load_shop_and_products(shop_link):
     Driver.get(shop_link)
     time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
     num_of_skus = 0
+    if len(Driver.find_elements(By.ID, 'banner')) > 0 and len(Driver.find_elements(By.ID, 'err')) > 0:
+        tip = Driver.find_element(By.ID, 'err').find_elements(By.XPATH, 'div/p')[0].text
+        if tip == '抱歉！页面无法访问……':
+            # "抱歉！页面无法访问" 页面
+            msg = f'shop_link={shop_link} can not be accessed now'
+            logger.error(msg)
+            raise ShopLinkNotFound(msg)
     while True:
         divs = Driver.find_elements(By.XPATH, '//div')
         load_more_flag_div = None

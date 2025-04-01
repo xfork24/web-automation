@@ -385,6 +385,11 @@ def run_shop_crawler_tasks(update_id):
             update_task_info(task, update_id, TASK_STATUS_ERROR,
                              err_code=TASK_FAILED_SHOP_NOT_STANDARD)
             continue
+        except ShopLinkNotFound:
+            logger.error(f'shop link can not be accessed now, shop_name={task.shop_name}, just continue')
+            update_task_info(task, update_id, TASK_STATUS_ERROR,
+                             err_code=TASK_FAILED_SHOP_LINK_NOT_FOUND)
+            continue
         except ShopSkuNumExceeded:
             logger.error(f'num of sku items in shop_name={task.shop_name} exceeds limit, just continue')
             update_task_info(task, update_id, TASK_STATUS_ERROR,
