@@ -11,6 +11,7 @@ export const load = async () => {
     });
     let body = await response.json();
     body.data.forEach((item: SearchCrawlTask) => {
+      item.target_product_ids_str = JSON.stringify(item.target_product_ids);
       item.status_str = statusToString(item.status);
       item.reason = parseTaskReason(item);
     });

@@ -19,7 +19,7 @@ TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 86100
 # 各任务的等待配置
 TASK_SCAN_WAIT_IN_SECONDS = 60
 TASK_RETRY_WAIT_IN_SECONDS = 3600
-TASK_RETRY_BEFORE_ARCHIVED = 5
+TASK_RETRY_BEFORE_ARCHIVED = 10
 SEARCH_CRAWL_GAP_IN_SECONDS = 10
 SEARCH_SCAN_NAP_IN_SECONDS = 60
 SEARCH_SALE_ORDER = False
@@ -195,7 +195,6 @@ def analyze_and_generate_fix_tasks(update_id,
                     add_shop_crawl_task(pi.shop_name, [pi.product_id], None, update_id, update_role)
         # 处理llm_analysis缺失问题，我们不用batch的方式，便于检查任务是否存在，在执行任务时进行batch
         if fix_llm_analysis:
-            logger.info('handling product issues with empty LLM analysis ...')
             llm_start_ts = ts - TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS
             if LLM_ANALYSIS_KEY not in json_loads(pi.additional_properties):
                 tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == pi.product_id,

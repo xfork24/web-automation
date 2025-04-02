@@ -120,6 +120,7 @@ export type SearchCrawlTask = {
   reason: string;
   try_count: number;
   target_product_ids: string[];
+  target_product_ids_str: string;
   additional_properties: AdditionalProperties;
   create_ts: number;
   update_ts: number;
@@ -135,6 +136,7 @@ export type ShopCrawlTask = {
   reason: string;
   try_count: number;
   target_product_ids: string[];
+  target_product_ids_str: string;
   additional_properties: AdditionalProperties;
   create_ts: number;
   update_ts: number;

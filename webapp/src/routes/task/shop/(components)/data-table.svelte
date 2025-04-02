@@ -125,7 +125,7 @@
   let sorting = $state<SortingState>([]);
   let columnFilters = $state<ColumnFiltersState>([]);
   let rowSelection = $state<RowSelectionState>({});
-  let columnVisibility = $state<VisibilityState>({'Operator ID': false});
+  let columnVisibility = $state<VisibilityState>({'Operator ID': false, 'Product IDs': false});
 
 
   export const columns: ColumnDef<ShopCrawlTask>[] = [
@@ -192,6 +192,11 @@
         });
         return renderSnippet(statusSnippet, row.getValue('Target Product IDs'));
       }
+    },
+    {
+      id: 'Product IDs',
+      accessorKey: 'target_product_ids_str',
+      header: 'Product IDs',
     },
     {
       id: 'Status',
@@ -356,7 +361,7 @@
   const filter_fields = [
     {value: 'id', label: 'ID'},
     {value: 'shop_name', label: 'Shop Name'},
-    {value: 'target_product_ids', label: 'Target Product IDs'},
+    {value: 'target_product_ids_str', label: 'Product IDs'},
     {value: 'status', label: 'Status'},
     {value: 'reason', label: 'Reason'}
   ];

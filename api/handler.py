@@ -211,7 +211,7 @@ def get_shop_by_name(shop_name):
         return build_server_error_response(msg)
 
 
-@api.delete('/api/v1/product/<shop_name>')
+@api.delete('/api/v1/shop/<shop_name>')
 def delete_shop_by_name(shop_name):
     logger = get_logger()
     try:
