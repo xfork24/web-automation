@@ -6,6 +6,7 @@ from pathlib import Path
 from core.llm import *
 from core.crawler import *
 
+# 区分自动修复任务与手动添加任务，前者只要DEDUP期间有则不添加（无论状态），后者只要无非终止状态的就添加（无论时间）
 # 各任务的执行检查周期，所有任务都是检查所有（10年），通过自动归档机制自动处理
 TB_ISSUE_CHECK_PERIOD_IN_SECONDS = 315360000
 TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
@@ -17,6 +18,7 @@ TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 315360000
 # 在考虑归档检查的前提下，任务仍然有可能会重复触发，但实际无需每次都跑，
 # 比如店铺抓取，同样的店铺几天内抓过（不管是否成功，不成功会重试），则不再重复抓
 # 再比如我们现在的抓取策略并不清楚在搜索页和店铺页是否抓到目标商品，且商品信息是否得到修复
+# 自动任务的添加去重周期：7天
 TB_SEARCH_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
 TB_SHOP_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
 TB_DETAIL_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
@@ -60,10 +62,10 @@ TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS = 3
 # 同样的search_key忽略num_of_pages的不同，认为任务存在，无视任务的状态
 def analyze_and_add_search_crawl_tasks(search_key, num_of_pages, update_id):
     logger = get_logger()
-    start_ts = int(time.time()) - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
     query = SearchCrawlTask.select().where(SearchCrawlTask.search_key == search_key,
-                                           SearchCrawlTask.update_ts > start_ts).order_by(
-        SearchCrawlTask.update_ts).limit(1)
+                                           SearchCrawlTask.status != TASK_STATUS_DONE,
+                                           SearchCrawlTask.status != TASK_STATUS_ARCHIVED).order_by(
+        SearchCrawlTask.update_ts.desc()).limit(1)
     if query.count() > 0:
         logger.info(
             f'search crawl task id={query[0].id} already exist for search_key={search_key}, just ignore')
@@ -76,7 +78,6 @@ def analyze_and_add_search_crawl_tasks(search_key, num_of_pages, update_id):
 def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
                                      revenue_threshold=TB_SHOP_REVENUE_THRESHOLD):
     logger = get_logger()
-    start_ts = int(time.time()) - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
     pi_query = ProductInfo.select(ProductInfo.shop_name,
                                   fn.AVG(ProductInfo.display_price).alias('avg_price'),
                                   fn.SUM(ProductInfo.display_sale).alias('total_sale'),
@@ -88,8 +89,9 @@ def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
             break
         idx += 1
         query = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
-                                             ShopCrawlTask.update_ts > start_ts).order_by(
-            ShopCrawlTask.update_ts).limit(1)
+                                             ShopCrawlTask.status != TASK_STATUS_DONE,
+                                             ShopCrawlTask.status != TASK_STATUS_ARCHIVED).order_by(
+            ShopCrawlTask.update_ts.desc()).limit(1)
         if query.count() > 0:
             logger.info(
                 f'shop crawl task id={query[0].id} already exist for shop_name={pi.shop_name}, just ignore')
@@ -107,7 +109,6 @@ def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
 def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
                                        revenue_threshold=TB_SKU_REVENUE_THRESHOLD):
     logger = get_logger()
-    start_ts = int(time.time()) - TB_DETAIL_CRAWL_TASK_DEDUP_IN_SECONDS
     pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
     idx = 0
     for pi in pi_query:
@@ -116,7 +117,8 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
             break
         idx += 1
         query = DetailCrawlTask.select().where(DetailCrawlTask.product_id == pi.product_id,
-                                               DetailCrawlTask.update_ts > start_ts).order_by(
+                                               DetailCrawlTask.status != TASK_STATUS_DONE,
+                                               DetailCrawlTask.status != TASK_STATUS_ARCHIVED).order_by(
             DetailCrawlTask.update_ts).limit(1)
         if query.count() > 0:
             logger.info(

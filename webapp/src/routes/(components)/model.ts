@@ -238,11 +238,13 @@ export function parseTaskReason(task: any) {
       } else if (max === 4) {
         v = 'SHOP_NOT_EXIST';
       } else if (max === 5) {
-        v = 'SHOP_LINK_NOT_FOUND';
+        v = 'SHOP_LINK_NOT_ACCESSIBLE';
       } else if (max === 6) {
         v = 'SHOP_NOT_FOUND_IN_SEARCH';
+      } else if (max === 7) {
+        v = 'SHOP_LINK_NOT_FOUND';
       } else {
-        v = 'UNDEFINED';
+        v = 'UNKNOWN'
       }
       return `${v}[${counts.get(max)!}]`;
     }
