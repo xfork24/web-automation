@@ -6,14 +6,24 @@ from pathlib import Path
 from core.llm import *
 from core.crawler import *
 
-# 各任务的去重检查周期，所有任务都是检查所有（10年），通过自动归档机制自动处理
+# 各任务的执行检查周期，所有任务都是检查所有（10年），通过自动归档机制自动处理
 TB_ISSUE_CHECK_PERIOD_IN_SECONDS = 315360000
 TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
 TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
 TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
 TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
 TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 315360000
-# hot product 日更（1天减去5分钟）
+
+# 在考虑归档检查的前提下，任务仍然有可能会重复触发，但实际无需每次都跑，
+# 比如店铺抓取，同样的店铺几天内抓过（不管是否成功，不成功会重试），则不再重复抓
+# 再比如我们现在的抓取策略并不清楚在搜索页和店铺页是否抓到目标商品，且商品信息是否得到修复
+TB_SEARCH_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
+TB_SHOP_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
+TB_DETAIL_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
+TB_SHOP_SEARCH_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
+TB_LLM_ANALYZE_TASK_DEDUP_IN_SECONDS = 604800
+
+# hot product 生成去重检查，日更（1天减去5分钟）
 TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 86100
 
 # 各任务的等待配置
@@ -97,7 +107,7 @@ def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
 def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
                                        revenue_threshold=TB_SKU_REVENUE_THRESHOLD):
     logger = get_logger()
-    start_ts = int(time.time()) - TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS
+    start_ts = int(time.time()) - TB_DETAIL_CRAWL_TASK_DEDUP_IN_SECONDS
     pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
     idx = 0
     for pi in pi_query:
@@ -134,7 +144,6 @@ def analyze_and_generate_fix_tasks(update_id,
     # 处理可能的店铺问题
     if fix_shop_title:
         logger.info('handling shop issues with invalid link ...')
-        shop_search_start_ts = ts - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
         si_query = ShopInfo.select().where(ShopInfo.update_ts > ts - TB_ISSUE_CHECK_PERIOD_IN_SECONDS).order_by(
             ShopInfo.update_ts)
         for si in si_query:
@@ -145,15 +154,12 @@ def analyze_and_generate_fix_tasks(update_id,
                     break
             if not shop_link_match:
                 logger.info(f'handle shop link issue for shop_name={si.shop_name} with shop_link={si.shop_link}')
-                task = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == si.shop_name,
-                                                          ShopSearchCrawlTask.status != TASK_STATUS_DONE,
-                                                          ShopSearchCrawlTask.update_ts > shop_search_start_ts).order_by(
-                    ShopSearchCrawlTask.update_ts)
-                if task.count() == 0:
+                tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == si.shop_name,
+                                                           ShopSearchCrawlTask.update_ts > ts - TB_SHOP_SEARCH_CRAWL_TASK_DEDUP_IN_SECONDS).order_by(
+                    ShopSearchCrawlTask.update_ts.desc())
+                if tasks.count() == 0:
                     add_shop_search_crawl_task(si.shop_name, None, update_id, update_role)
     logger.info('handling product issues with display_sale==-1 or estimated_revenue==-1 ...')
-    search_start_ts = ts - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
-    shop_start_ts = ts - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
     pi_query = ProductInfo.select().where(ProductInfo.update_ts > ts - TB_ISSUE_CHECK_PERIOD_IN_SECONDS).order_by(
         ProductInfo.update_ts)
     for pi in pi_query:
@@ -164,11 +170,9 @@ def analyze_and_generate_fix_tasks(update_id,
                 logger.info(f'handle display_sale issue by search for product_id={pi.product_id}')
                 # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
                 tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == pi.product_title,
-                                                       SearchCrawlTask.status != TASK_STATUS_DONE,
-                                                       SearchCrawlTask.update_ts > search_start_ts).order_by(
-                    SearchCrawlTask.update_ts)
+                                                       SearchCrawlTask.update_ts > ts - TB_SEARCH_CRAWL_TASK_DEDUP_IN_SECONDS).order_by(
+                    SearchCrawlTask.update_ts.desc())
                 if len(tasks) > 0:
-                    assert (len(tasks) == 1)
                     target_product_ids = json_loads(tasks[0].target_product_ids)
                     if len(target_product_ids) > 0:
                         if pi.product_id not in target_product_ids:
@@ -181,11 +185,9 @@ def analyze_and_generate_fix_tasks(update_id,
                 logger.info(f'handle display_sale issue by shop for product_id={pi.product_id}')
                 # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
                 tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
-                                                     ShopCrawlTask.status != TASK_STATUS_DONE,
-                                                     ShopCrawlTask.update_ts > shop_start_ts).order_by(
-                    ShopCrawlTask.update_ts)
+                                                     ShopCrawlTask.update_ts > ts - TB_SHOP_CRAWL_TASK_DEDUP_IN_SECONDS).order_by(
+                    ShopCrawlTask.update_ts.desc())
                 if len(tasks) > 0:
-                    assert (len(tasks) == 1)
                     target_product_ids = json_loads(tasks[0].target_product_ids)
                     if len(target_product_ids) > 0:
                         if pi.product_id not in target_product_ids:
@@ -195,12 +197,11 @@ def analyze_and_generate_fix_tasks(update_id,
                     add_shop_crawl_task(pi.shop_name, [pi.product_id], None, update_id, update_role)
         # 处理llm_analysis缺失问题，我们不用batch的方式，便于检查任务是否存在，在执行任务时进行batch
         if fix_llm_analysis:
-            llm_start_ts = ts - TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS
+            llm_start_ts = ts - TB_LLM_ANALYZE_TASK_DEDUP_IN_SECONDS
             if LLM_ANALYSIS_KEY not in json_loads(pi.additional_properties):
                 tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == pi.product_id,
-                                                      LLMAnalyzeTask.status != TASK_STATUS_DONE,
                                                       LLMAnalyzeTask.update_ts > llm_start_ts).order_by(
-                    LLMAnalyzeTask.update_ts)
+                    LLMAnalyzeTask.update_ts.desc())
                 logger.info(f'handle LLM analysis for product_id={pi.product_id}, product_title={pi.product_title}')
                 if tasks.count() == 0:
                     add_llm_analyze_task(pi.product_id, pi.product_title, None, update_id, update_role)

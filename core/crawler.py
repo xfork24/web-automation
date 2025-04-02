@@ -160,6 +160,20 @@ def element_click(element):
     time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
 
 
+def switch_to_frame(iframe):
+    logger = get_logger()
+    logger.info(f'switch to iframe={iframe.accessible_name} and wait for seconds')
+    Driver.switch_to.frame(iframe)
+    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+
+def switch_to_default():
+    logger = get_logger()
+    logger.info(f'switch to default frame and wait for seconds')
+    Driver.switch_to.default_content()
+    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+
 def parse_product_id_from_item(item_id):
     assert (item_id is not None and item_id.rfind('_') != -1)
     product_id = item_id[item_id.rfind('_') + 1:]
@@ -335,10 +349,10 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
         logger.info(f'parsing search result: {search_result.accessible_name}')
         product_id = parse_product_id_from_item(search_result.get_attribute('id'))
         target_product_ids = target_product_ids or []  # None表示不限制target product id
-        if len(target_product_ids) > 0 and product_id not in target_product_ids:
-            logger.info(
-                f'product_id={product_id} not in target_product_ids={target_product_ids}, just ignore and return')
-            return
+        if len(target_product_ids) == 0 or product_id in target_product_ids:
+            logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
+        else:
+            logger.info(f'parsed product_id={product_id} not in target_product_ids={target_product_ids}, crawl it too')
         product_link = search_result.get_attribute('href')
         sku_id = parse_sku_id_from_product_link(product_link) or '0'
         product_items = search_result.find_elements(By.XPATH, 'div/div')
