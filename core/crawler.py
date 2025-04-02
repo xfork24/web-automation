@@ -238,12 +238,13 @@ def is_valid_image_link(link):
 
 
 def handle_taobao_login_page():
+    global Driver
     logger = get_logger()
-    logger.info('navigate to taobao login page and wait in seconds')
-    Driver.get(TB_LOGIN_PAGE)
-    time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
     while True:
         try:
+            logger.info('navigate to taobao login page and wait in seconds')
+            Driver.get(TB_LOGIN_PAGE)
+            time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
             user_input = Driver.find_element(By.ID, 'fm-login-id')
             passwd_input = Driver.find_element(By.ID, 'fm-login-password')
             login_button = Driver.find_element(By.CLASS_NAME, 'fm-btn').find_element(By.XPATH, 'button')
@@ -253,6 +254,15 @@ def handle_taobao_login_page():
             passwd_input.clear()
             passwd_input.send_keys(TB_PASSWORD)
             element_click(login_button)
+            # check whether slide check is required
+            try:
+                Driver.find_element(By.XPATH, '//*[@id="baxia-dialog-content"]')
+                logger.info('slide check needed, just try to bypass it by reinitialize webdriver')
+                close_driver()
+                Driver = init_webdriver(WebDriverType.ChromDriver)
+                continue
+            except NoSuchElementException:
+                logger.info('do not need slide check this time, just continue')
             time.sleep(LOGIN_CONFIRM_WAIT_IN_SECONDS)
             break
         except NoSuchElementException:
