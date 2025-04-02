@@ -19,3 +19,7 @@ class ShopLinkNotFound(RuntimeError):
 
 class ShopNotFoundInSearch(RuntimeError):
     pass
+
+
+class LoginFailed(RuntimeError):
+    pass

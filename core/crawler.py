@@ -23,6 +23,7 @@ TB_SHOP_BROWSE_TITLE_NAME = '店铺浏览-淘宝网'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_LOGIN_AUTH_TITLE_NAME = '登录-身份验证'
 LOGIN_CHECK_WAIT_IN_SECONDS = 5
+LOGIN_RETRY_MAX_NUM = 5
 LOGIN_CONFIRM_WAIT_IN_SECONDS = 15
 SEARCH_WAIT_IN_SECONDS = 5
 DETAIL_PAGE_WAIT_IN_SECONDS = 5
@@ -240,8 +241,14 @@ def is_valid_image_link(link):
 def handle_taobao_login_page():
     global Driver
     logger = get_logger()
+    try_count = 0
     while True:
         try:
+            try_count += 1
+            if try_count >= LOGIN_RETRY_MAX_NUM:
+                msg = 'login retry max count exceeded, login failed.'
+                logger.error(msg)
+                raise LoginFailed(msg)
             logger.info('navigate to taobao login page and wait in seconds')
             Driver.get(TB_LOGIN_PAGE)
             time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
