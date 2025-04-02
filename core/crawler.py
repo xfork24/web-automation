@@ -32,6 +32,7 @@ DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 SHOP_PAGE_MAX_SKU_NUM = 100
 SHOP_PAGE_LOAD_MAX_COUNT = 10
+SHOP_PAGE_PRODUCT_COVER_TRY_COUNT = 3
 
 # search page related controls
 SEARCH_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
@@ -73,6 +74,9 @@ DETAIL_PRICE_VAL_RE_EXP = re.compile('^text--\\w+')
 DETAIL_MAIN_IMGS_SINGLE_IMG_V8_RE_EXP = re.compile('^descV8-singleImage$')
 DETAIL_MAIN_IMGS_RICHTEXT_V8_RE_EXP = re.compile('^descV8-richtext$')
 DETAIL_IMG_LINK_VALIDATE_RE_EXP = re.compile('^https://\\w+')
+
+# others
+SHOP_PRODUCT_COVER_PLACEHOLDER_LINK = 'https://gw.alicdn.com/imgextra/i4/O1CN01CYtPWu1MUBqQAUK9D_!!6000000001437-2-tps-2-2.png'
 
 
 class WebDriverType(Enum):
@@ -588,8 +592,11 @@ def craw_taobao_shop_sku(shop_sku_div, shop_name, shop_link, update_id, target_p
         logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
     else:
         logger.info(f'parsed product_id={product_id} not in target_product_ids={target_product_ids}, crawl it too')
-    scroll_window_to_element(shop_sku_div)
-    product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
+    for _ in range(SHOP_PAGE_PRODUCT_COVER_TRY_COUNT):
+        scroll_window_to_element(shop_sku_div)
+        product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
+        if product_cover != SHOP_PRODUCT_COVER_PLACEHOLDER_LINK:
+            break
     sku_id = parse_sku_id_from_product_link(product_link) or ''
     divs = shop_sku_div.find_elements(By.XPATH, './/div')
     title_div, price_div, sale_div = None, None, None
