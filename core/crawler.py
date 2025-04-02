@@ -191,6 +191,10 @@ def parse_product_id_from_product_link(link):
         return None
 
 
+def parse_product_title(title):
+    return title.replace('̷', '')
+
+
 def parse_sku_id_from_product_link(link):
     result = urlparse(link)
     qs = parse_qs(result.query)
@@ -396,12 +400,12 @@ def parse_taobao_search_result(search_result, ids_set, update_id, target_product
             elif re.match(SEARCH_IMAGE_WRAPPER_RE_EXP, cls_name):
                 image_wrapper = item
         assert (sku_title_wrapper is not None and price_wrapper is not None and image_wrapper is not None)
-        product_title = sku_title_wrapper.find_element(By.XPATH, 'div/span').text
+        product_title = parse_product_title(sku_title_wrapper.find_element(By.XPATH, 'div/span').text)
         if len(product_title) == 0:
             title_spans = sku_title_wrapper.find_elements(By.XPATH, 'div/span/span')
             if len(title_spans) > 0:
                 for title_span in title_spans:
-                    product_title += title_span.text
+                    product_title += parse_product_title(title_span.text)
         product_cover = image_wrapper.find_element(By.XPATH, 'img').get_attribute('src')
         price_unit_span, display_sale_span = None, None
         for span in price_wrapper.find_elements(By.XPATH, 'div/span'):
@@ -600,7 +604,7 @@ def craw_taobao_shop_sku(shop_sku_div, shop_name, shop_link, update_id, target_p
         elif re.match(SHOP_SKU_CARD_SALE_RE_EXP, cls_name):
             sale_div = div
     assert (title_div is not None and price_div is not None and sale_div is not None)
-    product_title = title_div.text
+    product_title = parse_product_title(title_div.text)
     price_spans = price_div.find_elements(By.XPATH, 'span')
     assert (len(price_spans) == 2)
     price_unit = parse_price_unit(price_spans[0].text)
@@ -732,7 +736,7 @@ def craw_taobao_detail_page(product_id, product_link, update_id):
     assert (page_image_v8_div is not None or page_image_v6_div is not None)
     # parse product title and shop info
     sku_id = parse_sku_id_from_product_link(product_link) or '0'
-    product_title = title_div.find_element(By.XPATH, 'h1').text
+    product_title = parse_product_title(title_div.find_element(By.XPATH, 'h1').text)
     shop_info_inner = shop_info_div.find_element(By.XPATH, 'a')
     shop_name = shop_info_inner.find_element(By.XPATH, 'div/div/span').text
     shop_link = shop_info_inner.get_attribute('href')
