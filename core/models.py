@@ -68,7 +68,7 @@ class BaseModel(Model):
             try:
                 if not isinstance(v, str):
                     continue
-                if re.match(re.compile('^[[{][\\s\\S]*[]}]$'), v):
+                if re.match(re.compile('^[\[\{][\\s\\S]*[\]\}]$'), v):
                     jsonv[k] = json_loads(v)
             except JSONDecodeError:
                 continue

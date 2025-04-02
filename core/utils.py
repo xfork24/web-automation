@@ -75,7 +75,12 @@ def par_price_ocr(image_file_path):
     try:
         return parse_price_ocr_by_pyocr(image_file_path)
     except PriceOCRError:
+        pass
+    try:
         return parse_price_ocr_by_pytesseract(image_file_path)
+    except PriceOCRError:
+        pass
+    raise PriceOCRError()
 
 
 def json_dumps(content):
