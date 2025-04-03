@@ -115,7 +115,7 @@ def get_product_history_by_id(product_id):
             if not found:
                 try:
                     llm_task = LLMAnalyzeTask.get(LLMAnalyzeTask.id == history.update_id)
-                    updater['from'] = 'llm_analyze_task'
+                    updater['updater'] = 'llm_analyze_task'
                     updater['detail'] = f'{llm_task.product_title}[{llm_task.try_count}]'
                     found = True
                 except DoesNotExist:
@@ -123,7 +123,7 @@ def get_product_history_by_id(product_id):
             if not found:
                 try:
                     search_task = SearchCrawlTask.get(SearchCrawlTask.id == history.update_id)
-                    updater['from'] = 'search_crawl_task'
+                    updater['updater'] = 'search_crawl_task'
                     updater['detail'] = f'{search_task.search_key}[{search_task.try_count}]'
                     found = True
                 except DoesNotExist:
@@ -131,7 +131,7 @@ def get_product_history_by_id(product_id):
             if not found:
                 try:
                     shop_task = ShopCrawlTask.get(ShopCrawlTask.id == history.update_id)
-                    updater['from'] = 'shop_crawl_task'
+                    updater['updater'] = 'shop_crawl_task'
                     updater['detail'] = f'{shop_task.shop_name}[{shop_task.try_count}]'
                     found = True
                 except DoesNotExist:
@@ -139,7 +139,7 @@ def get_product_history_by_id(product_id):
             if not found:
                 try:
                     detail_task = DetailCrawlTask.get(DetailCrawlTask.id == history.update_id)
-                    updater['from'] = 'detail_crawl_task'
+                    updater['updater'] = 'detail_crawl_task'
                     updater['detail'] = f'{detail_task.product_link}[{detail_task.try_count}]'
                     found = True
                 except DoesNotExist:
@@ -147,13 +147,13 @@ def get_product_history_by_id(product_id):
             # 有可能历史任务被我们删掉了，通过update_role字段来修复他们
             if not found:
                 if history.update_role == save_taobao_search_result.__name__:
-                    updater['from'] = 'search_crawl_task'
+                    updater['updater'] = 'search_crawl_task'
                 elif history.update_role == save_taobao_shop_sku_result.__name__:
-                    updater['from'] = 'shop_crawl_task'
+                    updater['updater'] = 'shop_crawl_task'
                 elif history.update_role == save_taobao_detail_result.__name__:
-                    updater['from'] = 'detail_crawl_task'
+                    updater['updater'] = 'detail_crawl_task'
                 else:
-                    updater['from'] = 'Unknown'
+                    updater['updater'] = 'Unknown'
                 updater['detail'] = 'Unknown'
                 found = True
             h = history.to_json()

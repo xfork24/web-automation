@@ -134,7 +134,7 @@
   let sorting = $state<SortingState>([]);
   let columnFilters = $state<ColumnFiltersState>([]);
   let rowSelection = $state<RowSelectionState>({});
-  let columnVisibility = $state<VisibilityState>({'Sale/Year': false, 'Revenue/Year': false, 'Price': false});
+  let columnVisibility = $state<VisibilityState>({'Sale/Year': false, 'Price': false, 'Operator ID': false});
 
   export const columns: ColumnDef<ProductInfo>[] = [
     {
@@ -524,7 +524,7 @@
       </Dialog.Content>
     </Dialog.Root>
 
-    <Toaster />
+    <Toaster/>
 
     <DropdownMenu.Root>
       <DropdownMenu.Trigger>

@@ -80,7 +80,7 @@ export type ProductHistory = {
   create_ts: number;
   update_id: string;
   update_role: string;
-  from: string;
+  updater: string;
   detail: string;
 }
 

@@ -53,9 +53,9 @@
       }
     },
     {
-      id: 'From',
-      accessorKey: 'from',
-      header: 'From',
+      id: 'Updater',
+      accessorKey: 'updater',
+      header: 'Updater',
       cell: ({row}) => {
         const statusSnippet = createRawSnippet<[string]>((getData) => {
           const from = getData();
@@ -63,7 +63,7 @@
             render: () => `<span>${from}</span>`
           };
         });
-        return renderSnippet(statusSnippet, row.getValue('From'));
+        return renderSnippet(statusSnippet, row.getValue('Updater'));
       }
     },
     {
@@ -235,15 +235,15 @@
   });
 
   const filter_fields = [
-    {value: 'from', label: 'From'},
+    {value: 'updater', label: 'Updater'},
     {value: 'detail', label: 'Detail'},
     {value: 'update_id', label: 'Operator ID'}
   ];
 
-  let value = $state('from');
+  let value = $state('updater');
 
   const triggerContent = $derived(
-    filter_fields.find((f) => f.value === value)?.label ?? 'From'
+    filter_fields.find((f) => f.value === value)?.label ?? 'Updater'
   );
 
   function clearAllTableFilters() {
