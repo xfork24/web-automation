@@ -77,7 +77,7 @@
       open = false;
       table.resetRowSelection(false);
       await invalidateAll();
-      toast("Operation Success");
+      toast("Operation Successful");
     } catch (error) {
       console.error(`Error in function: ${error}`);
     }
@@ -102,7 +102,7 @@
       open = false;
       table.resetRowSelection(false);
       await invalidateAll();
-      toast("Operation Success");
+      toast("Operation Successful");
     } catch (error) {
       console.error(`Error in function: ${error}`);
     }
@@ -123,7 +123,7 @@
       open = false;
       table.resetRowSelection(false);
       await invalidateAll();
-      toast("Operation Success");
+      toast("Operation Successful");
     } catch (error) {
       console.error(`Error in function: ${error}`);
     }

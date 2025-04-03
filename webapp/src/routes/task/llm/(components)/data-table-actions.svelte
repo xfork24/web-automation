@@ -47,7 +47,7 @@
       if (result.code == 0) {
         open = false;
         await invalidateAll();
-        toast("Operation Success");
+        toast("Operation Successful");
       }
     } catch (error) {
       console.error(`Error in function: ${error}`);
@@ -66,7 +66,7 @@
       if (result.code == 0) {
         open = false;
         await invalidateAll();
-        toast("Operation Success");
+        toast("Operation Successful");
       }
     } catch (error) {
       console.error(`Error in function: ${error}`);
@@ -85,7 +85,7 @@
       if (result.code == 0) {
         open = false;
         await invalidateAll();
-        toast("Operation Success");
+        toast("Operation Successful");
       }
     } catch (error) {
       console.error(`Error in function: ${error}`);
