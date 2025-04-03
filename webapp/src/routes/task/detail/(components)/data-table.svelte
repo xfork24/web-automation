@@ -389,18 +389,18 @@
     </Button>
 
     <Dialog.Root bind:open>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeCreateSelectDetailDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeCreateSelectDetailDialog()} variant="destructive">
           Resubmit Tasks
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeArchiveSelectDetailDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeArchiveSelectDetailDialog()} variant="destructive">
           Archive Tasks
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeDeleteSelectDetailDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeDeleteSelectDetailDialog()} variant="destructive">
           Delete Tasks
         </Button>
       </Dialog.Trigger>

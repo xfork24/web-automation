@@ -1,3 +1,5 @@
+import { parseProductInfo, type ProductInfo } from "../../(components)/model";
+
 export const load = async ({url}) => {
   try {
     const regexp = /^\/shop\/(?<shop_name>[<_>%\w]+)(?<query_params>\??[%_=&\w]*)(?<tag>[#\w]*)/;
@@ -20,11 +22,15 @@ export const load = async ({url}) => {
         'Content-Type': 'application/json;charset=UTF-8'
       }
     });
-    const products = await products_response.json();
-
+    const body = await products_response.json();
+    let products: ProductInfo[] = [];
+    body.data.forEach((product: ProductInfo) => {
+        products.push(parseProductInfo(product));
+      }
+    )
     return {
       shop_info: shop.data,
-      products: products.data,
+      products: products,
       shop_name: decodeURI(shop_name!)
     };
   } catch (error) {

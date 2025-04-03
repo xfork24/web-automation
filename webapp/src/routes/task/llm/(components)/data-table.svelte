@@ -404,18 +404,18 @@
     </Button>
 
     <Dialog.Root bind:open>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeCreateSelectLLMDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeCreateSelectLLMDialog()} variant="destructive">
           Resubmit Tasks
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeArchiveSelectLLMDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeArchiveSelectLLMDialog()} variant="destructive">
           Archive Tasks
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeDeleteSelectLLMDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeDeleteSelectLLMDialog()} variant="destructive">
           Delete Tasks
         </Button>
       </Dialog.Trigger>

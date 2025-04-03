@@ -40,6 +40,10 @@ export type ProductInfo = {
   product_link: string;
   shop_name: string;
   shop_link: string;
+  keyword: string;
+  category: string;
+  digital: boolean;
+  digital_str: string;
   price_unit: string;
   display_price: number;
   display_sale: number;
@@ -249,7 +253,20 @@ export function parseTaskReason(task: any) {
       return `${v}[${counts.get(max)!}]`;
     }
   }
+}
 
+export function parseProductInfo(product: ProductInfo) {
+  if (product.additional_properties.llm_analysis != undefined) {
+    product.keyword = product.additional_properties.llm_analysis.keyword;
+    product.category = product.additional_properties.llm_analysis.category;
+    product.digital = product.additional_properties.llm_analysis.digital;
+  } else {
+    product.keyword = '';
+    product.category = '';
+    product.digital = false;
+  }
+  product.digital_str = product.digital ? 'TRUE' : 'FALSE';
+  return product;
 }
 
 export function assert(condition: boolean, message: string) {

@@ -393,18 +393,18 @@
     </Button>
 
     <Dialog.Root bind:open>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeCreateSelectShopSearchDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeCreateSelectShopSearchDialog()} variant="destructive">
           Resubmit Tasks
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeArchiveSelectShopSearchDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeArchiveSelectShopSearchDialog()} variant="destructive">
           Archive Tasks
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeDeleteSelectShopSearchDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeDeleteSelectShopSearchDialog()} variant="destructive">
           Delete Tasks
         </Button>
       </Dialog.Trigger>

@@ -16,6 +16,7 @@
   import DataTableCheckbox from '../../../(components)/data-table-checkbox.svelte';
   import DataTableSortButton from '../../../(components)/data-table-sort-button.svelte';
   import DataTableActions from './data-table-actions.svelte';
+  import NewTaskDialog from './new-task-dialog.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -31,6 +32,7 @@
   } from '$lib/components/ui/data-table';
   import { assert, parseUUID4, type SearchCrawlTask, timeConverter } from '../../../(components)/model';
   import { invalidateAll } from '$app/navigation';
+  import { Label } from "$lib/components/ui/label";
 
 
   let {data} = $props();
@@ -425,23 +427,25 @@
       placeholder="Filter {triggerContent}..."
       value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
     />
-    <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
-      <FunnelX/>
-    </Button>
+    <div class="mr-4">
+      <Button class="max-w-xs" onclick={ () => clearAllTableFilters()} variant="destructive">
+        <FunnelX/>
+      </Button>
+    </div>
 
     <Dialog.Root bind:open>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeCreateSelectSearchDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeCreateSelectSearchDialog()} variant="destructive">
           Resubmit Tasks
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeArchiveSelectSearchDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeArchiveSelectSearchDialog()} variant="destructive">
           Archive Tasks
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeDeleteSelectSearchDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeDeleteSelectSearchDialog()} variant="destructive">
           Delete Tasks
         </Button>
       </Dialog.Trigger>
@@ -460,6 +464,8 @@
         </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
+
+    <NewTaskDialog user={data.user}></NewTaskDialog>
 
     <DropdownMenu.Root>
       <DropdownMenu.Trigger>

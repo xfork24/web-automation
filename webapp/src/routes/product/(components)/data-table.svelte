@@ -261,11 +261,52 @@
           style: 'currency',
           currency: row.original.price_unit
         });
-
         return renderSnippet(
           amountCellSnippet,
           formatter.format(Number.parseFloat(row.getValue('Revenue/Year')) / 100)
         );
+      }
+    },
+    {
+      id: 'Keyword',
+      accessorKey: 'keyword',
+      header: 'Keyword',
+      cell: ({row}) => {
+        const statusSnippet = createRawSnippet<[string]>((getData) => {
+          const keyword = getData();
+          return {
+            render: () => `<div>${keyword}</div>`
+          };
+        });
+        return renderSnippet(statusSnippet, row.getValue('Keyword'));
+      }
+    },
+    {
+      id: 'Category',
+      accessorKey: 'category',
+      header: 'Category',
+      cell: ({row}) => {
+        const statusSnippet = createRawSnippet<[string]>((getData) => {
+          const category = getData();
+          return {
+            render: () => `<div>${category}</div>`
+          };
+        });
+        return renderSnippet(statusSnippet, row.getValue('Category'));
+      }
+    },
+    {
+      id: 'Digital',
+      accessorKey: 'digital_str',
+      header: 'Digital',
+      cell: ({row}) => {
+        const statusSnippet = createRawSnippet<[string]>((getData) => {
+          const digital_str = getData();
+          return {
+            render: () => `<div>${digital_str}</div>`
+          };
+        });
+        return renderSnippet(statusSnippet, row.getValue('Digital'));
       }
     },
     {
@@ -395,6 +436,9 @@
     {value: 'product_id', label: 'Product ID'},
     {value: 'product_title', label: 'Product Title'},
     {value: 'shop_name', label: 'Shop Name'},
+    {value: 'keyword', label: 'Keyword'},
+    {value: 'category', label: 'Category'},
+    {value: 'digital_str', label: 'Digital'},
     {value: 'update_id', label: 'Operator ID'}
   ];
 
@@ -444,18 +488,18 @@
     </Button>
 
     <Dialog.Root bind:open>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeCrawlSelectProductDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeCrawlSelectProductDialog()} variant="destructive">
           Crawl Products
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeCrawlSelectProductInShopDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeCrawlSelectProductInShopDialog()} variant="destructive">
           Crawl Products in Shop
         </Button>
       </Dialog.Trigger>
-      <Dialog.Trigger>
-        <Button class="max-w-xs mr-4" onclick={ () => beforeDeleteSelectProductDialog()} variant="destructive">
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeDeleteSelectProductDialog()} variant="destructive">
           Delete Products
         </Button>
       </Dialog.Trigger>
