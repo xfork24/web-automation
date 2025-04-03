@@ -313,7 +313,7 @@ def run_all_in_one_crawler_task(update_id):
     analyze_and_generate_fix_tasks(update_id)
     run_shop_search_crawler_task(update_id)
     run_shop_crawler_tasks(update_id)
-    run_llm_analyze_tasks(update_id)
+    # run_llm_analyze_tasks(update_id)
     run_detail_crawler_tasks(update_id)
 
 
