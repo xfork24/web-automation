@@ -11,15 +11,16 @@ export type ErrorEntity = {
 export type AdditionalProperties = {
   llm_analysis: LLMAnalyzeResult;
   errors: ErrorEntity[];
+  diff: string;
 }
 export type OperationHistory = {
   id: number;
   pk: string;
   table_name: string;
   additional_properties: AdditionalProperties;
+  operation: number;
   operation_ts: number;
   create_ts: number;
-  update_ts: number;
   update_id: string;
   update_role: string;
 };
@@ -70,6 +71,18 @@ export type ProductSale = {
   update_id: string;
   update_role: string;
 };
+
+export type ProductHistory = {
+  id: number;
+  additional_properties: AdditionalProperties;
+  operation: number;
+  operation_ts: number;
+  create_ts: number;
+  update_id: string;
+  update_role: string;
+  from: string;
+  detail: string;
+}
 
 export type ShopInfo = {
   shop_name: string;
@@ -253,20 +266,6 @@ export function parseTaskReason(task: any) {
       return `${v}[${counts.get(max)!}]`;
     }
   }
-}
-
-export function parseProductInfo(product: ProductInfo) {
-  if (product.additional_properties.llm_analysis != undefined) {
-    product.keyword = product.additional_properties.llm_analysis.keyword;
-    product.category = product.additional_properties.llm_analysis.category;
-    product.digital = product.additional_properties.llm_analysis.digital;
-  } else {
-    product.keyword = '';
-    product.category = '';
-    product.digital = false;
-  }
-  product.digital_str = product.digital ? 'TRUE' : 'FALSE';
-  return product;
 }
 
 export function assert(condition: boolean, message: string) {

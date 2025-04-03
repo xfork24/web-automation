@@ -9,12 +9,14 @@
   import { getLocalTimeZone, today } from '@internationalized/date';
   import { type ProductSale, timeConverter } from '../../(components)/model';
   import DataTable from './(components)/data-table.svelte';
+  import HistoryDataTable from './(components)/history-data-table.svelte';
 
   let {data} = $props();
   let sales = $state(data.product_sales);
 
   const product_id = data.product_id;
-  const product = data.product_info;
+  const product = data.product_info!;
+  const histories = data.product_histories;
 
   let formatter = $state(new Intl.NumberFormat('zh-CN', {
     style: 'currency',
@@ -99,62 +101,71 @@
           <img src={product.product_cover} alt="product cover"/>
         </div>
         <div class="flex flex-wrap items-center gap-4 w-4/5">
-          <div class="grid grid-cols-2 auto-cols-auto gap-4 p-4">
+          <div class="grid grid-cols-3 auto-cols-auto gap-4 p-4">
             <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>Product ID: </Label></div>
+              <div class="mr-1"><Label>Product ID: </Label></div>
               {product.product_id}
             </div>
             <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>SKU ID: </Label></div>
+              <div class="mr-1"><Label>SKU ID: </Label></div>
               {product.sku_id}
             </div>
             <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>Product Title: </Label></div>
+              <div class="mr-1"><Label>Product Title: </Label></div>
               <a class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
                  href={product.product_link}
                  target="_blank">{product.product_title}</a>
             </div>
             <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>Shop Name: </Label></div>
+              <div class="mr-1"><Label>Shop Name: </Label></div>
               <a class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
                  href={product.shop_link} target="_blank">{product.shop_name}</a>
             </div>
             <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>Display Price: </Label></div>
-              {formatter.format(Number.parseFloat(product.display_price) / 100)}
+              <div class="mr-1"><Label>Keyword: </Label></div>
+              {product.keyword}
             </div>
             <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>Product Sale: </Label></div>
+              <div class="mr-1"><Label>Category: </Label></div>
+              {product.category}
+            </div>
+            <div class="flex flex-nowrap">
+              <div class="mr-1"><Label>Digital: </Label></div>
+              {product.digital_str}
+            </div>
+            <div class="flex flex-nowrap">
+              <div class="mr-1"><Label>Display Price: </Label></div>
+              {formatter.format(product.display_price / 100)}
+            </div>
+            <div class="flex flex-nowrap">
+              <div class="mr-1"><Label>Product Sale: </Label></div>
               {product.display_sale}
             </div>
             <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>Estimated Revenue: </Label></div>
-              {formatter.format(Number.parseFloat(product.estimated_revenue) / 100)}
+              <div class="mr-1"><Label>Estimated Revenue: </Label></div>
+              {formatter.format(product.estimated_revenue / 100)}
             </div>
             <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>Create Time: </Label></div>
+              <div class="mr-1"><Label>Create Time: </Label></div>
               <div>
                 <p>{create_tm[0]}</p>
                 <p>{create_tm[1]}</p>
               </div>
             </div>
             <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>Update Time: </Label></div>
+              <div class="mr-1"><Label>Update Time: </Label></div>
               <div>
                 <p>{update_tm[0]}</p>
                 <p>{update_tm[1]}</p>
               </div>
             </div>
-            <div class="flex flex-nowrap">
-              <div class="mr-2"><Label>Operator ID: </Label></div>
-              {product.update_id}
-            </div>
           </div>
         </div>
       </div>
+      <div class="items-center justify-between px-4 text-4xl">Product Sale Information</div>
       <div class="flex p-4">
         <div class="items-center justify-between w-1/4">
-          <RangeCalendar bind:value class="rounded-md border"/>
+          <RangeCalendar bind:value class="rounded-md border w-[200]"/>
           <div class="flex justify-end gap-4 py-4">
             <Button type="reset" class="bg-red-500 hover:bg-red-500" onclick={() => resetCalendar()}>Reset
             </Button>
@@ -164,6 +175,10 @@
         <div class="flex flex-wrap gap-4 px-4 w-3/4">
           <DataTable {sales}/>
         </div>
+      </div>
+      <div class="items-center justify-between px-4 text-4xl">Product Update History</div>
+      <div class="items-center justify-between px-4">
+        <HistoryDataTable {histories}/>
       </div>
     {:else}
       <div class="items-center justify-between px-4 text-4xl">Please select a valid product from <a

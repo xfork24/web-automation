@@ -1,4 +1,4 @@
-import { parseProductInfo, type ProductInfo } from "../../(components)/model";
+import { type ProductInfo } from "../../(components)/model";
 
 export const load = async ({url}) => {
   try {
@@ -23,14 +23,21 @@ export const load = async ({url}) => {
       }
     });
     const body = await products_response.json();
-    let products: ProductInfo[] = [];
     body.data.forEach((product: ProductInfo) => {
-        products.push(parseProductInfo(product));
+      if (product.additional_properties.llm_analysis != undefined) {
+        product.keyword = product.additional_properties.llm_analysis.keyword;
+        product.category = product.additional_properties.llm_analysis.category;
+        product.digital = product.additional_properties.llm_analysis.digital;
+      } else {
+        product.keyword = '';
+        product.category = '';
+        product.digital = false;
       }
-    )
+      product.digital_str = product.digital ? 'TRUE' : 'FALSE';
+    })
     return {
       shop_info: shop.data,
-      products: products,
+      products: body.data,
       shop_name: decodeURI(shop_name!)
     };
   } catch (error) {

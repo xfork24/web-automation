@@ -215,7 +215,7 @@
         {#each table.getRowModel().rows as row (row.id)}
           <Table.Row data-state={row.getIsSelected() && "selected"}>
             {#each row.getVisibleCells() as cell (cell.id)}
-              <Table.Cell class="text-center px-0.5 [&:has([role=checkbox])]:pl-3">
+              <Table.Cell class="text-center py-0.5 px-0.5 [&:has([role=checkbox])]:pl-3">
                 <FlexRender
                   content={cell.column.columnDef.cell}
                   context={cell.getContext()}
@@ -234,10 +234,6 @@
     </Table.Root>
   </div>
   <div class="flex items-center justify-end space-x-2 pt-4">
-    <div class="text-muted-foreground flex-1 text-sm">
-      {table.getFilteredSelectedRowModel().rows.length} of
-      {table.getFilteredRowModel().rows.length} row(s) selected.
-    </div>
     <div class="space-x-2">
       <Button
         disabled={!table.getCanPreviousPage()}

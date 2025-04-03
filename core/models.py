@@ -63,7 +63,7 @@ class BaseModel(Model):
 
     def to_json(self, recurse=False):
         jsonv = dict()
-        x = model_to_dict(self, recurse=recurse)
+        x = model_to_dict(self, recurse)
         for k, v in x.items():
             try:
                 if not isinstance(v, str):

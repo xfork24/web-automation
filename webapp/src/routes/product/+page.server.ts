@@ -1,4 +1,4 @@
-import { type ProductInfo, parseProductInfo } from "../(components)/model";
+import { type ProductInfo } from "../(components)/model";
 
 export const load = async () => {
   try {
@@ -9,13 +9,20 @@ export const load = async () => {
       }
     });
     const body = await response.json();
-    let products: ProductInfo[] = [];
     body.data.forEach((product: ProductInfo) => {
-        products.push(parseProductInfo(product));
+      if (product.additional_properties.llm_analysis != undefined) {
+        product.keyword = product.additional_properties.llm_analysis.keyword;
+        product.category = product.additional_properties.llm_analysis.category;
+        product.digital = product.additional_properties.llm_analysis.digital;
+      } else {
+        product.keyword = '';
+        product.category = '';
+        product.digital = false;
       }
-    )
+      product.digital_str = product.digital ? 'TRUE' : 'FALSE';
+    })
     return {
-      products: products
+      products: body.data,
     };
   } catch (error) {
     console.error(`Error in load function: ${error}`);

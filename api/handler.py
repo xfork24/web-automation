@@ -3,7 +3,7 @@
 # restful API for management console
 
 from flask import Flask, request
-from core.models import *
+from core.crawler import *
 from core.analysis import (
     TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS,
     TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS,
@@ -95,6 +95,72 @@ def get_product_by_id(product_id):
         msg = f'product_id={product_id} not found'
         logger.info(f'invalid product_id={product_id}, not found')
         return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.get('/api/v1/product/<product_id>/history')
+def get_product_history_by_id(product_id):
+    logger = get_logger()
+    try:
+        histories = OperationHistory.select().where(OperationHistory.pk == product_id).order_by(
+            OperationHistory.operation_ts.desc())
+        data = []
+        for history in histories:
+            updater = {}
+            found = False
+            # 可能更改product_info的方式有llm_analyze, search_crawl, shop_crawl, detail_crawl
+            if not found:
+                try:
+                    llm_task = LLMAnalyzeTask.get(LLMAnalyzeTask.id == history.update_id)
+                    updater['from'] = 'llm_analyze_task'
+                    updater['detail'] = f'{llm_task.product_title}[{llm_task.try_count}]'
+                    found = True
+                except DoesNotExist:
+                    pass
+            if not found:
+                try:
+                    search_task = SearchCrawlTask.get(SearchCrawlTask.id == history.update_id)
+                    updater['from'] = 'search_crawl_task'
+                    updater['detail'] = f'{search_task.search_key}[{search_task.try_count}]'
+                    found = True
+                except DoesNotExist:
+                    pass
+            if not found:
+                try:
+                    shop_task = ShopCrawlTask.get(ShopCrawlTask.id == history.update_id)
+                    updater['from'] = 'shop_crawl_task'
+                    updater['detail'] = f'{shop_task.shop_name}[{shop_task.try_count}]'
+                    found = True
+                except DoesNotExist:
+                    pass
+            if not found:
+                try:
+                    detail_task = DetailCrawlTask.get(DetailCrawlTask.id == history.update_id)
+                    updater['from'] = 'detail_crawl_task'
+                    updater['detail'] = f'{detail_task.product_link}[{detail_task.try_count}]'
+                    found = True
+                except DoesNotExist:
+                    pass
+            # 有可能历史任务被我们删掉了，通过update_role字段来修复他们
+            if not found:
+                if history.update_role == save_taobao_search_result.__name__:
+                    updater['from'] = 'search_crawl_task'
+                elif history.update_role == save_taobao_shop_sku_result.__name__:
+                    updater['from'] = 'shop_crawl_task'
+                elif history.update_role == save_taobao_detail_result.__name__:
+                    updater['from'] = 'detail_crawl_task'
+                else:
+                    updater['from'] = 'Unknown'
+                updater['detail'] = 'Unknown'
+                found = True
+            h = history.to_json()
+            if found:
+                h.update(updater)
+            data.append(h)
+        return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)

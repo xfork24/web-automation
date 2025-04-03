@@ -5,6 +5,8 @@
   } from '$lib/components/ui/button/index.js';
   import { goto, invalidateAll } from '$app/navigation';
   import type { ProductInfo } from '../../(components)/model';
+  import { Toaster } from "$lib/components/ui/sonner/index.js";
+  import { toast } from "svelte-sonner";
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
 
@@ -48,7 +50,7 @@
       if (result.code == 0) {
         open = false;
         await invalidateAll();
-        return;
+        toast("Operation Success");
       }
     } catch (error) {
       console.error(`Error in function: ${error}`);
@@ -72,7 +74,7 @@
       if (result.code == 0) {
         open = false;
         await invalidateAll();
-        return;
+        toast("Operation Success");
       }
     } catch (error) {
       console.error(`Error in function: ${error}`);
@@ -91,13 +93,15 @@
       if (result.code == 0) {
         open = false;
         await invalidateAll();
-        return;
+        toast("Operation Success");
       }
     } catch (error) {
       console.error(`Error in function: ${error}`);
     }
   }
 </script>
+
+<Toaster/>
 
 <Dialog.Root bind:open>
   <DropdownMenu.Root>
