@@ -50,11 +50,12 @@
     <div class="grid gap-4 py-4">
       <div class="grid grid-cols-3 items-center gap-4">
         <Label for="search_key" class="text-right">Search Key</Label>
-        <Input id="key" value={search_key} class="col-span-2"/>
+        <Input id="key" value={search_key} oninput={(e) => search_key = e.currentTarget.value} class="col-span-2"/>
       </div>
       <div class="grid grid-cols-3 items-center gap-4">
         <Label for="num_of_pages" class="text-right">Number of Pages</Label>
-        <Input id="pages" value={num_of_pages} class="col-span-2"/>
+        <Input id="pages" value={num_of_pages} oninput={(e) => num_of_pages = Number.parseInt(e.currentTarget.value)}
+               class="col-span-2"/>
       </div>
     </div>
     <Dialog.Footer>

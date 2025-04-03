@@ -110,6 +110,7 @@
         const statusSnippet = createRawSnippet<[AdditionalProperties]>((getData) => {
           const additionalProperties = getData();
           let diff = additionalProperties.diff != undefined ? JSON.stringify(additionalProperties.diff) : '{}';
+          diff = diff.replace(/\s+/g,"")
           return {
             render: () => `<div><img src="/diff.ico" alt="diff" style="cursor:pointer;" title=${diff}></div>`
           };
