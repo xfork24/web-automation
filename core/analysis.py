@@ -14,6 +14,7 @@ TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
 TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
 TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
 TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 315360000
+TB_PRODUCT_MANAGE_TASK_PERIOD_IN_SECONDS = 315360000
 
 # 在考虑归档检查的前提下，任务仍然有可能会重复触发，但实际无需每次都跑，
 # 比如店铺抓取，同样的店铺几天内抓过（不管是否成功，不成功会重试），则不再重复抓
@@ -24,6 +25,7 @@ TB_SHOP_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
 TB_DETAIL_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
 TB_SHOP_SEARCH_CRAWL_TASK_DEDUP_IN_SECONDS = 604800
 TB_LLM_ANALYZE_TASK_DEDUP_IN_SECONDS = 604800
+TB_PRODUCT_MANAGE_TASK_DEDUP_IN_SECONDS = 604800
 
 # hot product 生成去重检查，日更（1天减去5分钟）
 TB_HOT_PRODUCT_PERIOD_IN_SECONDS = 86100
@@ -238,7 +240,7 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                         analyze_and_add_hot_products.__name__)
 
 
-def download_product_resources(product_id, ts, force_download=False):
+def download_product_resources(product_id, ts=None, force_download=False):
     logger = get_logger()
     try:
         exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
@@ -246,7 +248,7 @@ def download_product_resources(product_id, ts, force_download=False):
         logger.error(f'No product info found for product_id={product_id}, just return')
         return
     # create download folder
-    product_root_dir = f'{PRODUCT_DIR}/{product_id}/{ts}'
+    product_root_dir = f'{PRODUCT_DIR}/{product_id}/{int(time.time()) if ts is None else ts}'
     product_path = Path(product_root_dir)
     if product_path.exists():
         if force_download:
@@ -457,7 +459,7 @@ def run_detail_crawler_tasks(update_id):
             logger.info(
                 f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
             craw_taobao_detail_page(task.product_id, task.product_link, task.id)
-            download_product_resources(task.product_id, int(time.time()))
+            download_product_resources(task.product_id)
         except Exception:
             logger.error(
                 f'get unhandled exception while crawling task id={task.id} with product_id={task.product_id}, product_link={task.product_link}, just continue')

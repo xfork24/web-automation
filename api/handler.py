@@ -10,7 +10,7 @@ from core.analysis import (
     TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS,
     TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS,
     TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS,
-    TB_HOT_PRODUCT_PERIOD_IN_SECONDS
+    TB_PRODUCT_MANAGE_TASK_PERIOD_IN_SECONDS
 )
 
 TASK_STATUS_QUERY_PERIOD = 604800
@@ -466,6 +466,53 @@ def query_product_sales():
             query = ProductSale.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_json() for q in query]
         return build_success_response({'data': data})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.get('/api/v1/shadow_product/<shadow_product_id>')
+def get_shadow_product_by_id(shadow_product_id):
+    logger = get_logger()
+    try:
+        p = ShadowProductInfo.get(ProductInfo.shadow_product_id == shadow_product_id)
+        return build_success_response({'data': p.to_json()})
+    except DoesNotExist:
+        msg = f'shadow_product_id={shadow_product_id} not found'
+        logger.info(f'invalid shadow_product_id={shadow_product_id}, not found')
+        return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.get('/api/v1/shadow_product/<shadow_product_id>/history')
+def get_shadow_product_history_by_id(shadow_product_id):
+    logger = get_logger()
+    try:
+        histories = OperationHistory.select().where(OperationHistory.pk == shadow_product_id).order_by(
+            OperationHistory.operation_ts.desc())
+        data = [h.to_json() for h in histories]
+        return build_success_response({'data': data})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/shadow_product/<shadow_product_id>')
+def delete_shadow_product_by_id(shadow_product_id):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(
+                f'get delete_shadow_product_by_id request for shadow_product_id={shadow_product_id} without update_id set')
+            return build_client_error_response(
+                f'update_id not set for delete request shadow_product_id={shadow_product_id}')
+        x = delete_shadow_product(shadow_product_id, request.args['update_id'])
+        return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)
@@ -1083,6 +1130,132 @@ def get_search_crawl_tasks():
         return build_server_error_response(msg)
 
 
+@api.get('/api/v1/shop_search_task/<task_id>')
+def get_shop_search_crawl_task_by_id(task_id):
+    logger = get_logger()
+    try:
+        p = ShopSearchCrawlTask.get(ShopSearchCrawlTask.id == task_id)
+        return build_success_response({'data': p.to_json()})
+    except DoesNotExist:
+        msg = f'id={task_id} not found'
+        logger.info(f'invalid id={task_id}, not found')
+        return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.put('/api/v1/shop_search_task')
+def create_shop_search_task():
+    logger = get_logger()
+    try:
+        start_ts = int(time.time()) - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+        payload = request.json
+        tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == payload.get('shop_name'),
+                                                   ShopSearchCrawlTask.status != TASK_STATUS_DONE,
+                                                   ShopSearchCrawlTask.status != TASK_STATUS_ARCHIVED,
+                                                   ShopSearchCrawlTask.update_ts > start_ts)
+        task_id = ''
+        if len(tasks) == 0 or payload.get('force') == 'true':
+            task_id = add_shop_search_crawl_task(payload.get('shop_name'),
+                                                 {},
+                                                 payload.get('update_id'),
+                                                 create_shop_search_task.__name__)
+        else:
+            logger.info(
+                f'same task already exist for shop_name={payload.get("shop_name")} and "force" is not set to "true", just ignore')
+        return build_success_response({'task_id': task_id})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.delete('/api/v1/shop_search_task/<task_id>')
+def delete_shop_search_crawl_task_by_id(task_id):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get delete_shop_search_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        x = delete_shop_search_crawl_task(task_id, request.args['update_id'])
+        return build_success_response({'delete': x})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.post('/api/v1/shop_search_task/<task_id>/archive')
+def archive_shop_search_crawl_task_by_id(task_id):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get archive_shop_search_crawl_task_by_id request for task_id={task_id} without update_id set')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+        task = ShopSearchCrawlTask.get(ShopSearchCrawlTask.id == task_id)
+        update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
+        return build_success_response({})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+# supported query params:
+# shop_name = XXX
+# status = XXX
+# update_ts = {"lt": 100, "gt": 30}
+# update_id = XXX
+# sort = update_ts or update_id
+# desc = true or false
+# limit = int(XXX)
+# offset = int(XXX)
+@api.get('/api/v1/shop_search_tasks')
+def get_shop_search_crawl_tasks():
+    logger = get_logger()
+    try:
+        select_exps = []
+        sort = ShopSearchCrawlTask.update_ts
+        desc = False
+        limit = DB_QUERY_DEFAULT_LIMIT
+        offset = 0
+        for k, v in request.args.items():
+            if k == 'shop_name':
+                select_exps.append(ShopSearchCrawlTask.shop_name == v)
+            elif k == 'status':
+                select_exps.append(ShopSearchCrawlTask.status == int(v))
+            elif k == 'update_ts':
+                select_exps += parse_param_compare(ShopSearchCrawlTask.update_ts, v)
+            elif k == 'update_id':
+                select_exps.append(ShopSearchCrawlTask.update_id == v)
+            elif k == 'sort':
+                sort_columns = {
+                    'update_ts': ShopSearchCrawlTask.update_ts,
+                    'update_id': ShopSearchCrawlTask.update_id
+                }
+                if v in sort_columns:
+                    sort = sort_columns[v]
+            elif k == 'desc':
+                desc = True
+            elif k == 'limit':
+                limit = int(v)
+            elif k == 'offset':
+                offset = int(v)
+        sort = sort.desc() if desc else sort
+        if len(select_exps) == 0:
+            query = ShopSearchCrawlTask.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = ShopSearchCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        data = [q.to_json() for q in query]
+        return build_success_response({'data': data})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 @api.get('/api/v1/llm_task/<task_id>')
 def get_llm_analyze_task_by_id(task_id):
     logger = get_logger()
@@ -1210,11 +1383,11 @@ def get_llm_analyze_tasks():
         return build_server_error_response(msg)
 
 
-@api.get('/api/v1/shop_search_task/<task_id>')
-def get_shop_search_crawl_task_by_id(task_id):
+@api.get('/api/v1/product_task/<task_id>')
+def get_product_manage_task_by_id(task_id):
     logger = get_logger()
     try:
-        p = ShopSearchCrawlTask.get(ShopSearchCrawlTask.id == task_id)
+        p = ProductManageTask.get(ProductManageTask.id == task_id)
         return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'id={task_id} not found'
@@ -1226,25 +1399,27 @@ def get_shop_search_crawl_task_by_id(task_id):
         return build_server_error_response(msg)
 
 
-@api.put('/api/v1/shop_search_task')
-def create_shop_search_task():
+@api.put('/api/v1/product_task')
+def create_product_manage_task():
     logger = get_logger()
     try:
-        start_ts = int(time.time()) - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+        start_ts = int(time.time()) - TB_PRODUCT_MANAGE_TASK_PERIOD_IN_SECONDS
         payload = request.json
-        tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == payload.get('shop_name'),
-                                                   ShopSearchCrawlTask.status != TASK_STATUS_DONE,
-                                                   ShopSearchCrawlTask.status != TASK_STATUS_ARCHIVED,
-                                                   ShopSearchCrawlTask.update_ts > start_ts)
+        tasks = ProductManageTask.select().where(ProductManageTask.product_id == payload.get('product_id'),
+                                                 ProductManageTask.status != TASK_STATUS_DONE,
+                                                 ProductManageTask.status != TASK_STATUS_ARCHIVED,
+                                                 ProductManageTask.update_ts > start_ts)
         task_id = ''
         if len(tasks) == 0 or payload.get('force') == 'true':
-            task_id = add_shop_search_crawl_task(payload.get('shop_name'),
-                                                 {},
-                                                 payload.get('update_id'),
-                                                 create_shop_search_task.__name__)
+            task_id = add_product_manage_task(payload.get('product_id'),
+                                              payload.get('shop_name'),
+                                              payload.get('operation'),
+                                              {},
+                                              payload.get('update_id'),
+                                              add_product_manage_task.__name__)
         else:
             logger.info(
-                f'same task already exist for shop_name={payload.get("shop_name")} and "force" is not set to "true", just ignore')
+                f'same task already exist for product_id={payload.get("product_id")} and "force" is not set to "true", just ignore')
         return build_success_response({'task_id': task_id})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -1252,14 +1427,14 @@ def create_shop_search_task():
         return build_server_error_response(msg)
 
 
-@api.delete('/api/v1/shop_search_task/<task_id>')
-def delete_shop_search_crawl_task_by_id(task_id):
+@api.delete('/api/v1/product_task/<task_id>')
+def delete_product_manage_task_by_id(task_id):
     logger = get_logger()
     try:
         if 'update_id' not in request.args.keys():
-            logger.info(f'get delete_shop_search_crawl_task_by_id request for task_id={task_id} without update_id set')
+            logger.info(f'get delete_product_manage_task_by_id request for task_id={task_id} without update_id set')
             return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
-        x = delete_shop_search_crawl_task(task_id, request.args['update_id'])
+        x = delete_product_manage_task(task_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -1267,14 +1442,14 @@ def delete_shop_search_crawl_task_by_id(task_id):
         return build_server_error_response(msg)
 
 
-@api.post('/api/v1/shop_search_task/<task_id>/archive')
-def archive_shop_search_crawl_task_by_id(task_id):
+@api.post('/api/v1/product_task/<task_id>/archive')
+def archive_product_manage_task_by_id(task_id):
     logger = get_logger()
     try:
         if 'update_id' not in request.args.keys():
-            logger.info(f'get archive_shop_search_crawl_task_by_id request for task_id={task_id} without update_id set')
+            logger.info(f'get archive_product_manage_task_by_id request for task_id={task_id} without update_id set')
             return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
-        task = ShopSearchCrawlTask.get(ShopSearchCrawlTask.id == task_id)
+        task = ProductManageTask.get(ProductManageTask.id == task_id)
         update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
         return build_success_response({})
     except Exception as e:
@@ -1284,7 +1459,7 @@ def archive_shop_search_crawl_task_by_id(task_id):
 
 
 # supported query params:
-# shop_name = XXX
+# product_id = XXX
 # status = XXX
 # update_ts = {"lt": 100, "gt": 30}
 # update_id = XXX
@@ -1292,28 +1467,32 @@ def archive_shop_search_crawl_task_by_id(task_id):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@api.get('/api/v1/shop_search_tasks')
-def get_shop_search_crawl_tasks():
+@api.get('/api/v1/product_task')
+def get_product_manage_tasks():
     logger = get_logger()
     try:
         select_exps = []
-        sort = ShopSearchCrawlTask.update_ts
+        sort = ProductManageTask.update_ts
         desc = False
         limit = DB_QUERY_DEFAULT_LIMIT
         offset = 0
         for k, v in request.args.items():
-            if k == 'shop_name':
-                select_exps.append(ShopSearchCrawlTask.shop_name == v)
+            if k == 'product_id':
+                select_exps.append(ProductManageTask.product_id == v)
+            elif k == 'shop_name':
+                select_exps.append(ProductManageTask.shop_name == v)
+            elif k == 'operation':
+                select_exps.append(ProductManageTask.operation == v)
             elif k == 'status':
-                select_exps.append(ShopSearchCrawlTask.status == int(v))
+                select_exps.append(ProductManageTask.status == int(v))
             elif k == 'update_ts':
-                select_exps += parse_param_compare(ShopSearchCrawlTask.update_ts, v)
+                select_exps += parse_param_compare(ProductManageTask.update_ts, v)
             elif k == 'update_id':
-                select_exps.append(ShopSearchCrawlTask.update_id == v)
+                select_exps.append(ProductManageTask.update_id == v)
             elif k == 'sort':
                 sort_columns = {
-                    'update_ts': ShopSearchCrawlTask.update_ts,
-                    'update_id': ShopSearchCrawlTask.update_id
+                    'update_ts': ProductManageTask.update_ts,
+                    'update_id': ProductManageTask.update_id
                 }
                 if v in sort_columns:
                     sort = sort_columns[v]
@@ -1325,9 +1504,9 @@ def get_shop_search_crawl_tasks():
                 offset = int(v)
         sort = sort.desc() if desc else sort
         if len(select_exps) == 0:
-            query = ShopSearchCrawlTask.select().order_by(sort).limit(limit).offset(offset)
+            query = ProductManageTask.select().order_by(sort).limit(limit).offset(offset)
         else:
-            query = ShopSearchCrawlTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+            query = ProductManageTask.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:

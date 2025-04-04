@@ -16,7 +16,7 @@ from core.config import *
 from core.exceptions import *
 from core.models import *
 
-WEBDRIVER_OPTION_HEADLESS = True
+WEBDRIVER_OPTION_HEADLESS = False
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
@@ -34,6 +34,7 @@ TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 SHOP_PAGE_MAX_SKU_NUM = 100
 SHOP_PAGE_LOAD_MAX_COUNT = 10
 SHOP_PAGE_PRODUCT_COVER_TRY_COUNT = 5
+PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS = 5
 
 # search page related controls
 SEARCH_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
@@ -248,7 +249,7 @@ def is_valid_image_link(link):
         return True
 
 
-def handle_taobao_login_page():
+def handle_taobao_login_page(user):
     global Driver
     logger = get_logger()
     try_count = 0
@@ -267,9 +268,9 @@ def handle_taobao_login_page():
             login_button = Driver.find_element(By.CLASS_NAME, 'fm-btn').find_element(By.XPATH, 'button')
             assert (user_input is not None and passwd_input is not None and login_button is not None)
             user_input.clear()
-            user_input.send_keys(TB_USERNAME)
+            user_input.send_keys(user)
             passwd_input.clear()
-            passwd_input.send_keys(TB_PASSWORD)
+            passwd_input.send_keys(TB_USERS[user])
             element_click(login_button)
             # check whether slide check is required
             try:
@@ -288,7 +289,7 @@ def handle_taobao_login_page():
             time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
 
 
-def handle_taobao_post_login_page():
+def handle_taobao_post_login_page(user):
     logger = get_logger()
     logger.info('check if we are in taobao/personal homepage')
     while True:
@@ -303,7 +304,7 @@ def handle_taobao_post_login_page():
             sms_btn = Driver.find_element(By.ID, 'J_GetCode')
             confirm_btn = Driver.find_element(By.ID, 'submitBtn')
             sms_btn.click()
-            sms_code = input(f'Please input SMS verification code for user={TB_USERNAME}: ')
+            sms_code = input(f'Please input SMS verification code for user={user}: ')
             code_input.send_keys(sms_code)
             confirm_btn.click()
             time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
@@ -315,9 +316,9 @@ def handle_taobao_post_login_page():
             time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
 
 
-def login_taobao():
-    handle_taobao_login_page()
-    handle_taobao_post_login_page()
+def login_taobao(user=TB_CRAWL_USER):
+    handle_taobao_login_page(user)
+    handle_taobao_post_login_page(user)
     set_window_size()
 
 
@@ -971,6 +972,22 @@ def save_taobao_detail_result(product_id, sku_id, product_title, product_link,
     add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None,
                      update_id, update_role)
     update_shop_info(shop_name, update_id, update_role, shop_link, '', None)
+
+
+def product_manage_on_shelf(shadow_product_id):
+    pass
+
+
+def product_manage_online(product_id):
+    pass
+
+
+def product_manage_offline(product_id):
+    pass
+
+
+def product_manage_off_shelf(product_id):
+    pass
 
 
 Driver = init_webdriver(WebDriverType.ChromDriver)

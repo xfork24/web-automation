@@ -86,6 +86,31 @@ CREATE TABLE IF NOT EXISTS hot_product
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
+-- ------------------------------------
+-- Create shadow_product_info Table
+-- ------------------------------------
+CREATE TABLE IF NOT EXISTS shadow_product_info
+(
+    shadow_product_id     varchar(32)  NOT NULL,
+    product_id            varchar(32)  NOT NULL,
+    product_title         varchar(128) NOT NULL,
+    shop_name             varchar(128) NOT NULL,
+    price_unit            varchar(3)   NOT NULL,
+    price                 int          NOT NULL,
+    inventory             int          NOT NULL,
+    title_imgs            text         NOT NULL,
+    page_imgs             text         NOT NULL,
+    offer_details         text         NOT NULL,
+    additional_properties text         NOT NULL,
+    status                tinyint      NOT NULL,
+    create_ts             int          NOT NULL,
+    update_ts             int          NOT NULL,
+    update_id             varchar(32)  NOT NULL,
+    update_role           varchar(64)  NOT NULL,
+    PRIMARY KEY (shadow_product_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
 -- --------------------------------
 -- Create operation_history Table
 -- --------------------------------
@@ -200,6 +225,26 @@ CREATE TABLE IF NOT EXISTS llm_analyze_task
   DEFAULT CHARSET = utf8mb4;
 
 -- -----------------------------------
+-- Create product_manage_task Table
+-- -----------------------------------
+CREATE TABLE IF NOT EXISTS product_manage_task
+(
+    id                    varchar(32)  NOT NULL,
+    product_id            varchar(32)  NOT NULL,
+    shop_name             varchar(128) NOT NULL,
+    operation             tinyint      NOT NULL,
+    status                tinyint      NOT NULL,
+    try_count             int          NOT NULL,
+    additional_properties text         NOT NULL,
+    create_ts             int          NOT NULL,
+    update_ts             int          NOT NULL,
+    update_id             varchar(32)  NOT NULL,
+    update_role           varchar(64)  NOT NULL,
+    PRIMARY KEY (id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+-- -----------------------------------
 -- Create Indexes And Foreign Keys
 -- -----------------------------------
 ALTER TABLE product_info
@@ -234,6 +279,17 @@ ALTER TABLE product_sale
 ALTER TABLE hot_product
     ADD INDEX idx_create_ts (create_ts);
 ALTER TABLE hot_product
+    ADD INDEX idx_update_id (update_id);
+
+ALTER TABLE shadow_product_info
+    ADD INDEX idx_product_id (product_id);
+ALTER TABLE shadow_product_info
+    ADD INDEX idx_shop_name (shop_name);
+ALTER TABLE shadow_product_info
+    ADD INDEX idx_status (status);
+ALTER TABLE shadow_product_info
+    ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE shadow_product_info
     ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE operation_history
@@ -272,6 +328,15 @@ ALTER TABLE search_crawl_task
 ALTER TABLE search_crawl_task
     ADD INDEX idx_update_id (update_id);
 
+ALTER TABLE shop_search_crawl_task
+    ADD INDEX idx_shop_name (shop_name);
+ALTER TABLE shop_search_crawl_task
+    ADD INDEX idx_status (status);
+ALTER TABLE shop_search_crawl_task
+    ADD INDEX idx_update_ts (update_ts);
+ALTER TABLE shop_search_crawl_task
+    ADD INDEX idx_update_id (update_id);
+
 ALTER TABLE llm_analyze_task
     ADD INDEX idx_product_id (product_id);
 ALTER TABLE llm_analyze_task
@@ -281,13 +346,15 @@ ALTER TABLE llm_analyze_task
 ALTER TABLE llm_analyze_task
     ADD INDEX idx_update_id (update_id);
 
-ALTER TABLE shop_search_crawl_task
+ALTER TABLE product_manage_task
+    ADD INDEX idx_product_id (product_id);
+ALTER TABLE product_manage_task
     ADD INDEX idx_shop_name (shop_name);
-ALTER TABLE shop_search_crawl_task
+ALTER TABLE product_manage_task
     ADD INDEX idx_status (status);
-ALTER TABLE shop_search_crawl_task
+ALTER TABLE product_manage_task
     ADD INDEX idx_update_ts (update_ts);
-ALTER TABLE shop_search_crawl_task
+ALTER TABLE product_manage_task
     ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE product_info
@@ -300,6 +367,12 @@ ALTER TABLE hot_product
     ADD CONSTRAINT fk_hot_product_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
 ALTER TABLE hot_product
     ADD CONSTRAINT fk_hot_product_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
+ALTER TABLE shadow_product_info
+    ADD CONSTRAINT fk_shadow_product_info_shadow_product_id FOREIGN KEY (shadow_product_id) REFERENCES product_info (product_id);
+ALTER TABLE shadow_product_info
+    ADD CONSTRAINT fk_shadow_product_info_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
+ALTER TABLE shadow_product_info
+    ADD CONSTRAINT fk_shadow_product_info_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
 ALTER TABLE detail_crawl_task
     ADD CONSTRAINT fk_detail_crawl_task_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
 ALTER TABLE shop_crawl_task
@@ -308,6 +381,10 @@ ALTER TABLE shop_search_crawl_task
     ADD CONSTRAINT fk_shop_search_crawl_task_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
 ALTER TABLE llm_analyze_task
     ADD CONSTRAINT fk_llm_analyze_task_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
+ALTER TABLE product_manage_task
+    ADD CONSTRAINT fk_product_manage_task_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
+ALTER TABLE product_manage_task
+    ADD CONSTRAINT product_manage_task_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
 
 -- --------------------------------------------
 -- Create User taobao And Grant Permissions

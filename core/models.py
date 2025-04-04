@@ -99,7 +99,7 @@ class ProductInfo(BaseModel):
     product_title = CharField(max_length=128)
     product_link = CharField(max_length=512)
     product_cover = CharField(max_length=512)
-    shop_name = ForeignKeyField(ShopInfo, backref='productinfos', column_name='shop_name', lazy_load=False)
+    shop_name = ForeignKeyField(ShopInfo, backref='product_infos', column_name='shop_name', lazy_load=False)
     shop_link = CharField(max_length=512)
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
@@ -116,11 +116,14 @@ class ProductInfo(BaseModel):
 
     class Meta:
         table_name = 'product_info'
+        indexes = (
+            (('shop_name',), False),
+        )
 
 
 class ProductSale(BaseModel):
-    product_id = ForeignKeyField(ProductInfo, backref='productsales', column_name='product_id', lazy_load=False)
-    shop_name = ForeignKeyField(ShopInfo, backref='productsales', column_name='shop_name', lazy_load=False)
+    product_id = ForeignKeyField(ProductInfo, backref='product_sales', column_name='product_id', lazy_load=False)
+    shop_name = ForeignKeyField(ShopInfo, backref='product_sales', column_name='shop_name', lazy_load=False)
     price_unit = CharField(max_length=3)
     display_price = IntegerField()
     display_sale = IntegerField(index=True)
@@ -133,11 +136,14 @@ class ProductSale(BaseModel):
     class Meta:
         table_name = 'product_sale'
         primary_key = CompositeKey('product_id', 'create_ts')
+        indexes = (
+            (('shop_name',), False),
+        )
 
 
 class HotProduct(BaseModel):
-    product_id = ForeignKeyField(ProductInfo, backref='hotproducts', column_name='product_id', lazy_load=False)
-    shop_name = ForeignKeyField(ShopInfo, backref='hotproducts', column_name='shop_name', lazy_load=False)
+    product_id = ForeignKeyField(ProductInfo, backref='hot_products', column_name='product_id', lazy_load=False)
+    shop_name = ForeignKeyField(ShopInfo, backref='hot_products', column_name='shop_name', lazy_load=False)
     additional_properties = TextField()
     create_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
@@ -146,10 +152,41 @@ class HotProduct(BaseModel):
     class Meta:
         table_name = 'hot_product'
         primary_key = CompositeKey('product_id', 'create_ts')
+        indexes = (
+            (('shop_name',), False),
+        )
+
+
+class ShadowProductInfo(BaseModel):
+    shadow_product_id = ForeignKeyField(ProductInfo, backref='shadow_product_ids', column_name='product_id',
+                                        lazy_load=False)
+    product_id = ForeignKeyField(ProductInfo, backref='product_ids', column_name='product_id', lazy_load=False)
+    product_title = CharField(max_length=128)
+    shop_name = ForeignKeyField(ShopInfo, backref='shop_names', column_name='shop_name', lazy_load=False)
+    price_unit = CharField(max_length=3)
+    price = IntegerField()
+    inventory = IntegerField()
+    title_imgs = TextField()
+    page_imgs = TextField()
+    offer_details = TextField()
+    additional_properties = TextField()
+    status = SmallIntegerField(index=True)
+    create_ts = IntegerField()
+    update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
+    update_role = CharField(max_length=64)
+
+    class Meta:
+        table_name = 'shadow_product_info'
+        primary_key = CompositeKey('shadow_product_id')
+        indexes = (
+            (('product_id',), False),
+            (('shop_name',), False),
+        )
 
 
 class OperationHistory(BaseModel):
-    id = IntegerField()
+    id = IntegerField(primary_key=True)
     pk = CharField(max_length=128)
     table_name = CharField(max_length=32)
     additional_properties = TextField()
@@ -169,7 +206,7 @@ class OperationHistory(BaseModel):
 
 class DetailCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    product_id = ForeignKeyField(ProductInfo, backref='detailcrawltasks', column_name='product_id', lazy_load=False)
+    product_id = ForeignKeyField(ProductInfo, backref='detail_crawl_tasks', column_name='product_id', lazy_load=False)
     product_link = CharField(max_length=512)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
@@ -181,11 +218,14 @@ class DetailCrawlTask(BaseModel):
 
     class Meta:
         table_name = 'detail_crawl_task'
+        indexes = (
+            (('product_id',), False),
+        )
 
 
 class ShopCrawlTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    shop_name = ForeignKeyField(ShopInfo, backref='shopcrawltasks', column_name='shop_name', lazy_load=False)
+    shop_name = ForeignKeyField(ShopInfo, backref='shop_crawl_tasks', column_name='shop_name', lazy_load=False)
     target_product_ids = CharField(max_length=1024)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
@@ -197,6 +237,9 @@ class ShopCrawlTask(BaseModel):
 
     class Meta:
         table_name = 'shop_crawl_task'
+        indexes = (
+            (('shop_name',), False),
+        )
 
 
 class SearchCrawlTask(BaseModel):
@@ -216,9 +259,27 @@ class SearchCrawlTask(BaseModel):
         table_name = 'search_crawl_task'
 
 
+class ShopSearchCrawlTask(BaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    shop_name = ForeignKeyField(ShopInfo, backref='shop_search_crawl_tasks', column_name='shop_name', lazy_load=False)
+    status = SmallIntegerField(index=True)
+    try_count = IntegerField()
+    additional_properties = TextField()
+    create_ts = IntegerField()
+    update_ts = IntegerField(index=True)
+    update_id = CharField(max_length=32, index=True)
+    update_role = CharField(max_length=64)
+
+    class Meta:
+        table_name = 'shop_search_crawl_task'
+        indexes = (
+            (('shop_name',), False),
+        )
+
+
 class LLMAnalyzeTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    product_id = ForeignKeyField(ProductInfo, backref='llmanalyzetasks', column_name='product_id', lazy_load=False)
+    product_id = ForeignKeyField(ProductInfo, backref='llm_analyze_tasks', column_name='product_id', lazy_load=False)
     product_title = CharField(max_length=128)
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
@@ -230,11 +291,16 @@ class LLMAnalyzeTask(BaseModel):
 
     class Meta:
         table_name = 'llm_analyze_task'
+        indexes = (
+            (('product_id',), False),
+        )
 
 
-class ShopSearchCrawlTask(BaseModel):
+class ProductManageTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
-    shop_name = ForeignKeyField(ShopInfo, backref='shopsearchcrawltasks', column_name='shop_name', lazy_load=False)
+    product_id = ForeignKeyField(ProductInfo, backref='product_manage_tasks', column_name='product_id', lazy_load=False)
+    shop_name = ForeignKeyField(ShopInfo, backref='product_manage_tasks', column_name='shop_name', lazy_load=False)
+    operation = SmallIntegerField()
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
     additional_properties = TextField()
@@ -244,7 +310,11 @@ class ShopSearchCrawlTask(BaseModel):
     update_role = CharField(max_length=64)
 
     class Meta:
-        table_name = 'shop_search_crawl_task'
+        table_name = 'product_manage_task'
+        indexes = (
+            (('product_id',), False),
+            (('shop_name',), False),
+        )
 
 
 def update_product_info(product_id, update_id, update_role,
@@ -433,6 +503,86 @@ def add_product_sale(product_id, shop_name,
                               update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
+def update_shadow_product_info(shadow_product_id, status, update_id, update_role,
+                               product_id, product_title='', shop_name='',
+                               price_unit='', price=-1, inventory=-1,
+                               title_imgs=None, page_imgs=None, offer_details=None,
+                               additional_properties=None):
+    # update shadow_product_info table
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        # if record already exists, update only if value is valid
+        exist_spi = ShadowProductInfo.get(ShadowProductInfo.shadow_product_id == shadow_product_id)
+        original_json = exist_spi.to_json()
+        if product_id != '':
+            exist_spi.product_id = product_id
+        if product_title != '':
+            exist_spi.product_title = product_title
+        if shop_name != '':
+            exist_spi.shop_name = shop_name
+        if price_unit != '':
+            exist_spi.price_unit = price_unit
+        if price != -1:
+            exist_spi.price = price
+        if inventory != -1:
+            exist_spi.inventory = inventory
+        if title_imgs is not None:
+            exist_spi.title_imgs = json_dumps(title_imgs)
+        if page_imgs is not None:
+            exist_spi.page_imgs = json_dumps(page_imgs)
+        if offer_details is not None:
+            exist_spi.offer_details = json_dumps(offer_details)
+        if additional_properties is not None:
+            exist_spi.additional_properties = json_dumps(additional_properties)
+        exist_spi.status = status
+        exist_spi.update_ts = ts
+        exist_spi.update_id = update_id
+        exist_spi.update_role = update_role
+        exist_spi.save()
+        updated_json = exist_spi.to_json()
+        logger.info(f'exist shadow product info record updated: {exist_spi.to_json()}')
+        add_operation_history(shadow_product_id, exist_spi.table_name(),
+                              {'diff': json_diff(original_json, updated_json)},
+                              update_id, update_role, ts,
+                              DB_OPS_UPDATE_EXIST)
+    except DoesNotExist:
+        new_spi = ShadowProductInfo()
+        new_spi.shadow_product_id = shadow_product_id
+        new_spi.product_id = product_id
+        new_spi.product_title = product_title
+        new_spi.shop_name = shop_name
+        new_spi.price_unit = price_unit
+        new_spi.price = price
+        new_spi.inventory = inventory
+        if title_imgs is not None:
+            new_spi.title_imgs = json_dumps(title_imgs)
+        else:
+            new_spi.title_imgs = json_dumps({})
+        if page_imgs is not None:
+            new_spi.page_imgs = json_dumps(page_imgs)
+        else:
+            new_spi.page_imgs = json_dumps({})
+        if offer_details is not None:
+            new_spi.offer_details = json_dumps(offer_details)
+        else:
+            new_spi.offer_details = json_dumps({})
+        if additional_properties is not None:
+            new_spi.additional_properties = json_dumps(additional_properties)
+        else:
+            new_spi.additional_properties = json_dumps({})
+        new_spi.status = status
+        new_spi.create_ts = ts
+        new_spi.update_ts = ts
+        new_spi.update_id = update_id
+        new_spi.update_role = update_role
+        new_spi.save(force_insert=True)
+        logger.info(f'new shadow product info record inserted: {new_spi.to_json()}')
+        add_operation_history(shadow_product_id, new_spi.table_name(),
+                              {'diff': json_diff({}, new_spi.to_json())},
+                              update_id, update_role, ts, DB_OPS_CREATE_NEW)
+
+
 def add_operation_history(pk, table_name, additional_properties, update_id, update_role, operation_ts, operation):
     logger = get_logger()
     new_oh = OperationHistory()
@@ -534,6 +684,31 @@ def add_search_crawl_task(search_key, num_of_pages, target_product_ids, addition
     return pk
 
 
+def add_shop_search_crawl_task(shop_name, additional_properties, update_id, update_role):
+    logger = get_logger()
+    ts = int(time.time())
+    pk = uuid4().hex
+    new_sct = ShopSearchCrawlTask()
+    new_sct.id = pk
+    new_sct.shop_name = shop_name
+    new_sct.status = TASK_STATUS_NEW
+    new_sct.try_count = 0
+    if additional_properties is not None:
+        new_sct.additional_properties = json_dumps(additional_properties)
+    else:
+        new_sct.additional_properties = json_dumps({})
+    new_sct.create_ts = ts
+    new_sct.update_ts = ts
+    new_sct.update_id = update_id
+    new_sct.update_role = update_role
+    new_sct.save(force_insert=True)
+    logger.info(f'new shop search crawl task record inserted: {new_sct.to_json()}')
+    add_operation_history(pk, new_sct.table_name(),
+                          {'diff': json_diff({}, new_sct.to_json())},
+                          update_id, update_role, ts, DB_OPS_CREATE_NEW)
+    return pk
+
+
 def add_llm_analyze_task(product_id, product_title, additional_properties, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
@@ -560,27 +735,29 @@ def add_llm_analyze_task(product_id, product_title, additional_properties, updat
     return pk
 
 
-def add_shop_search_crawl_task(shop_name, additional_properties, update_id, update_role):
+def add_product_manage_task(product_id, shop_name, operation, additional_properties, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     pk = uuid4().hex
-    new_sct = ShopSearchCrawlTask()
-    new_sct.id = pk
-    new_sct.shop_name = shop_name
-    new_sct.status = TASK_STATUS_NEW
-    new_sct.try_count = 0
+    new_pmt = ProductManageTask()
+    new_pmt.id = pk
+    new_pmt.product_id = product_id
+    new_pmt.shop_name = shop_name
+    new_pmt.operation = operation
+    new_pmt.status = TASK_STATUS_NEW
+    new_pmt.try_count = 0
     if additional_properties is not None:
-        new_sct.additional_properties = json_dumps(additional_properties)
+        new_pmt.additional_properties = json_dumps(additional_properties)
     else:
-        new_sct.additional_properties = json_dumps({})
-    new_sct.create_ts = ts
-    new_sct.update_ts = ts
-    new_sct.update_id = update_id
-    new_sct.update_role = update_role
-    new_sct.save(force_insert=True)
-    logger.info(f'new shop search crawl task record inserted: {new_sct.to_json()}')
-    add_operation_history(pk, new_sct.table_name(),
-                          {'diff': json_diff({}, new_sct.to_json())},
+        new_pmt.additional_properties = json_dumps({})
+    new_pmt.create_ts = ts
+    new_pmt.update_ts = ts
+    new_pmt.update_id = update_id
+    new_pmt.update_role = update_role
+    new_pmt.save(force_insert=True)
+    logger.info(f'new product manage task record inserted: {new_pmt.to_json()}')
+    add_operation_history(pk, new_pmt.table_name(),
+                          {'diff': json_diff({}, new_pmt.to_json())},
                           update_id, update_role, ts, DB_OPS_CREATE_NEW)
     return pk
 
@@ -706,6 +883,25 @@ def delete_shop(shop_name, update_id):
         return 0
 
 
+def delete_shadow_product(shadow_product_id, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_sp = ShadowProductInfo.get(ShadowProductInfo.shadow_product_id == shadow_product_id)
+        original_json = exist_sp.to_json()
+        x = ShadowProductInfo.delete().where(ShadowProductInfo.shadow_product_id == shadow_product_id).execute()
+        add_operation_history(shadow_product_id, exist_sp.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_shadow_product.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'shadow product with shadow_product_id={shadow_product_id} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and shadow_product_id={shadow_product_id} can not be deleted')
+        return 0
+
+
 def delete_product_sale(product_id, create_ts, update_id):
     logger = get_logger()
     ts = int(time.time())
@@ -805,6 +1001,25 @@ def delete_search_crawl_task(task_id, update_id):
         return 0
 
 
+def delete_shop_search_crawl_task(task_id, update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    try:
+        exist_sct = ShopSearchCrawlTask.get(ShopSearchCrawlTask.id == task_id)
+        original_json = exist_sct.to_json()
+        x = ShopSearchCrawlTask.delete().where(ShopSearchCrawlTask.id == task_id).execute()
+        add_operation_history(task_id, exist_sct.table_name(),
+                              {'diff': json_diff(original_json, {})},
+                              update_id, delete_shop_search_crawl_task.__name__, ts, DB_OPS_DELETE_RECORD)
+        return x
+    except DoesNotExist:
+        logger.info(f'shop with task_id={task_id} does not exist')
+        return 0
+    except IntegrityError:
+        logger.info(f'integrity check failed and task_id={task_id} can not be deleted')
+        return 0
+
+
 def delete_llm_analyze_task(task_id, update_id):
     logger = get_logger()
     ts = int(time.time())
@@ -824,16 +1039,16 @@ def delete_llm_analyze_task(task_id, update_id):
         return 0
 
 
-def delete_shop_search_crawl_task(task_id, update_id):
+def delete_product_manage_task(task_id, update_id):
     logger = get_logger()
     ts = int(time.time())
     try:
-        exist_sct = ShopSearchCrawlTask.get(ShopSearchCrawlTask.id == task_id)
-        original_json = exist_sct.to_json()
-        x = ShopSearchCrawlTask.delete().where(ShopSearchCrawlTask.id == task_id).execute()
-        add_operation_history(task_id, exist_sct.table_name(),
+        exist_pmt = ProductManageTask.get(ProductManageTask.id == task_id)
+        original_json = exist_pmt.to_json()
+        x = ProductManageTask.delete().where(ProductManageTask.id == task_id).execute()
+        add_operation_history(task_id, exist_pmt.table_name(),
                               {'diff': json_diff(original_json, {})},
-                              update_id, delete_shop_search_crawl_task.__name__, ts, DB_OPS_DELETE_RECORD)
+                              update_id, delete_product_manage_task.__name__, ts, DB_OPS_DELETE_RECORD)
         return x
     except DoesNotExist:
         logger.info(f'shop with task_id={task_id} does not exist')
