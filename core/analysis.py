@@ -465,7 +465,7 @@ def run_detail_crawler_tasks(update_id):
         try:
             logger.info(
                 f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
-            craw_taobao_detail_page(task.product_id, update_id, task.product_link)
+            craw_taobao_detail_page(task.product_id, task.product_link, update_id)
         except Exception:
             logger.error(
                 f'get unhandled exception while crawling task id={task.id} with product_id={task.product_id}, product_link={task.product_link}, just continue')

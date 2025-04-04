@@ -16,6 +16,7 @@ from core.config import *
 from core.exceptions import *
 from core.models import *
 
+WEBDRIVER_OPTION_HEADLESS = True
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
@@ -95,7 +96,8 @@ def init_webdriver(webdriver_type: WebDriverType):
         options = webdriver.ChromeOptions()
         options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
         options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_argument('--headless')
+        if WEBDRIVER_OPTION_HEADLESS:
+            options.add_argument('--headless')
         options.add_argument('--disable-gpu')
         driver = webdriver.Chrome(options=options, service=driver_service)
     elif webdriver_type == WebDriverType.SafariDriver:
@@ -271,11 +273,12 @@ def handle_taobao_login_page():
             element_click(login_button)
             # check whether slide check is required
             try:
-                Driver.find_element(By.XPATH, '//*[@id="baxia-dialog-content"]')
-                logger.info('slide check needed, just try to bypass it by reinitialize webdriver')
-                close_driver()
-                Driver = init_webdriver(WebDriverType.ChromDriver)
-                continue
+                if WEBDRIVER_OPTION_HEADLESS:
+                    Driver.find_element(By.XPATH, '//*[@id="baxia-dialog-content"]')
+                    logger.info('slide check needed, just try to bypass it by reinitialize webdriver')
+                    close_driver()
+                    Driver = init_webdriver(WebDriverType.ChromDriver)
+                    continue
             except NoSuchElementException:
                 logger.info('do not need slide check this time, just continue')
             time.sleep(LOGIN_CONFIRM_WAIT_IN_SECONDS)
