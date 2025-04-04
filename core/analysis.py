@@ -238,74 +238,65 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                         analyze_and_add_hot_products.__name__)
 
 
-def download_hot_product_resources(force_download=False):
+def download_product_resources(product_id, ts, force_download=False):
     logger = get_logger()
-    start_ts = int(time.time()) - TB_HOT_PRODUCT_PERIOD_IN_SECONDS
-    # 下载hot product页面素材
-    logger.info('download hot product page resources ...')
-    set_window_size()
-    hp_query = HotProduct.select().where(HotProduct.create_ts > start_ts).order_by(HotProduct.create_ts)
-    for hp in hp_query:
-        product_root_dir = f'{PRODUCT_DIR}/{hp.product_id}/{hp.create_ts}'
-        product_path = Path(product_root_dir)
-        if product_path.exists():
-            if force_download:
-                logger.info(
-                    f'product path already exist with root_dir={product_root_dir}, will force clean it and redownload')
-                shutil.rmtree(product_root_dir, ignore_errors=True)
-            else:
-                logger.info(
-                    f'product path already exist with root_dir={product_root_dir}, just ignore')
-                continue
-        logger.info(f'create product_root_dir={product_root_dir}')
-        product_path.mkdir(parents=True, exist_ok=True)
+    try:
+        exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
+    except DoesNotExist:
+        logger.error(f'No product info found for product_id={product_id}, just return')
+        return
+    # create download folder
+    product_root_dir = f'{PRODUCT_DIR}/{product_id}/{ts}'
+    product_path = Path(product_root_dir)
+    if product_path.exists():
+        if force_download:
+            logger.info(
+                f'product path already exist with root_dir={product_root_dir}, will force clean it and redownload')
+            shutil.rmtree(product_root_dir, ignore_errors=True)
+        else:
+            logger.info(
+                f'product path already exist with root_dir={product_root_dir}, just ignore')
+            return
+    logger.info(f'create product_root_dir={product_root_dir}')
+    product_path.mkdir(parents=True, exist_ok=True)
+    # download title images
+    logger.info(
+        f'download product title images with product_id={exist_pi.product_id} and title_imgs={exist_pi.title_imgs}')
+    title_imgs = json_loads(exist_pi.title_imgs)
+    if len(title_imgs) > 0:
+        Path(f'{product_root_dir}/title_images').mkdir()
+    for title_img in title_imgs:
         try:
-            exist_pi = ProductInfo.get(ProductInfo.product_id == hp.product_id)
-        except DoesNotExist:
-            logger.error(f'No product info found for product_id={hp.product_id}, just ignore')
+            Driver.get(title_img)
+            time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
+            img = Driver.find_element(By.XPATH, '//img')
+            assert (img is not None)
+            logger.info(f'download product title_image={title_img}')
+            element_screenshot(img,
+                               f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}')
+        except Exception:
+            logger.error(f'get unhandled exception while get page image link={title_img}, just ignore')
+            traceback.print_exc()
             continue
-        # download title images
-        logger.info(
-            f'download product title images with product_id={exist_pi.product_id} and title_imgs={exist_pi.title_imgs}')
-        title_imgs = json_loads(exist_pi.title_imgs)
-        if len(title_imgs) > 0:
-            Path(f'{product_root_dir}/title_images').mkdir()
-        for title_img in title_imgs:
-            try:
-                Driver.get(title_img)
-                time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
-                img = Driver.find_element(By.XPATH, '//img')
-                assert (img is not None)
-                logger.info(f'download product title_image={title_img}')
-                element_screenshot(img,
-                                   f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}')
-            except Exception:
-                logger.error(f'get unhandled exception while get page image link={title_img}, just ignore')
-                traceback.print_exc()
-                continue
-        # download page images
-        logger.info(
-            f'download product title images with product_id={exist_pi.product_id} and title_imgs={exist_pi.page_imgs}')
-        page_imgs = json_loads(exist_pi.page_imgs)
-        if len(page_imgs) > 0:
-            Path(f'{product_root_dir}/page_images').mkdir()
-        for page_img in page_imgs:
-            try:
-                Driver.get(page_img)
-                time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
-                img = Driver.find_element(By.XPATH, '//img')
-                assert (img is not None)
-                logger.info(f'download product page_image={page_img}')
-                element_screenshot(img,
-                                   f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}')
-            except Exception:
-                logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
-                traceback.print_exc()
-                continue
-        # analyze offer details
-        # offer_details = json_loads(exist_pi.offer_details)
-        # analyze additional properties
-        # additional_properties = json_loads(exist_pi.additional_properties)
+    # download page images
+    logger.info(
+        f'download product title images with product_id={exist_pi.product_id} and title_imgs={exist_pi.page_imgs}')
+    page_imgs = json_loads(exist_pi.page_imgs)
+    if len(page_imgs) > 0:
+        Path(f'{product_root_dir}/page_images').mkdir()
+    for page_img in page_imgs:
+        try:
+            Driver.get(page_img)
+            time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
+            img = Driver.find_element(By.XPATH, '//img')
+            assert (img is not None)
+            logger.info(f'download product page_image={page_img}')
+            element_screenshot(img,
+                               f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}')
+        except Exception:
+            logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
+            traceback.print_exc()
+            continue
 
 
 def run_all_in_one_crawler_task(update_id):
@@ -466,6 +457,7 @@ def run_detail_crawler_tasks(update_id):
             logger.info(
                 f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
             craw_taobao_detail_page(task.product_id, task.product_link, task.id)
+            download_product_resources(task.product_id, int(time.time()))
         except Exception:
             logger.error(
                 f'get unhandled exception while crawling task id={task.id} with product_id={task.product_id}, product_link={task.product_link}, just continue')
