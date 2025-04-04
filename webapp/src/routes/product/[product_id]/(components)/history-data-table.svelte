@@ -72,10 +72,24 @@
       header: 'Detail',
       cell: ({row}) => {
         const statusSnippet = createRawSnippet<[string]>((getData) => {
-          const detail = getData();
-          return {
-            render: () => `<span>${detail}</span>`
-          };
+          const detail: string = getData();
+          if (row.original.updater == 'detail_crawl_task') {
+            const regexp = /^(?<product_link>[^\[\]]+)\[(?<try_count>\d+)\]$/;
+            const matches = detail.match(regexp);
+            if (matches && matches.groups) {
+              return {
+                render: () => `<div><a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='${matches.groups!.product_link}' target="_blank">Link</a>[${matches.groups!.try_count}]</div>>`
+              }
+            } else {
+              return {
+                render: () => `<span>${detail}</span>`
+              };
+            }
+          } else {
+            return {
+              render: () => `<span>${detail}</span>`
+            };
+          }
         });
         return renderSnippet(statusSnippet, row.getValue('Detail'));
       }
@@ -110,7 +124,7 @@
         const statusSnippet = createRawSnippet<[AdditionalProperties]>((getData) => {
           const additionalProperties = getData();
           let diff = additionalProperties.diff != undefined ? JSON.stringify(additionalProperties.diff) : '{}';
-          diff = diff.replace(/\s+/g,"")
+          diff = diff.replace(/\s+/g, "")
           return {
             render: () => `<div><img src="/diff.ico" alt="diff" style="cursor:pointer;" title=${diff}></div>`
           };
