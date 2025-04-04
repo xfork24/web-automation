@@ -95,7 +95,7 @@
   </header>
   <main>
     {#if data.product_info !== undefined }
-      <div class="items-center justify-between px-4 text-4xl">Product Detail for Product: {product_id}</div>
+      <div class="items-center justify-between px-4 text-4xl">Product Basic Information</div>
       <div class="flex p-4">
         <div class="items-center justify-between w-1/5">
           <img src={product.product_cover} alt="product cover"/>

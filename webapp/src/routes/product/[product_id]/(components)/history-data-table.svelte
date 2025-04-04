@@ -77,8 +77,10 @@
             const regexp = /^(?<product_link>[^\[\]]+)\[(?<try_count>\d+)\]$/;
             const matches = detail.match(regexp);
             if (matches && matches.groups) {
+              const product_link = matches.groups!.product_link.replace(/\s+/g, "")
+              const try_count = matches.groups!.try_count
               return {
-                render: () => `<div><a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='${matches.groups!.product_link}' target="_blank">Link</a>[${matches.groups!.try_count}]</div>>`
+                render: () => `<div style="display: flex; justify-content: center;"><a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='${product_link}' target="_blank" style="text-align: center;"><img src="/product.ico" alt="product link" style="cursor:pointer;" title=${product_link}></a>[${try_count}]</div>`
               }
             } else {
               return {
@@ -126,7 +128,7 @@
           let diff = additionalProperties.diff != undefined ? JSON.stringify(additionalProperties.diff) : '{}';
           diff = diff.replace(/\s+/g, "")
           return {
-            render: () => `<div><img src="/diff.ico" alt="diff" style="cursor:pointer;" title=${diff}></div>`
+            render: () => `<div style="display: flex; justify-content: center;"><img src="/diff.ico" alt="diff" style="cursor:pointer;" title=${diff}></div>`
           };
         });
         return renderSnippet(statusSnippet, row.getValue('Diff'));
