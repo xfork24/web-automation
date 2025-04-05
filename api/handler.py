@@ -513,7 +513,7 @@ def create_shadow_product_by_id():
             sp.page_imgs = p.page_imgs
             sp.offer_details = p.offer_details
             sp.additional_properties = p.additional_properties
-            sp.status = SHADOW_PRODUCT_NEW
+            sp.status = SHADOW_PRODUCT_STATUS_READY if sp.ready_for_onshelf() else SHADOW_PRODUCT_STATUS_NEW
             sp.create_ts = ts
             sp.update_ts = ts
             sp.update_id = request.args['update_id']
@@ -832,6 +832,11 @@ def get_all_tasks():
             LLMAnalyzeTask.status, fn.COUNT(LLMAnalyzeTask.id).alias('count')).where(
             LLMAnalyzeTask.update_ts >= start_ts, LLMAnalyzeTask.update_ts < now).group_by(LLMAnalyzeTask.status)
         data['llm_analyze_task'] = parse_task_status_query(query)
+        # product manage task
+        query = ProductManageTask.select(ProductManageTask.status, fn.COUNT(ProductManageTask.id).alias('count')).where(
+            ProductManageTask.update_ts >= start_ts, ProductManageTask.update_ts < now).group_by(
+            ProductManageTask.status)
+        data['product_manage_task'] = parse_task_status_query(query)
         return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -1567,7 +1572,7 @@ def archive_product_manage_task_by_id(task_id):
 # desc = true or false
 # limit = int(XXX)
 # offset = int(XXX)
-@api.get('/api/v1/product_task')
+@api.get('/api/v1/product_tasks')
 def get_product_manage_tasks():
     logger = get_logger()
     try:

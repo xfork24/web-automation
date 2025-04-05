@@ -395,3 +395,24 @@ CREATE USER IF NOT EXISTS 'taobao'@'localhost'
     IDENTIFIED BY 'taobao';
 GRANT ALL PRIVILEGES ON taobao.* TO 'taobao'@'localhost';
 FLUSH PRIVILEGES;
+
+-- -------------------------------------------
+-- Create Shadow Product Default Reference
+-- -------------------------------------------
+INSERT INTO `shop_info` (`shop_name`, `shop_link`, `shop_cover`, `additional_properties`, `create_ts`, `update_ts`,
+                         `update_id`, `update_role`)
+VALUES ('ShadowShop',
+        'https://www.taobao.com',
+        'https://img.alicdn.com/imgextra/i1/O1CN01pz5irY1bhDKceJor2_!!6000000003496-2-tps-144-144.png_320x320q75.jpg_.webp',
+        '{}', 1743825269, 1743825269, 'ShadowReference', 'ShadowReference');
+INSERT INTO `product_info` (`product_id`, `sku_id`, `product_title`, `product_link`, `product_cover`, `shop_name`,
+                            `shop_link`, `price_unit`, `display_price`, `display_sale`, `estimated_revenue`,
+                            `title_imgs`, `page_imgs`, `offer_details`, `additional_properties`, `create_ts`,
+                            `update_ts`, `update_id`, `update_role`)
+VALUES ('000000000000', '0', 'ShadowProduct',
+        'https://www.taobao.com',
+        'https://img.alicdn.com/imgextra/i1/O1CN01pz5irY1bhDKceJor2_!!6000000003496-2-tps-144-144.png_320x320q75.jpg_.webp',
+        'ShadowShop',
+        'https://www.taobao.com',
+        'CNY', 0, 0, 0, '{}', '{}', '{}', '{}', 1743827099, 1743827099, 'ShadowReference',
+        'ShadowReference');

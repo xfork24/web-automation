@@ -84,6 +84,10 @@
         {
           title: 'Shop Search Crawl Tasks',
           url: '/task/shop_search'
+        },
+        {
+          title: 'Product Manage Tasks',
+          url: '/task/product'
         }
       ]
     },

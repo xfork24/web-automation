@@ -32,6 +32,12 @@ TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
 TASK_STATUS_ARCHIVED = 5
 
+PRODUCT_MANAGE_OPERATION_READY = 1
+PRODUCT_MANAGE_OPERATION_ONSHELF = 2
+PRODUCT_MANAGE_OPERATION_ONLINE = 3
+PRODUCT_MANAGE_OPERATION_OFFLINE = 4
+PRODUCT_MANAGE_OPERATION_OFFSHELF = 5
+
 TASK_FAILED_UNEXPECTED_ERROR = 1
 TASK_FAILED_SHOP_NOT_STANDARD = 2
 TASK_FAILED_SHOP_SKU_EXCEEDS_LIMIT = 3
@@ -40,11 +46,12 @@ TASK_FAILED_SHOP_LINK_NOT_ACCESSIBLE = 5
 TASK_FAILED_SHOP_NOT_FOUND_IN_SEARCH = 6
 TASK_FAILED_SHOP_LINK_NOT_FOUND = 7
 
-SHADOW_PRODUCT_NEW = 1
-SHADOW_PRODUCT_ON_SHELF = 2
-SHADOW_PRODUCT_ON_LINE = 3
-SHADOW_PRODUCT_OFF_LINE = 4
-SHADOW_PRODUCT_OFF_SHELF = 5
+SHADOW_PRODUCT_STATUS_NEW = 0
+SHADOW_PRODUCT_STATUS_READY = 1
+SHADOW_PRODUCT_STATUS_ONSHELF = 2
+SHADOW_PRODUCT_STATUS_ONLINE = 3
+SHADOW_PRODUCT_STATUS_OFFLINE = 4
+SHADOW_PRODUCT_STATUS_OFFSHELF = 5
 
 SHOP_LINK_KNOWN_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
                                re.compile('^https://shop\\w+.taobao.com/')]
@@ -181,6 +188,13 @@ class ShadowProductInfo(BaseModel):
     update_ts = IntegerField(index=True)
     update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
+
+    def ready_for_onshelf(self):
+        if len(json_loads(self.title_imgs)) > 0 and len(
+                json_loads(self.page_imgs)) > 0 and LLM_ANALYSIS_KEY in json_loads(self.additional_properties):
+            return True
+        else:
+            return False
 
     class Meta:
         table_name = 'shadow_product_info'

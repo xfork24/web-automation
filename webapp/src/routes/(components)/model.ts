@@ -123,7 +123,7 @@ export type ShopInfo = {
 };
 
 export type DetailCrawlTask = {
-  id: number;
+  id: string;
   product_id: string;
   product_link: string;
   status: number;
@@ -138,7 +138,7 @@ export type DetailCrawlTask = {
 };
 
 export type LLMAnalyzeTask = {
-  id: number;
+  id: string;
   product_id: string;
   product_title: string;
   status: number;
@@ -153,7 +153,7 @@ export type LLMAnalyzeTask = {
 };
 
 export type SearchCrawlTask = {
-  id: number;
+  id: string;
   search_key: string;
   num_of_pages: string;
   status: number;
@@ -170,7 +170,7 @@ export type SearchCrawlTask = {
 };
 
 export type ShopCrawlTask = {
-  id: number;
+  id: string;
   shop_name: string;
   status: number;
   status_str: string;
@@ -186,8 +186,25 @@ export type ShopCrawlTask = {
 };
 
 export type ShopSearchCrawlTask = {
-  id: number;
+  id: string;
   shop_name: string;
+  status: number;
+  status_str: string;
+  reason: string;
+  try_count: number;
+  additional_properties: AdditionalProperties;
+  create_ts: number;
+  update_ts: number;
+  update_id: string;
+  update_role: string;
+};
+
+export type ProductManageTask = {
+  id: string;
+  product_id: string;
+  shop_name: string;
+  operation: number;
+  operation_str: string;
   status: number;
   status_str: string;
   reason: string;
@@ -250,19 +267,37 @@ export function statusToString(status: number) {
 }
 
 export function shadowStatusToString(status: number) {
-  let task_status = '';
-  if (status === 1) {
-    task_status = 'NEW';
+  let shadow_status = '';
+  if (status === 0) {
+    shadow_status = 'NEW';
+  } else if (status === 1) {
+    shadow_status = 'READY';
   } else if (status === 2) {
-    task_status = 'ON_SHELF';
+    shadow_status = 'ON_SHELF';
   } else if (status === 3) {
-    task_status = 'ONLINE';
+    shadow_status = 'ONLINE';
   } else if (status === 4) {
-    task_status = 'OFFLINE';
+    shadow_status = 'OFFLINE';
   } else if (status === 5) {
-    task_status = 'OFF_SHELF';
+    shadow_status = 'OFF_SHELF';
   }
-  return task_status;
+  return shadow_status;
+}
+
+export function shadowOperationToString(status: number) {
+  let shadow_operation = '';
+  if (status === 1) {
+    shadow_operation = 'PREPARE';
+  } else if (status === 2) {
+    shadow_operation = 'ON_SHELF';
+  } else if (status === 3) {
+    shadow_operation = 'ONLINE';
+  } else if (status === 4) {
+    shadow_operation = 'OFFLINE';
+  } else if (status === 5) {
+    shadow_operation = 'OFF_SHELF';
+  }
+  return shadow_operation;
 }
 
 export function parseTaskReason(task: any) {

@@ -193,7 +193,7 @@
         </Dialog.Trigger>
         <Dialog.Trigger class="w-full">
           <DropdownMenu.Item onclick={() => beforeOnShelfProductDialog()}>
-            <span>Product OnShelf</span>
+            <span>Onshelf Product</span>
           </DropdownMenu.Item>
         </Dialog.Trigger>
       </DropdownMenu.Group>

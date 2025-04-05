@@ -1,4 +1,4 @@
-import { type ProductInfo } from "../(components)/model";
+import { type ShadowProductInfo, shadowStatusToString } from "../(components)/model";
 
 export const load = async () => {
   try {
@@ -9,8 +9,8 @@ export const load = async () => {
       }
     });
     const body = await response.json();
-    body.data.forEach((shadow: ProductInfo) => {
-      if (shadow.additional_properties.hasOwnProperty('llm_analysis')) {
+    body.data.forEach((shadow: ShadowProductInfo) => {
+      if (shadow.hasOwnProperty('additional_properties') && shadow.additional_properties.hasOwnProperty('llm_analysis')) {
         shadow.keyword = shadow.additional_properties.llm_analysis.keyword;
         shadow.category = shadow.additional_properties.llm_analysis.category;
         shadow.digital = shadow.additional_properties.llm_analysis.digital;
@@ -20,6 +20,7 @@ export const load = async () => {
         shadow.digital = false;
       }
       shadow.digital_str = shadow.digital ? 'TRUE' : 'FALSE';
+      shadow.status_str = shadowStatusToString(shadow.status);
     })
     return {
       shadow_products: body.data,

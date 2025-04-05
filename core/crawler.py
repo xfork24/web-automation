@@ -974,19 +974,23 @@ def save_taobao_detail_result(product_id, sku_id, product_title, product_link,
     update_shop_info(shop_name, update_id, update_role, shop_link, '', None)
 
 
-def product_manage_on_shelf(shadow_product_id):
+def product_manage_ready(product_id, shop_name, update_id):
     pass
 
 
-def product_manage_online(product_id):
+def product_manage_on_shelf(product_id, shop_name, update_id):
     pass
 
 
-def product_manage_offline(product_id):
+def product_manage_online(shadow_id, shop_name, update_id):
     pass
 
 
-def product_manage_off_shelf(product_id):
+def product_manage_offline(shadow_id, shop_name, update_id):
+    pass
+
+
+def product_manage_off_shelf(shadow_id, shop_name, update_id):
     pass
 
 

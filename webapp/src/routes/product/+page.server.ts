@@ -10,7 +10,7 @@ export const load = async () => {
     });
     const body = await response.json();
     body.data.forEach((product: ProductInfo) => {
-      if (product.additional_properties.hasOwnProperty('llm_analysis')) {
+      if (product.hasOwnProperty('additional_properties') && product.additional_properties.hasOwnProperty('llm_analysis')) {
         product.keyword = product.additional_properties.llm_analysis.keyword;
         product.category = product.additional_properties.llm_analysis.category;
         product.digital = product.additional_properties.llm_analysis.digital;

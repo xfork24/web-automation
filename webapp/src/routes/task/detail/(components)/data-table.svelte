@@ -344,7 +344,7 @@
   const filter_fields = [
     {value: 'id', label: 'ID'},
     {value: 'product_id', label: 'Product ID'},
-    {value: 'status', label: 'Status'},
+    {value: 'status_str', label: 'Status'},
     {value: 'reason', label: 'Reason'}
   ];
 

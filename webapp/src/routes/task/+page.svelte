@@ -61,6 +61,10 @@
           value.key = 'llm_analyze_task';
           value.title = 'LLM Analyze Tasks';
           value.link = '/task/llm';
+        } else if (key === 'product_manage_task') {
+          value.key = 'product_manage_task';
+          value.title = 'Product Manage Tasks';
+          value.link = '/task/product';
         }
         results.push(value);
       }

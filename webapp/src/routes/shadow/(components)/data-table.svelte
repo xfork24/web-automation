@@ -43,17 +43,31 @@
   });
 
   function beforeOnlineSelectProductDialog() {
-    dialog_body = 'This action will online select product(s). The task(s) will be scheduled later.';
+    dialog_body = 'This action will try to online select product(s). The task(s) will be scheduled later.';
     handler = createSelectOnlineTask;
   }
 
   function beforeOfflineSelectProductDialog() {
-    dialog_body = 'This action will offline select product(s). The task(s) will be scheduled later.';
+    dialog_body = 'This action will try to offline select product(s). The task(s) will be scheduled later.';
     handler = createSelectOfflineTask;
+  }
+
+  function beforeDeleteSelectProductDialog() {
+    dialog_body = 'This action will try to delete select product(s)';
+    handler = deleteSelectShadowProduct;
   }
 
   async function createSelectOnlineTask(rows: Row<ShadowProductInfo>[]) {
     try {
+      // 必须所有的商品都是Offline=4状态才可以操作上线
+      for (const row of rows) {
+        if (row.original.status !== 4) {
+          open = false;
+          await invalidateAll();
+          toast("Operation Failed: Product(s) must be in OFFLINE status.");
+          return;
+        }
+      }
       for (const row of rows) {
         const response = await fetch('http://localhost:8000/api/v1/product_task', {
           method: 'PUT',
@@ -81,6 +95,15 @@
 
   async function createSelectOfflineTask(rows: Row<ShadowProductInfo>[]) {
     try {
+      // 必须所有的商品都是Online=3状态才可以操作上线
+      for (const row of rows) {
+        if (row.original.status !== 3) {
+          open = false;
+          await invalidateAll();
+          toast("Operation Failed: Product(s) must be in ONLINE status.");
+          return;
+        }
+      }
       for (const row of rows) {
         const response = await fetch('http://localhost:8000/api/v1/product_task', {
           method: 'PUT',
@@ -90,7 +113,7 @@
           body: JSON.stringify({
             'product_id': row.original.shadow_id,
             'shop_name': '归去来宝藏店',
-            'operation': 3,
+            'operation': 4,
             'update_id': data.user.name
           })
         });
@@ -106,11 +129,41 @@
     }
   }
 
+  async function deleteSelectShadowProduct(rows: Row<ShadowProductInfo>[]) {
+    try {
+      // 必须所有的商品都是New=0或Ready=1状态才可以操作上线
+      for (const row of rows) {
+        if (row.original.status !== 0 && row.original.status !== 1) {
+          open = false;
+          await invalidateAll();
+          toast("Operation Failed: Product(s) must be in NEW or READY status.");
+          return;
+        }
+      }
+      for (const row of rows) {
+        const response = await fetch(`http://localhost:8000/api/v1/shadow_product/${row.original.product_id}?update_id=${data.user.name}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+          },
+        });
+        const result = await response.json();
+        assert(result.code == 0, `delete shadow product failed for product ${row.original.product_id}`);
+      }
+      open = false;
+      table.resetRowSelection(false);
+      await invalidateAll();
+      toast("Operation Successful");
+    } catch (error) {
+      console.error(`Error in function: ${error}`);
+    }
+  }
+
   let pagination = $state<PaginationState>({pageIndex: 0, pageSize: 10});
   let sorting = $state<SortingState>([]);
   let columnFilters = $state<ColumnFiltersState>([]);
   let rowSelection = $state<RowSelectionState>({});
-  let columnVisibility = $state<VisibilityState>({'Operator ID': false});
+  let columnVisibility = $state<VisibilityState>({'Inventory': false, 'Operator ID': false});
 
   export const columns: ColumnDef<ShadowProductInfo>[] = [
     {
@@ -148,6 +201,20 @@
       }
     },
     {
+      id: 'Shop Name',
+      accessorKey: 'shop_name',
+      header: 'Shop Name',
+      cell: ({row}) => {
+        const statusSnippet = createRawSnippet<[string]>((getData) => {
+          const shop_name = getData();
+          return {
+            render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/shop/${shop_name}'>${shop_name}</a>`
+          };
+        });
+        return renderSnippet(statusSnippet, row.getValue('Shop Name'));
+      }
+    },
+    {
       id: 'Shadow ID',
       accessorKey: 'shadow_id',
       header: 'Shadow ID',
@@ -155,10 +222,24 @@
         const amountCellSnippet = createRawSnippet<[string]>((getData) => {
           const shadow_id = getData();
           return {
-            render: () => `<div>${shadow_id}</div>`
+            render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${shadow_id}'>${shadow_id}</a>`
           };
         });
         return renderSnippet(amountCellSnippet, row.getValue('Shadow ID'));
+      }
+    },
+    {
+      id: 'Status',
+      accessorKey: 'status_str',
+      header: 'Status',
+      cell: ({row}) => {
+        const statusSnippet = createRawSnippet<[number]>((getData) => {
+          const status = getData();
+          return {
+            render: () => `<div>${status}</div>`
+          };
+        });
+        return renderSnippet(statusSnippet, row.getValue('Status'));
       }
     },
     {
@@ -173,20 +254,6 @@
           };
         });
         return renderSnippet(statusSnippet, row.getValue('Product Title'));
-      }
-    },
-    {
-      id: 'Shop Name',
-      accessorKey: 'shop_name',
-      header: 'Shop Name',
-      cell: ({row}) => {
-        const statusSnippet = createRawSnippet<[string]>((getData) => {
-          const shop_name = getData();
-          return {
-            render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/shop/${shop_name}'>${shop_name}</a>`
-          };
-        });
-        return renderSnippet(statusSnippet, row.getValue('Shop Name'));
       }
     },
     {
@@ -390,9 +457,10 @@
 
   const filter_fields = [
     {value: 'product_id', label: 'Product ID'},
-    {value: 'shadow_id', label: 'Shadow ID'},
-    {value: 'product_title', label: 'Product Title'},
     {value: 'shop_name', label: 'Shop Name'},
+    {value: 'shadow_id', label: 'Shadow ID'},
+    {value: 'status_str', label: 'Status'},
+    {value: 'product_title', label: 'Product Title'},
     {value: 'keyword', label: 'Keyword'},
     {value: 'category', label: 'Category'},
     {value: 'digital_str', label: 'Digital'},
@@ -453,6 +521,11 @@
       <Dialog.Trigger class="mr-4">
         <Button class="max-w-xs" onclick={ () => beforeOfflineSelectProductDialog()} variant="destructive">
           Offline Products
+        </Button>
+      </Dialog.Trigger>
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeDeleteSelectProductDialog()} variant="destructive">
+          Delete Products
         </Button>
       </Dialog.Trigger>
       <Dialog.Content>
