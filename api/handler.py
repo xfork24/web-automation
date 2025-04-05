@@ -174,6 +174,14 @@ def delete_product_by_id(product_id):
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_product_by_id request for product_id={product_id} without update_id set')
             return build_client_error_response(f'update_id not set for delete request product_id={product_id}')
+        # 若存在状态非NEW和READY的shadow_product，则不允许删除
+        shadow_products = ShadowProductInfo.select().where(ShadowProductInfo.product_id == product_id,
+                                                           ShadowProductInfo.status != SHADOW_PRODUCT_STATUS_NEW,
+                                                           ShadowProductInfo.status != SHADOW_PRODUCT_STATUS_READY)
+        if len(shadow_products) > 0:
+            logger.info(
+                f'there are existing shadow products with this product_id={product_id}, record can not be deleted')
+            return build_client_error_response(f'shadow product exist for product_id={product_id}')
         x = delete_product(product_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -284,6 +292,14 @@ def delete_shop_by_name(shop_name):
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_product_by_name request for shop_name={shop_name} without update_id set')
             return build_client_error_response(f'update_id not set for delete request shop_name={shop_name}')
+        # 若存在状态非NEW和READY的shadow_product，则不允许删除
+        shadow_products = ShadowProductInfo.select().where(ShadowProductInfo.shop_name == shop_name,
+                                                           ShadowProductInfo.status != SHADOW_PRODUCT_STATUS_NEW,
+                                                           ShadowProductInfo.status != SHADOW_PRODUCT_STATUS_READY)
+        if len(shadow_products) > 0:
+            logger.info(
+                f'there are existing shadow products with this shop_name={shop_name}, record can not be deleted')
+            return build_client_error_response(f'shadow product exist for shop_name={shop_name}')
         x = delete_shop(shop_name, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -480,7 +496,7 @@ def get_shadow_product_by_id(product_id):
         return build_success_response({'data': p.to_json()})
     except DoesNotExist:
         msg = f'product_id={product_id} not found'
-        logger.info(f'shadow product_id={product_id}, not found')
+        logger.info(f'product_id={product_id}, not found')
         return build_not_found_response(msg)
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -493,32 +509,27 @@ def create_shadow_product_by_id():
     logger = get_logger()
     payload = request.json
     try:
+        # 这里是创建新的，不是修改，所以只有在不存在的情况下才调用
         product_id = payload.get('product_id')
         ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         logger.info(f'shadow product with product_id={product_id} already exist, just return')
         return build_success_response({})
     except DoesNotExist:
         try:
-            p = ProductInfo.get(ProductInfo.product_id == product_id)
-            ts = int(time.time())
-            sp = ShadowProductInfo()
-            sp.product_id = p.product_id
-            sp.shadow_id = SHADOW_PRODUCT_DEFAULT_ID
-            sp.product_title = p.product_title
-            sp.shop_name = p.shop_name
-            sp.price_unit = p.price_unit
-            sp.price = p.display_price
-            sp.inventory = 0
-            sp.title_imgs = p.title_imgs
-            sp.page_imgs = p.page_imgs
-            sp.offer_details = p.offer_details
-            sp.additional_properties = p.additional_properties
-            sp.status = SHADOW_PRODUCT_STATUS_READY if sp.ready_for_onshelf() else SHADOW_PRODUCT_STATUS_NEW
-            sp.create_ts = ts
-            sp.update_ts = ts
-            sp.update_id = request.args['update_id']
-            sp.update_role = create_shadow_product_by_id.__name__
-            sp.save(force_insert=True)
+            p = ProductInfo.get(ProductInfo.product_id == payload.get('product_id'))
+            title_imgs = json_loads(p.title_imgs)
+            page_imgs = json_loads(p.page_imgs)
+            offer_details = json_loads(p.offer_details)
+            additional_properties = json_loads(p.additional_properties)
+            if len(title_imgs) > 0 and len(
+                    page_imgs) > 0 and len(offer_details.keys()) > 0 and LLM_ANALYSIS_KEY in additional_properties:
+                status = SHADOW_PRODUCT_STATUS_READY
+            else:
+                status = SHADOW_PRODUCT_STATUS_NEW
+            update_shadow_product_info(p.product_id, status, payload.get('update_id'),
+                                       create_shadow_product_by_id.__name__, SHADOW_PRODUCT_DEFAULT_ID,
+                                       p.product_title, p.shop_name, p.price_unit, p.display_price, 0,
+                                       title_imgs, page_imgs, offer_details, additional_properties)
             return build_success_response({})
         except Exception as e:
             msg = f'get unhandled exception {e}'
@@ -553,6 +564,13 @@ def delete_shadow_product_by_id(product_id):
                 f'get delete_shadow_product_by_id request for product_id={product_id} without update_id set')
             return build_client_error_response(
                 f'update_id not set for delete request product_id={product_id}')
+        # 若存在状态非NEW和READY的shadow_product，则不允许删除
+        shadow_product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+        if shadow_product.status != SHADOW_PRODUCT_STATUS_NEW and shadow_product.status != SHADOW_PRODUCT_STATUS_READY:
+            logger.info(
+                f'shadow product with product_id={product_id} can not be deleted with status={shadow_product.status}')
+            return build_client_error_response(
+                f'shadow product with product_id={product_id} can not be deleted with status={shadow_product.status}')
         x = delete_shadow_product(product_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -1511,6 +1529,7 @@ def create_product_manage_task():
         start_ts = int(time.time()) - TB_PRODUCT_MANAGE_TASK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = ProductManageTask.select().where(ProductManageTask.product_id == payload.get('product_id'),
+                                                 ProductManageTask.operation == payload.get('operation'),
                                                  ProductManageTask.status != TASK_STATUS_DONE,
                                                  ProductManageTask.status != TASK_STATUS_ARCHIVED,
                                                  ProductManageTask.update_ts > start_ts)

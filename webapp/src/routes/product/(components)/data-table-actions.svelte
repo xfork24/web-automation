@@ -107,7 +107,7 @@
 
   async function onShelfProduct(row: ProductInfo) {
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/shadow_product?update_id=${user.name}`, {
+      const response = await fetch(`http://localhost:8000/api/v1/shadow_product`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json;charset=UTF-8'

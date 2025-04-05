@@ -15,6 +15,7 @@ TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
 TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS = 315360000
 TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS = 315360000
 TB_PRODUCT_MANAGE_TASK_PERIOD_IN_SECONDS = 315360000
+TB_SHADOW_PRODUCT_CHECK_PERIOD_IN_SECONDS = 315360000
 
 # 在考虑归档检查的前提下，任务仍然有可能会重复触发，但实际无需每次都跑，
 # 比如店铺抓取，同样的店铺几天内抓过（不管是否成功，不成功会重试），则不再重复抓
@@ -111,6 +112,7 @@ def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
 def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
                                        revenue_threshold=TB_SKU_REVENUE_THRESHOLD):
     logger = get_logger()
+    ts = int(time.time())
     pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
     idx = 0
     for pi in pi_query:
@@ -119,15 +121,14 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
             break
         idx += 1
         query = DetailCrawlTask.select().where(DetailCrawlTask.product_id == pi.product_id,
-                                               DetailCrawlTask.status != TASK_STATUS_DONE,
-                                               DetailCrawlTask.status != TASK_STATUS_ARCHIVED).order_by(
-            DetailCrawlTask.update_ts).limit(1)
+                                               DetailCrawlTask.update_ts > ts - TB_DETAIL_CRAWL_TASK_DEDUP_IN_SECONDS).order_by(
+            DetailCrawlTask.update_ts)
         if query.count() > 0:
             logger.info(
                 f'detail crawl task id={query[0].id} already exist for product_id={pi.product_id}, just ignore')
-            continue
-        add_detail_crawl_task(pi.product_id, pi.product_link, None, update_id,
-                              analyze_and_add_detail_crawl_tasks.__name__)
+        else:
+            add_detail_crawl_task(pi.product_id, pi.product_link, None, update_id,
+                                  analyze_and_add_detail_crawl_tasks.__name__)
 
 
 # 有如下可能的无效shop_info的情况：
@@ -201,10 +202,9 @@ def analyze_and_generate_fix_tasks(update_id,
                     add_shop_crawl_task(pi.shop_name, [pi.product_id], None, update_id, update_role)
         # 处理llm_analysis缺失问题，我们不用batch的方式，便于检查任务是否存在，在执行任务时进行batch
         if fix_llm_analysis:
-            llm_start_ts = ts - TB_LLM_ANALYZE_TASK_DEDUP_IN_SECONDS
             if LLM_ANALYSIS_KEY not in json_loads(pi.additional_properties):
                 tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == pi.product_id,
-                                                      LLMAnalyzeTask.update_ts > llm_start_ts).order_by(
+                                                      LLMAnalyzeTask.update_ts > ts - TB_LLM_ANALYZE_TASK_DEDUP_IN_SECONDS).order_by(
                     LLMAnalyzeTask.update_ts.desc())
                 logger.info(f'handle LLM analysis for product_id={pi.product_id}, product_title={pi.product_title}')
                 if tasks.count() == 0:
@@ -215,7 +215,7 @@ def analyze_and_generate_fix_tasks(update_id,
 def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                                  revenue_threshold=TB_HOT_PRODUCT_REVENUE_THRESHOLD):
     logger = get_logger()
-    start_ts = int(time.time()) - TB_HOT_PRODUCT_PERIOD_IN_SECONDS
+    ts = int(time.time())
     pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
     idx = 0
     for pi in pi_query:
@@ -230,7 +230,7 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
             continue
         idx += 1
         query = HotProduct.select().where(HotProduct.product_id == pi.product_id,
-                                          HotProduct.create_ts > start_ts).order_by(
+                                          HotProduct.create_ts > ts - TB_HOT_PRODUCT_PERIOD_IN_SECONDS).order_by(
             HotProduct.create_ts).limit(1)
         if query.count() > 0:
             logger.info(
@@ -306,8 +306,59 @@ def run_all_in_one_crawler_task(update_id):
     analyze_and_generate_fix_tasks(update_id)
     run_shop_search_crawler_task(update_id)
     run_shop_crawler_tasks(update_id)
-    # run_llm_analyze_tasks(update_id)
+    analyze_and_fix_shadow_products(update_id)
     run_detail_crawler_tasks(update_id)
+
+
+# 分析并自动添加shadow products, 同时生成detail_crawl_task和llm_analyze_task
+# 然后检查并更新所有状态为NEW的shadow_product
+def analyze_and_fix_shadow_products(update_id):
+    logger = get_logger()
+    ts = int(time.time())
+    # TODO: 按一定标准生成shadow_products
+    # check and update shadow product status
+    shadow_products = ShadowProductInfo.select().where(ShadowProductInfo.status == SHADOW_PRODUCT_STATUS_NEW,
+                                                       ShadowProductInfo.update_ts > ts - TB_SHADOW_PRODUCT_CHECK_PERIOD_IN_SECONDS)
+    for sp in shadow_products:
+        try:
+            p = ProductInfo.get(ProductInfo.product_id == sp.product_id)
+            title_imgs = json_loads(p.title_imgs)
+            page_imgs = json_loads(p.page_imgs)
+            offer_details = json_loads(p.offer_details)
+            additional_properties = json_loads(p.additional_properties)
+            if len(title_imgs) > 0 and len(
+                    page_imgs) > 0 and len(offer_details.keys()) > 0 and LLM_ANALYSIS_KEY in additional_properties:
+                status = SHADOW_PRODUCT_STATUS_READY
+            else:
+                status = SHADOW_PRODUCT_STATUS_NEW
+            # 我们总是将shadow_product更新到最新，只要它还是NEW状态
+            update_shadow_product_info(p.product_id, status, update_id,
+                                       analyze_and_fix_shadow_products.__name__, SHADOW_PRODUCT_DEFAULT_ID,
+                                       p.product_title, p.shop_name, p.price_unit, p.display_price, 0,
+                                       title_imgs, page_imgs, offer_details, additional_properties)
+            if len(title_imgs) == 0 or len(page_imgs) == 0 or len(offer_details.keys()) == 0:
+                tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == p.product_id,
+                                                       DetailCrawlTask.update_ts > ts - TB_DETAIL_CRAWL_TASK_DEDUP_IN_SECONDS).order_by(
+                    DetailCrawlTask.update_ts.desc())
+                if len(tasks) == 0:
+                    logger.info(f'add detail crawl task to fix shadow product, product_id={p.product_id}')
+                    add_detail_crawl_task(p.product_id, p.product_link, {}, update_id,
+                                          analyze_and_fix_shadow_products.__name__)
+            if LLM_ANALYSIS_KEY not in additional_properties:
+                tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == p.product_id,
+                                                      LLMAnalyzeTask.update_ts > ts - TB_LLM_ANALYZE_TASK_DEDUP_IN_SECONDS).order_by(
+                    LLMAnalyzeTask.update_ts.desc())
+                if len(tasks) == 0:
+                    logger.info(f'add llm analyze task to fix shadow product, product_id={p.product_id}')
+                    add_llm_analyze_task(p.product_id, p.product_title, {}, update_id,
+                                         analyze_and_fix_shadow_products.__name__)
+        except DoesNotExist:
+            logger.error(f'product_id={sp.product_id} does not exist while updating shadow product, just continue')
+            continue
+        except Exception:
+            logger.error(f'get unexpected exception while updating shadow products, just continue')
+            traceback.print_exc()
+            continue
 
 
 # 返回是否继续执行这个task

@@ -189,13 +189,6 @@ class ShadowProductInfo(BaseModel):
     update_id = CharField(max_length=32, index=True)
     update_role = CharField(max_length=64)
 
-    def ready_for_onshelf(self):
-        if len(json_loads(self.title_imgs)) > 0 and len(
-                json_loads(self.page_imgs)) > 0 and LLM_ANALYSIS_KEY in json_loads(self.additional_properties):
-            return True
-        else:
-            return False
-
     class Meta:
         table_name = 'shadow_product_info'
         primary_key = CompositeKey('product_id')
@@ -523,7 +516,7 @@ def add_product_sale(product_id, shop_name,
 
 
 def update_shadow_product_info(product_id, status, update_id, update_role,
-                               shadow_id, product_title='', shop_name='',
+                               shadow_id='', product_title='', shop_name='',
                                price_unit='', price=-1, inventory=-1,
                                title_imgs=None, page_imgs=None, offer_details=None,
                                additional_properties=None):
@@ -854,6 +847,14 @@ def delete_product(product_id, update_id):
         llm_analyze_tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == product_id)
         for llm_analyze_task in llm_analyze_tasks:
             delete_llm_analyze_task(llm_analyze_task.id, update_id)
+        # 关联删除所有product_manage_task
+        product_manage_tasks = ProductManageTask.select().where(ProductManageTask.product_id == product_id)
+        for product_manage_task in product_manage_tasks:
+            delete_product_manage_task(product_manage_task.id, update_id)
+        # 关联删除所有的shadow product
+        shadow_products = ShadowProductInfo.select().where(ShadowProductInfo.product_id == product_id)
+        for shadow_product in shadow_products:
+            delete_shadow_product(shadow_product.product_id, update_id)
         # 删除product_info
         exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
         original_json = exist_pi.to_json()
