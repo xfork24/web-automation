@@ -678,7 +678,7 @@ def crawl_taobao_shop_link_by_search(shop_name, update_id):
         if cls_name is None:
             continue
         elif re.match(SHOP_SEARCH_TIPS_RE_EXP, cls_name) and div.text == '“没有找到相关宝贝”':
-            msg = f'can not find shop_name={shop_name} by shop search'
+            msg = f'can not find shop_name={shop_name} by shop search, no results found'
             logger.error(msg)
             raise ShopNotFoundInSearch(msg)
     shop_link = None
@@ -700,6 +700,10 @@ def crawl_taobao_shop_link_by_search(shop_name, update_id):
     if shop_link is not None:
         logger.info(f'update shop_name={shop_name} and shop_link={shop_link}')
         update_shop_info(shop_name, update_id, crawl_taobao_shop_link_by_search.__name__, shop_link, shop_cover, None)
+    else:
+        msg = f'can not find shop_name={shop_name} by shop search, all results parsed'
+        logger.error(msg)
+        raise ShopNotFoundInSearch(msg)
 
 
 def parse_price_span(price_span, product_id):

@@ -34,7 +34,7 @@
   import {
     assert,
     parseUUID4,
-    type ShopSearchCrawlTask,
+    type ShopSearchCrawlTask, task_status_badge_class,
     timeConverter
   } from '../../../(components)/model';
   import { invalidateAll } from '$app/navigation';
@@ -192,8 +192,9 @@
       cell: ({row}) => {
         const statusSnippet = createRawSnippet<[number]>((getData) => {
           const status = getData();
+          const badge_class = task_status_badge_class[row.original.status];
           return {
-            render: () => `<div>${status}</div>`
+            render: () => `<div><span class="${badge_class}">${status}</span></div>`
           };
         });
         return renderSnippet(statusSnippet, row.getValue('Status'));

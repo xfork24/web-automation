@@ -31,7 +31,13 @@
     renderComponent,
     renderSnippet
   } from '$lib/components/ui/data-table';
-  import { assert, type ProductManageTask, parseUUID4, timeConverter } from '../../../(components)/model';
+  import {
+    assert,
+    type ProductManageTask,
+    parseUUID4,
+    timeConverter,
+    task_status_badge_class
+  } from '../../../(components)/model';
   import { invalidateAll } from '$app/navigation';
 
 
@@ -217,8 +223,9 @@
       cell: ({row}) => {
         const statusSnippet = createRawSnippet<[number]>((getData) => {
           const status = getData();
+          const badge_class = task_status_badge_class[row.original.status];
           return {
-            render: () => `<div>${status}</div>`
+            render: () => `<div><span class="${badge_class}">${status}</span></div>`
           };
         });
         return renderSnippet(statusSnippet, row.getValue('Status'));
