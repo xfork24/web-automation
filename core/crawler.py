@@ -16,7 +16,7 @@ from core.config import *
 from core.exceptions import *
 from core.models import *
 
-WEBDRIVER_OPTION_HEADLESS = False
+WEBDRIVER_OPTION_HEADLESS = True
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'

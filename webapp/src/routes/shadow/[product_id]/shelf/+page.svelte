@@ -1,6 +1,6 @@
 <script lang="ts">
-  import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
-  import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+  import * as Breadcrumb from '$lib/components/ui/breadcrumb';
+  import * as Sidebar from '$lib/components/ui/sidebar';
   import Tally_1 from '@lucide/svelte/icons/tally-1';
 
   let {data} = $props();
@@ -17,7 +17,7 @@
             <Tally_1/>
           </Breadcrumb.Separator>
           <Breadcrumb.Item>
-            <Breadcrumb.Link href="/">Home</Breadcrumb.Link>
+            <Breadcrumb.Link href="/static">Home</Breadcrumb.Link>
           </Breadcrumb.Item>
           <Breadcrumb.Separator/>
           <Breadcrumb.Item>

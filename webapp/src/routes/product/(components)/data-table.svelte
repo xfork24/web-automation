@@ -18,12 +18,12 @@
   import DataTableActions from './data-table-actions.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
-  import { Toaster } from "$lib/components/ui/sonner/index.js";
+  import { Toaster } from "$lib/components/ui/sonner";
   import { toast } from "svelte-sonner";
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Table from '$lib/components/ui/table';
-  import * as Select from '$lib/components/ui/select/index.js';
-  import * as Dialog from '$lib/components/ui/dialog/index.js';
+  import * as Select from '$lib/components/ui/select';
+  import * as Dialog from '$lib/components/ui/dialog';
   import {
     FlexRender,
     createSvelteTable,

@@ -91,8 +91,8 @@ CREATE TABLE IF NOT EXISTS hot_product
 -- ------------------------------------
 CREATE TABLE IF NOT EXISTS shadow_product_info
 (
-    shadow_product_id     varchar(32)  NOT NULL,
     product_id            varchar(32)  NOT NULL,
+    shadow_id             varchar(32)  NOT NULL,
     product_title         varchar(128) NOT NULL,
     shop_name             varchar(128) NOT NULL,
     price_unit            varchar(3)   NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS shadow_product_info
     update_ts             int          NOT NULL,
     update_id             varchar(32)  NOT NULL,
     update_role           varchar(64)  NOT NULL,
-    PRIMARY KEY (shadow_product_id)
+    PRIMARY KEY (product_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
@@ -282,9 +282,13 @@ ALTER TABLE hot_product
     ADD INDEX idx_update_id (update_id);
 
 ALTER TABLE shadow_product_info
-    ADD INDEX idx_product_id (product_id);
+    ADD INDEX idx_shadow_id (shadow_id);
 ALTER TABLE shadow_product_info
     ADD INDEX idx_shop_name (shop_name);
+ALTER TABLE shadow_product_info
+    ADD INDEX idx_price (price);
+ALTER TABLE shadow_product_info
+    ADD INDEX idx_inventory (inventory);
 ALTER TABLE shadow_product_info
     ADD INDEX idx_status (status);
 ALTER TABLE shadow_product_info
@@ -367,8 +371,6 @@ ALTER TABLE hot_product
     ADD CONSTRAINT fk_hot_product_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
 ALTER TABLE hot_product
     ADD CONSTRAINT fk_hot_product_shop_name FOREIGN KEY (shop_name) REFERENCES shop_info (shop_name);
-ALTER TABLE shadow_product_info
-    ADD CONSTRAINT fk_shadow_product_info_shadow_product_id FOREIGN KEY (shadow_product_id) REFERENCES product_info (product_id);
 ALTER TABLE shadow_product_info
     ADD CONSTRAINT fk_shadow_product_info_product_id FOREIGN KEY (product_id) REFERENCES product_info (product_id);
 ALTER TABLE shadow_product_info

@@ -472,15 +472,15 @@ def query_product_sales():
         return build_server_error_response(msg)
 
 
-@api.get('/api/v1/shadow_product/<shadow_product_id>')
-def get_shadow_product_by_id(shadow_product_id):
+@api.get('/api/v1/shadow_product/<product_id>')
+def get_shadow_product_by_id(product_id):
     logger = get_logger()
     try:
-        p = ShadowProductInfo.get(ProductInfo.shadow_product_id == shadow_product_id)
+        p = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         return build_success_response({'data': p.to_json()})
     except DoesNotExist:
-        msg = f'shadow_product_id={shadow_product_id} not found'
-        logger.info(f'invalid shadow_product_id={shadow_product_id}, not found')
+        msg = f'product_id={product_id} not found'
+        logger.info(f'shadow product_id={product_id}, not found')
         return build_not_found_response(msg)
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -488,11 +488,53 @@ def get_shadow_product_by_id(shadow_product_id):
         return build_server_error_response(msg)
 
 
-@api.get('/api/v1/shadow_product/<shadow_product_id>/history')
-def get_shadow_product_history_by_id(shadow_product_id):
+@api.put('/api/v1/shadow_product')
+def create_shadow_product_by_id():
+    logger = get_logger()
+    payload = request.json
+    try:
+        product_id = payload.get('product_id')
+        ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+        logger.info(f'shadow product with product_id={product_id} already exist, just return')
+        return build_success_response({})
+    except DoesNotExist:
+        try:
+            p = ProductInfo.get(ProductInfo.product_id == product_id)
+            ts = int(time.time())
+            sp = ShadowProductInfo()
+            sp.product_id = p.product_id
+            sp.shadow_id = SHADOW_PRODUCT_DEFAULT_ID
+            sp.product_title = p.product_title
+            sp.shop_name = p.shop_name
+            sp.price_unit = p.price_unit
+            sp.price = p.display_price
+            sp.inventory = 0
+            sp.title_imgs = p.title_imgs
+            sp.page_imgs = p.page_imgs
+            sp.offer_details = p.offer_details
+            sp.additional_properties = p.additional_properties
+            sp.status = SHADOW_PRODUCT_NEW
+            sp.create_ts = ts
+            sp.update_ts = ts
+            sp.update_id = request.args['update_id']
+            sp.update_role = create_shadow_product_by_id.__name__
+            sp.save(force_insert=True)
+            return build_success_response({})
+        except Exception as e:
+            msg = f'get unhandled exception {e}'
+            logger.error(msg)
+            return build_server_error_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.get('/api/v1/shadow_product/<product_id>/history')
+def get_shadow_product_history_by_id(product_id):
     logger = get_logger()
     try:
-        histories = OperationHistory.select().where(OperationHistory.pk == shadow_product_id).order_by(
+        histories = OperationHistory.select().where(OperationHistory.pk == product_id).order_by(
             OperationHistory.operation_ts.desc())
         data = [h.to_json() for h in histories]
         return build_success_response({'data': data})
@@ -502,17 +544,75 @@ def get_shadow_product_history_by_id(shadow_product_id):
         return build_server_error_response(msg)
 
 
-@api.delete('/api/v1/shadow_product/<shadow_product_id>')
-def delete_shadow_product_by_id(shadow_product_id):
+@api.delete('/api/v1/shadow_product/<product_id>')
+def delete_shadow_product_by_id(product_id):
     logger = get_logger()
     try:
         if 'update_id' not in request.args.keys():
             logger.info(
-                f'get delete_shadow_product_by_id request for shadow_product_id={shadow_product_id} without update_id set')
+                f'get delete_shadow_product_by_id request for product_id={product_id} without update_id set')
             return build_client_error_response(
-                f'update_id not set for delete request shadow_product_id={shadow_product_id}')
-        x = delete_shadow_product(shadow_product_id, request.args['update_id'])
+                f'update_id not set for delete request product_id={product_id}')
+        x = delete_shadow_product(product_id, request.args['update_id'])
         return build_success_response({'delete': x})
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+# supported query params:
+# shop_name = XXX
+# update_ts = {"lt": 100, "gt": 30}
+# price = {"lt": 100, "gt": 30}
+# inventory = {"lt": 100, "gt": 30}
+# update_id = XXX
+# sort = update_ts or display_sale or estimated_revenue or update_id
+# desc = true or false
+# limit = int(XXX)
+# offset = int(XXX)
+@api.get('/api/v1/shadow_products')
+def query_shadow_products():
+    logger = get_logger()
+    try:
+        select_exps = []
+        sort = ShadowProductInfo.update_ts
+        desc = False
+        limit = DB_QUERY_DEFAULT_LIMIT
+        offset = 0
+        for k, v in request.args.items():
+            if k == 'shop_name':
+                select_exps.append(ShadowProductInfo.shop_name == v)
+            elif k == 'update_ts':
+                select_exps += parse_param_compare(ShadowProductInfo.update_ts, v)
+            elif k == 'price':
+                select_exps += parse_param_compare(ShadowProductInfo.price, v)
+            elif k == 'inventory':
+                select_exps += parse_param_compare(ShadowProductInfo.inventory, v)
+            elif k == 'update_id':
+                select_exps.append(ShadowProductInfo.update_id == v)
+            elif k == 'sort':
+                sort_columns = {
+                    'update_ts': ShadowProductInfo.update_ts,
+                    'display_sale': ShadowProductInfo.price,
+                    'estimated_revenue': ShadowProductInfo.inventory,
+                    'update_id': ShadowProductInfo.update_id
+                }
+                if v in sort_columns:
+                    sort = sort_columns[v]
+            elif k == 'desc':
+                desc = True
+            elif k == 'limit':
+                limit = int(v)
+            elif k == 'offset':
+                offset = int(v)
+        sort = sort.desc() if desc else sort
+        if len(select_exps) == 0:
+            query = ShadowProductInfo.select().order_by(sort).limit(limit).offset(offset)
+        else:
+            query = ShadowProductInfo.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        data = [q.to_json() for q in query]
+        return build_success_response({'data': data})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)

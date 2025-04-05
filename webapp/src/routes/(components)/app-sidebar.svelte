@@ -27,12 +27,16 @@
           url: '/product'
         },
         {
+          title: 'Shadow Products',
+          url: '/shadow'
+        },
+        {
           title: 'Product Detail',
           url: '/product/<product_id>'
         },
         {
           title: 'Product On Shelf',
-          url: '/product/<product_id>/shelf'
+          url: '/shadow/<product_id>/shelf'
         }
       ]
     },

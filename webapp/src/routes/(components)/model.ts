@@ -59,6 +59,30 @@ export type ProductInfo = {
   update_role: string;
 };
 
+export type ShadowProductInfo = {
+  product_id: string;
+  shadow_id: string;
+  product_title: string;
+  shop_name: string;
+  keyword: string;
+  category: string;
+  digital: boolean;
+  digital_str: string;
+  price_unit: string;
+  price: number;
+  inventory: number;
+  title_images: string[];
+  page_images: string[];
+  offer_details: OfferInfo;
+  additional_properties: AdditionalProperties;
+  status: number;
+  status_str: string;
+  create_ts: number;
+  update_ts: number;
+  update_id: string;
+  update_role: string;
+};
+
 export type ProductSale = {
   product_id: string;
   shop_name: string;
@@ -221,6 +245,22 @@ export function statusToString(status: number) {
     task_status = 'ERROR';
   } else if (status === 5) {
     task_status = 'ARCHIVED';
+  }
+  return task_status;
+}
+
+export function shadowStatusToString(status: number) {
+  let task_status = '';
+  if (status === 1) {
+    task_status = 'NEW';
+  } else if (status === 2) {
+    task_status = 'ON_SHELF';
+  } else if (status === 3) {
+    task_status = 'ONLINE';
+  } else if (status === 4) {
+    task_status = 'OFFLINE';
+  } else if (status === 5) {
+    task_status = 'OFF_SHELF';
   }
   return task_status;
 }

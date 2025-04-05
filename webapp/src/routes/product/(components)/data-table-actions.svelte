@@ -2,13 +2,13 @@
   import { Ellipsis } from '@lucide/svelte/icons';
   import {
     Button
-  } from '$lib/components/ui/button/index.js';
+  } from '$lib/components/ui/button';
   import { goto, invalidateAll } from '$app/navigation';
   import type { ProductInfo } from '../../(components)/model';
-  import { Toaster } from "$lib/components/ui/sonner/index.js";
+  import { Toaster } from "$lib/components/ui/sonner";
   import { toast } from "svelte-sonner";
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import * as Dialog from '$lib/components/ui/dialog/index.js';
+  import * as Dialog from '$lib/components/ui/dialog';
 
   let {row, user} = $props();
 
@@ -31,6 +31,11 @@
   function beforeDeleteProductDialog() {
     dialog_body = 'This action will try to delete a product. You must fix all external constraints before this operation can be done.';
     handler = deleteProduct;
+  }
+
+  function beforeOnShelfProductDialog() {
+    dialog_body = 'This action will try to put a product on shelf.';
+    handler = onShelfProduct;
   }
 
   async function createDetailCrawlTask(row: ProductInfo) {
@@ -99,6 +104,30 @@
       console.error(`Error in function: ${error}`);
     }
   }
+
+  async function onShelfProduct(row: ProductInfo) {
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/shadow_product?update_id=${user.name}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8'
+        },
+        body: JSON.stringify({
+          'product_id': row.product_id,
+          'update_id': user.name
+        })
+      });
+      const result = await response.json();
+      if (result.code == 0) {
+        open = false;
+        await invalidateAll();
+        toast("Operation Successful");
+        goto(`/shadow/${row.product_id}/shelf`);
+      }
+    } catch (error) {
+      console.error(`Error in function: ${error}`);
+    }
+  }
 </script>
 
 <Toaster/>
@@ -162,8 +191,11 @@
             <span>Delete Product</span>
           </DropdownMenu.Item>
         </Dialog.Trigger>
-        <DropdownMenu.Item onclick={() => goto('/product/' + row.product_id + '/shelf')}>Product OnShelf
-        </DropdownMenu.Item>
+        <Dialog.Trigger class="w-full">
+          <DropdownMenu.Item onclick={() => beforeOnShelfProductDialog()}>
+            <span>Product OnShelf</span>
+          </DropdownMenu.Item>
+        </Dialog.Trigger>
       </DropdownMenu.Group>
     </DropdownMenu.Content>
   </DropdownMenu.Root>

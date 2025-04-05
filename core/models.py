@@ -20,6 +20,7 @@ from playhouse.shortcuts import model_to_dict
 SHOP_COVER_DEFAULT_LINK = 'https://img.alicdn.com/imgextra/i1/O1CN01pz5irY1bhDKceJor2_!!6000000003496-2-tps-144-144.png_320x320q75.jpg_.webp'
 LLM_ANALYSIS_KEY = 'llm_analysis'
 ERRORS_KEY = 'errors'
+SHADOW_PRODUCT_DEFAULT_ID = '000000000000'
 
 DB_OPS_CREATE_NEW = 1
 DB_OPS_UPDATE_EXIST = 2
@@ -38,6 +39,12 @@ TASK_FAILED_SHOP_NOT_EXIST = 4
 TASK_FAILED_SHOP_LINK_NOT_ACCESSIBLE = 5
 TASK_FAILED_SHOP_NOT_FOUND_IN_SEARCH = 6
 TASK_FAILED_SHOP_LINK_NOT_FOUND = 7
+
+SHADOW_PRODUCT_NEW = 1
+SHADOW_PRODUCT_ON_SHELF = 2
+SHADOW_PRODUCT_ON_LINE = 3
+SHADOW_PRODUCT_OFF_LINE = 4
+SHADOW_PRODUCT_OFF_SHELF = 5
 
 SHOP_LINK_KNOWN_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
                                re.compile('^https://shop\\w+.taobao.com/')]
@@ -158,14 +165,13 @@ class HotProduct(BaseModel):
 
 
 class ShadowProductInfo(BaseModel):
-    shadow_product_id = ForeignKeyField(ProductInfo, backref='shadow_product_ids', column_name='product_id',
-                                        lazy_load=False)
     product_id = ForeignKeyField(ProductInfo, backref='product_ids', column_name='product_id', lazy_load=False)
+    shadow_id = CharField(max_length=32, index=True)
     product_title = CharField(max_length=128)
     shop_name = ForeignKeyField(ShopInfo, backref='shop_names', column_name='shop_name', lazy_load=False)
     price_unit = CharField(max_length=3)
-    price = IntegerField()
-    inventory = IntegerField()
+    price = IntegerField(index=True)
+    inventory = IntegerField(index=True)
     title_imgs = TextField()
     page_imgs = TextField()
     offer_details = TextField()
@@ -178,9 +184,8 @@ class ShadowProductInfo(BaseModel):
 
     class Meta:
         table_name = 'shadow_product_info'
-        primary_key = CompositeKey('shadow_product_id')
+        primary_key = CompositeKey('product_id')
         indexes = (
-            (('product_id',), False),
             (('shop_name',), False),
         )
 
@@ -503,8 +508,8 @@ def add_product_sale(product_id, shop_name,
                               update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_shadow_product_info(shadow_product_id, status, update_id, update_role,
-                               product_id, product_title='', shop_name='',
+def update_shadow_product_info(product_id, status, update_id, update_role,
+                               shadow_id, product_title='', shop_name='',
                                price_unit='', price=-1, inventory=-1,
                                title_imgs=None, page_imgs=None, offer_details=None,
                                additional_properties=None):
@@ -513,10 +518,10 @@ def update_shadow_product_info(shadow_product_id, status, update_id, update_role
     ts = int(time.time())
     try:
         # if record already exists, update only if value is valid
-        exist_spi = ShadowProductInfo.get(ShadowProductInfo.shadow_product_id == shadow_product_id)
+        exist_spi = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         original_json = exist_spi.to_json()
-        if product_id != '':
-            exist_spi.product_id = product_id
+        if shadow_id != '':
+            exist_spi.shadow_id = shadow_id
         if product_title != '':
             exist_spi.product_title = product_title
         if shop_name != '':
@@ -542,14 +547,14 @@ def update_shadow_product_info(shadow_product_id, status, update_id, update_role
         exist_spi.save()
         updated_json = exist_spi.to_json()
         logger.info(f'exist shadow product info record updated: {exist_spi.to_json()}')
-        add_operation_history(shadow_product_id, exist_spi.table_name(),
+        add_operation_history(product_id, exist_spi.table_name(),
                               {'diff': json_diff(original_json, updated_json)},
                               update_id, update_role, ts,
                               DB_OPS_UPDATE_EXIST)
     except DoesNotExist:
         new_spi = ShadowProductInfo()
-        new_spi.shadow_product_id = shadow_product_id
         new_spi.product_id = product_id
+        new_spi.shadow_id = shadow_id
         new_spi.product_title = product_title
         new_spi.shop_name = shop_name
         new_spi.price_unit = price_unit
@@ -578,7 +583,7 @@ def update_shadow_product_info(shadow_product_id, status, update_id, update_role
         new_spi.update_role = update_role
         new_spi.save(force_insert=True)
         logger.info(f'new shadow product info record inserted: {new_spi.to_json()}')
-        add_operation_history(shadow_product_id, new_spi.table_name(),
+        add_operation_history(product_id, new_spi.table_name(),
                               {'diff': json_diff({}, new_spi.to_json())},
                               update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
@@ -883,22 +888,22 @@ def delete_shop(shop_name, update_id):
         return 0
 
 
-def delete_shadow_product(shadow_product_id, update_id):
+def delete_shadow_product(product_id, update_id):
     logger = get_logger()
     ts = int(time.time())
     try:
-        exist_sp = ShadowProductInfo.get(ShadowProductInfo.shadow_product_id == shadow_product_id)
+        exist_sp = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         original_json = exist_sp.to_json()
-        x = ShadowProductInfo.delete().where(ShadowProductInfo.shadow_product_id == shadow_product_id).execute()
-        add_operation_history(shadow_product_id, exist_sp.table_name(),
+        x = ShadowProductInfo.delete().where(ShadowProductInfo.product_id == product_id).execute()
+        add_operation_history(product_id, exist_sp.table_name(),
                               {'diff': json_diff(original_json, {})},
                               update_id, delete_shadow_product.__name__, ts, DB_OPS_DELETE_RECORD)
         return x
     except DoesNotExist:
-        logger.info(f'shadow product with shadow_product_id={shadow_product_id} does not exist')
+        logger.info(f'shadow product with shadow_product_id={product_id} does not exist')
         return 0
     except IntegrityError:
-        logger.info(f'integrity check failed and shadow_product_id={shadow_product_id} can not be deleted')
+        logger.info(f'integrity check failed and shadow_product_id={product_id} can not be deleted')
         return 0
 
 
