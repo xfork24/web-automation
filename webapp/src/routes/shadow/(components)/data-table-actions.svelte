@@ -33,6 +33,11 @@
     handler = deleteShadowProduct;
   }
 
+  function beforeOnshelfProductDialog() {
+    dialog_body = 'This action will onshelf this product.';
+    handler = onshelfShadowProduct;
+  }
+
   async function createOnlineTask(row: ShadowProductInfo) {
     try {
       if (row.status !== 4) {
@@ -100,7 +105,7 @@
       if (row.status !== 0 && row.status !== 1) {
         open = false;
         await invalidateAll();
-        toast("Operation Failed: Product(s) must be in NEW or READY status.");
+        toast("Operation Failed: Product must be in NEW or READY status.");
         return;
       }
       const response = await fetch(`http://localhost:8000/api/v1/shadow_product/${row.product_id}?update_id=${user.name}`, {
@@ -117,6 +122,18 @@
       }
     } catch (error) {
       console.error(`Error in function: ${error}`);
+    }
+  }
+
+  async function onshelfShadowProduct(row: ShadowProductInfo) {
+    open = false;
+    if (row.status !== 1) {
+      await invalidateAll();
+      toast("Operation Failed: Product must be in READY status.");
+      return;
+    } else {
+      toast("Operation Successful");
+      await goto(`/shadow/${row.product_id}/shelf`);
     }
   }
 </script>
@@ -182,9 +199,11 @@
             <span>Delete Product</span>
           </DropdownMenu.Item>
         </Dialog.Trigger>
-        <DropdownMenu.Item onclick={() => goto('/shadow/' + row.product_id + '/shelf')}>
-          <span>Onshelf Product</span>
-        </DropdownMenu.Item>
+        <Dialog.Trigger class="w-full">
+          <DropdownMenu.Item onclick={() => beforeOnshelfProductDialog()}>
+            <span>Onshelf Product</span>
+          </DropdownMenu.Item>
+        </Dialog.Trigger>
       </DropdownMenu.Group>
     </DropdownMenu.Content>
   </DropdownMenu.Root>

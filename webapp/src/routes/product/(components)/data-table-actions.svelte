@@ -34,7 +34,7 @@
   }
 
   function beforeOnShelfProductDialog() {
-    dialog_body = 'This action will try to put a product on shelf.';
+    dialog_body = 'This action will try to make a product ready for shelf.';
     handler = onShelfProduct;
   }
 
@@ -122,7 +122,7 @@
         open = false;
         await invalidateAll();
         toast("Operation Successful");
-        goto(`/shadow/${row.product_id}/shelf`);
+        goto(`/shadow`);
       }
     } catch (error) {
       console.error(`Error in function: ${error}`);
@@ -193,7 +193,7 @@
         </Dialog.Trigger>
         <Dialog.Trigger class="w-full">
           <DropdownMenu.Item onclick={() => beforeOnShelfProductDialog()}>
-            <span>Onshelf Product</span>
+            <span>Ready For OnShelf</span>
           </DropdownMenu.Item>
         </Dialog.Trigger>
       </DropdownMenu.Group>

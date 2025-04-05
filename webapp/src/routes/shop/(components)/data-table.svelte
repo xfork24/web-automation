@@ -419,17 +419,17 @@
     <Dialog.Root bind:open>
       <Dialog.Trigger class="mr-4">
         <Button class="max-w-xs" onclick={ () => beforeCrawlSelectShopDialog()} variant="destructive">
-          Crawl Shops
+          Crawl
         </Button>
       </Dialog.Trigger>
       <Dialog.Trigger class="mr-4">
         <Button class="max-w-xs" onclick={ () => beforeCrawlSelectShopInSearchDialog()} variant="destructive">
-          Crawl Shops in Search
+          Crawl in Search
         </Button>
       </Dialog.Trigger>
       <Dialog.Trigger class="mr-4">
         <Button class="max-w-xs" onclick={ () => beforeDeleteSelectShopDialog()} variant="destructive">
-          Delete Shops
+          Delete
         </Button>
       </Dialog.Trigger>
       <Dialog.Content>

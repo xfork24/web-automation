@@ -32,7 +32,7 @@
   } from '$lib/components/ui/data-table';
   import FunnelX from '@lucide/svelte/icons/funnel-x';
   import { parseUUID4, type ProductInfo, timeConverter, assert } from '../../(components)/model';
-  import { invalidateAll } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
 
   let {data} = $props();
 
@@ -55,6 +55,11 @@
   function beforeDeleteSelectProductDialog() {
     dialog_body = 'This action will try to delete selected product(s). You must fix all external constraints before this operation can be done.';
     handler = deleteSelectProduct;
+  }
+
+  function beforeReadySelectProductDialog() {
+    dialog_body = 'This action will try to make selected product(s) ready for shelf. The task(s) will be scheduled later.';
+    handler = onShelfProduct;
   }
 
   async function createSelectDetailCrawlTask(rows: Row<ProductInfo>[]) {
@@ -125,6 +130,32 @@
       table.resetRowSelection(false);
       await invalidateAll();
       toast("Operation Successful");
+    } catch (error) {
+      console.error(`Error in function: ${error}`);
+    }
+  }
+
+  async function onShelfProduct(rows: Row<ProductInfo>[]) {
+    try {
+      for (const row of rows) {
+        const response = await fetch(`http://localhost:8000/api/v1/shadow_product`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+          },
+          body: JSON.stringify({
+            'product_id': row.original.product_id,
+            'update_id': data.user.name
+          })
+        });
+        const result = await response.json();
+        assert(result.code == 0, `create shadow_product failed for product ${row.original.product_id}`);
+      }
+      open = false;
+      table.resetRowSelection(false);
+      await invalidateAll();
+      toast("Operation Successful");
+      goto(`/shadow`);
     } catch (error) {
       console.error(`Error in function: ${error}`);
     }
@@ -495,17 +526,22 @@
     <Dialog.Root bind:open>
       <Dialog.Trigger class="mr-4">
         <Button class="max-w-xs" onclick={ () => beforeCrawlSelectProductDialog()} variant="destructive">
-          Crawl Products
+          Crawl
         </Button>
       </Dialog.Trigger>
       <Dialog.Trigger class="mr-4">
         <Button class="max-w-xs" onclick={ () => beforeCrawlSelectProductInShopDialog()} variant="destructive">
-          Crawl Products in Shop
+          Crawl in Shop
         </Button>
       </Dialog.Trigger>
       <Dialog.Trigger class="mr-4">
         <Button class="max-w-xs" onclick={ () => beforeDeleteSelectProductDialog()} variant="destructive">
-          Delete Products
+          Delete
+        </Button>
+      </Dialog.Trigger>
+      <Dialog.Trigger class="mr-4">
+        <Button class="max-w-xs" onclick={ () => beforeReadySelectProductDialog()} variant="destructive">
+          Ready OnShelf
         </Button>
       </Dialog.Trigger>
       <Dialog.Content>
