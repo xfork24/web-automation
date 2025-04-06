@@ -10,11 +10,15 @@
   import { Toaster } from "$lib/components/ui/sonner";
   import { toast } from "svelte-sonner";
   import { invalidateAll } from "$app/navigation";
+  import HistoryDataTable from "./(components)/history-data-table.svelte";
 
   let {data} = $props();
 
   const product_id = data.product_id;
+  const histories = data.shadow_histories;
+
   let product_title = $state(data.shadow_info.product_title);
+  let shop_name = $state(data.shadow_info.shop_name);
   let product_price = $state(data.shadow_info.price);
   let product_inventory = $state(data.shadow_info.inventory);
   let title_imgs = $state(data.shadow_info.title_imgs);
@@ -79,6 +83,7 @@
           'status': 1,
           'update_id': data.user.name,
           'product_title': product_title,
+          'shop_name': shop_name,
           'price': product_price,
           'inventory': product_inventory,
           'title_imgs': title_imgs,
@@ -115,6 +120,7 @@
           'status': 1,
           'update_id': data.user.name,
           'product_title': product_title,
+          'shop_name': shop_name,
           'price': product_price,
           'inventory': product_inventory,
           'title_imgs': title_imgs,
@@ -277,6 +283,10 @@
             </Dialog.Footer>
           </Dialog.Content>
         </Dialog.Root>
+        <div class="items-center justify-between px-4 text-4xl">Shadow Product Update History</div>
+        <div class="items-center justify-between px-4">
+          <HistoryDataTable {histories}/>
+        </div>
       </div>
     {:else}
       <div class="items-center justify-between px-4 text-4xl">Please select a valid product from <a

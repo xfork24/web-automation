@@ -13,9 +13,19 @@ export const load = async ({url}) => {
       }
     });
     const product = await product_response.json();
+
+    const history_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}/history`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json;charset=UTF-8'
+      }
+    });
+    const histories = await history_response.json();
+
     return {
       product_id: decodeURI(product_id!),
-      shadow_info: product.data
+      shadow_info: product.data,
+      shadow_histories: histories.data
     };
   } catch (error) {
     console.error(`Error in load function: ${error}`);

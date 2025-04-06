@@ -171,7 +171,7 @@
   let sorting = $state<SortingState>([]);
   let columnFilters = $state<ColumnFiltersState>([]);
   let rowSelection = $state<RowSelectionState>({});
-  let columnVisibility = $state<VisibilityState>({'Inventory': false, 'Operator ID': false});
+  let columnVisibility = $state<VisibilityState>({'Inventory': false, 'Operator ID': false, 'Operator Role': false});
 
   export const columns: ColumnDef<ShadowProductInfo>[] = [
     {
@@ -391,6 +391,20 @@
           };
         });
         return renderSnippet(amountCellSnippet, row.getValue('Operator ID'));
+      }
+    },
+    {
+      id: 'Operator Role',
+      accessorKey: 'update_role',
+      header: 'Operator Role',
+      cell: ({row}) => {
+        const amountCellSnippet = createRawSnippet<[string]>((getData) => {
+          const update_role = getData();
+          return {
+            render: () => `<div>${update_role}</div>`
+          };
+        });
+        return renderSnippet(amountCellSnippet, row.getValue('Operator Role'));
       }
     },
     {

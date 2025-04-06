@@ -105,7 +105,8 @@ def get_product_by_id(product_id):
 def get_product_history_by_id(product_id):
     logger = get_logger()
     try:
-        histories = OperationHistory.select().where(OperationHistory.pk == product_id).order_by(
+        histories = OperationHistory.select().where(OperationHistory.pk == product_id,
+                                                    OperationHistory.table_name == 'product_info').order_by(
             OperationHistory.operation_ts.desc())
         data = []
         for history in histories:
@@ -567,8 +568,12 @@ def update_shadow_product(product_id):
 def get_shadow_product_history_by_id(product_id):
     logger = get_logger()
     try:
-        histories = OperationHistory.select().where(OperationHistory.pk == product_id).order_by(
+        histories = OperationHistory.select().where(OperationHistory.pk == product_id,
+                                                    OperationHistory.table_name == 'shadow_product_info').order_by(
             OperationHistory.operation_ts.desc())
+        # 可能更改shadow_product_info的方式有：
+        # 两个handler函数: create_shadow_product_by_id, update_shadow_product
+        # 分析函数: analyze_and_fix_shadow_products
         data = [h.to_json() for h in histories]
         return build_success_response({'data': data})
     except Exception as e:
