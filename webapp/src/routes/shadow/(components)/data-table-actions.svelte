@@ -33,11 +33,6 @@
     handler = deleteShadowProduct;
   }
 
-  function beforeOnshelfProductDialog() {
-    dialog_body = 'This action will onshelf this product.';
-    handler = onshelfShadowProduct;
-  }
-
   async function createOnlineTask(row: ShadowProductInfo) {
     try {
       if (row.status !== 4) {
@@ -199,11 +194,9 @@
             <span>Delete Product</span>
           </DropdownMenu.Item>
         </Dialog.Trigger>
-        <Dialog.Trigger class="w-full">
-          <DropdownMenu.Item onclick={() => beforeOnshelfProductDialog()}>
-            <span>Onshelf Product</span>
-          </DropdownMenu.Item>
-        </Dialog.Trigger>
+        <DropdownMenu.Item onclick={() => onshelfShadowProduct(row)}>
+          <span>Onshelf Product</span>
+        </DropdownMenu.Item>
       </DropdownMenu.Group>
     </DropdownMenu.Content>
   </DropdownMenu.Root>

@@ -240,7 +240,7 @@ def analyze_and_add_hot_products(update_id, top_n=TB_HOT_PRODUCT_REVENUE_TOPN,
                         analyze_and_add_hot_products.__name__)
 
 
-def download_product_resources(product_id, ts=None, force_download=False):
+def download_product_resources(product_id, update_id, ts=None, force_download=False):
     logger = get_logger()
     try:
         exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
@@ -275,11 +275,11 @@ def download_product_resources(product_id, ts=None, force_download=False):
             assert (img is not None)
             logger.info(f'download product title_image={title_img}')
             element_screenshot(img,
-                               f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:]}')
+                               f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:title_img.rfind(".")]}.png')
         except Exception:
-            logger.error(f'get unhandled exception while get page image link={title_img}, just ignore')
+            logger.error(f'get unhandled exception while get page image link={title_img}, arise the exception')
             traceback.print_exc()
-            continue
+            raise
     # download page images
     logger.info(
         f'download product title images with product_id={exist_pi.product_id} and title_imgs={exist_pi.page_imgs}')
@@ -294,11 +294,15 @@ def download_product_resources(product_id, ts=None, force_download=False):
             assert (img is not None)
             logger.info(f'download product page_image={page_img}')
             element_screenshot(img,
-                               f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:]}')
+                               f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:page_img.rfind(".")]}.png')
         except Exception:
-            logger.error(f'get unhandled exception while get page image link={page_img}, just ignore')
+            logger.error(f'get unhandled exception while get page image link={page_img}, arise the exception')
             traceback.print_exc()
-            continue
+            raise
+    additional_properties = json_loads(exist_pi.additional_properties)
+    additional_properties[RESOURCE_ROOT_KEY] = product_root_dir[product_root_dir.find(PRODUCT_DIR_KEY):]
+    update_product_info(exist_pi.product_id, update_id, download_product_resources.__name__,
+                        additional_properties=additional_properties)
 
 
 def run_all_in_one_crawler_task(update_id):
@@ -326,8 +330,14 @@ def analyze_and_fix_shadow_products(update_id):
             page_imgs = json_loads(p.page_imgs)
             offer_details = json_loads(p.offer_details)
             additional_properties = json_loads(p.additional_properties)
-            if len(title_imgs) > 0 and len(
-                    page_imgs) > 0 and len(offer_details.keys()) > 0 and LLM_ANALYSIS_KEY in additional_properties:
+            if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
+                resource_root = additional_properties[RESOURCE_ROOT_KEY]
+                title_imgs = [
+                    f'{resource_root}/title_images/{title_img[title_img.rfind("/") + 1:title_img.rfind(".")]}.png' for
+                    title_img in title_imgs]
+                page_imgs = [f'{resource_root}/page_images/{page_img[page_img.rfind("/") + 1:page_img.rfind(".")]}.png'
+                             for page_img
+                             in page_imgs]
                 status = SHADOW_PRODUCT_STATUS_READY
             else:
                 status = SHADOW_PRODUCT_STATUS_NEW
@@ -336,7 +346,7 @@ def analyze_and_fix_shadow_products(update_id):
                                        analyze_and_fix_shadow_products.__name__, SHADOW_PRODUCT_DEFAULT_ID,
                                        p.product_title, p.shop_name, p.price_unit, p.display_price, 0,
                                        title_imgs, page_imgs, offer_details, additional_properties)
-            if len(title_imgs) == 0 or len(page_imgs) == 0 or len(offer_details.keys()) == 0:
+            if RESOURCE_ROOT_KEY not in additional_properties:
                 tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == p.product_id,
                                                        DetailCrawlTask.update_ts > ts - TB_DETAIL_CRAWL_TASK_DEDUP_IN_SECONDS).order_by(
                     DetailCrawlTask.update_ts.desc())
@@ -510,7 +520,7 @@ def run_detail_crawler_tasks(update_id):
             logger.info(
                 f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
             craw_taobao_detail_page(task.product_id, task.product_link, task.id)
-            download_product_resources(task.product_id)
+            download_product_resources(task.product_id, task.id)
         except Exception:
             logger.error(
                 f'get unhandled exception while crawling task id={task.id} with product_id={task.product_id}, product_link={task.product_link}, just continue')

@@ -20,6 +20,7 @@ from playhouse.shortcuts import model_to_dict
 SHOP_COVER_DEFAULT_LINK = 'https://img.alicdn.com/imgextra/i1/O1CN01pz5irY1bhDKceJor2_!!6000000003496-2-tps-144-144.png_320x320q75.jpg_.webp'
 LLM_ANALYSIS_KEY = 'llm_analysis'
 ERRORS_KEY = 'errors'
+RESOURCE_ROOT_KEY = 'resource_root'
 SHADOW_PRODUCT_DEFAULT_ID = '000000000000'
 
 DB_OPS_CREATE_NEW = 1
@@ -407,11 +408,11 @@ def update_product_info(product_id, update_id, update_role,
         if title_imgs is not None:
             new_pi.title_imgs = json_dumps(title_imgs)
         else:
-            new_pi.title_imgs = json_dumps({})
+            new_pi.title_imgs = json_dumps([])
         if page_imgs is not None:
             new_pi.page_imgs = json_dumps(page_imgs)
         else:
-            new_pi.page_imgs = json_dumps({})
+            new_pi.page_imgs = json_dumps([])
         if offer_details is not None:
             new_pi.offer_details = json_dumps(offer_details)
         else:
@@ -570,11 +571,11 @@ def update_shadow_product_info(product_id, status, update_id, update_role,
         if title_imgs is not None:
             new_spi.title_imgs = json_dumps(title_imgs)
         else:
-            new_spi.title_imgs = json_dumps({})
+            new_spi.title_imgs = json_dumps([])
         if page_imgs is not None:
             new_spi.page_imgs = json_dumps(page_imgs)
         else:
-            new_spi.page_imgs = json_dumps({})
+            new_spi.page_imgs = json_dumps([])
         if offer_details is not None:
             new_spi.offer_details = json_dumps(offer_details)
         else:

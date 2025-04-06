@@ -196,7 +196,7 @@
         const statusSnippet = createRawSnippet<[string]>((getData) => {
           const product_cover = getData();
           return {
-            render: () => `<a href="${row.original.product_link}" target="_blank"><img class="h-16 w-16 object-scale-down" src=${product_cover} /></a>`
+            render: () => `<a href="${row.original.product_link}" target="_blank"><img class="h-16 w-16 object-scale-down" src=${product_cover} alt=${product_cover}/></a>`
           };
         });
         return renderSnippet(statusSnippet, row.getValue('Product Cover'));

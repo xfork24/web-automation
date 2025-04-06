@@ -521,8 +521,10 @@ def create_shadow_product_by_id():
             page_imgs = json_loads(p.page_imgs)
             offer_details = json_loads(p.offer_details)
             additional_properties = json_loads(p.additional_properties)
-            if len(title_imgs) > 0 and len(
-                    page_imgs) > 0 and len(offer_details.keys()) > 0 and LLM_ANALYSIS_KEY in additional_properties:
+            if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
+                resource_root = additional_properties[RESOURCE_ROOT_KEY]
+                title_imgs = [f'{resource_root}/{title_img[title_img.rfind("/") + 1:]}' for title_img in title_imgs]
+                page_imgs = [f'{resource_root}/{page_img[page_img.rfind("/") + 1:]}' for page_img in page_imgs]
                 status = SHADOW_PRODUCT_STATUS_READY
             else:
                 status = SHADOW_PRODUCT_STATUS_NEW
@@ -535,6 +537,26 @@ def create_shadow_product_by_id():
             msg = f'get unhandled exception {e}'
             logger.error(msg)
             return build_server_error_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
+@api.post('/api/v1/shadow_product/<product_id>')
+def update_shadow_product(product_id):
+    logger = get_logger()
+    payload = request.json
+    try:
+        update_shadow_product_info(product_id, payload.get('status'), payload.get('update_id'),
+                                   update_shadow_product.__name__,
+                                   product_title=payload.get('product_title'), shop_name=payload.get('shop_name'),
+                                   price=payload.get('price'), inventory=payload.get('inventory'),
+                                   title_imgs=payload.get('title_imgs'),
+                                   page_imgs=payload.get('page_imgs'),
+                                   offer_details=payload.get('offer_details'),
+                                   additional_properties=payload.get('additional_properties'))
+        return build_success_response({})
     except Exception as e:
         msg = f'get unhandled exception {e}'
         logger.error(msg)

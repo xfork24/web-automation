@@ -15,7 +15,7 @@ export const load = async ({url}) => {
     const product = await product_response.json();
     return {
       product_id: decodeURI(product_id!),
-      product_info: product.data
+      shadow_info: product.data
     };
   } catch (error) {
     console.error(`Error in load function: ${error}`);

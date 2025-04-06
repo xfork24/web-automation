@@ -17,6 +17,7 @@ TB_USERS = {
 LOGGING_FORMAT = '%(asctime)s %(message)s'
 DEBUG_ROOT_DIR = '/Users/hengliu/workspace/web-automation'
 IMAGE_DIR = './images'
-PRODUCT_DIR = './products'
+PRODUCT_DIR = './webapp/static/products'
+PRODUCT_DIR_KEY = '/products'
 
 DEBUG = True
