@@ -17,14 +17,14 @@
   const product_id = data.product_id;
   const histories = data.shadow_histories;
 
-  let product_title = $state(data.shadow_info.product_title);
-  let shop_name = $state(data.shadow_info.shop_name);
-  let product_price = $state(data.shadow_info.price);
-  let product_inventory = $state(data.shadow_info.inventory);
-  let title_imgs = $state(data.shadow_info.title_imgs);
-  let page_imgs = $state(data.shadow_info.page_imgs);
-  let offer_details = $state(data.shadow_info.offer_details);
-  let additional_properties = $state(data.shadow_info.additional_properties);
+  let product_title = $state(data.shadow_info != undefined ? data.shadow_info.product_title : '');
+  let shop_name = $state(data.shadow_info != undefined ? data.shadow_info.shop_name : '');
+  let product_price = $state(data.shadow_info != undefined ? data.shadow_info.price : 0);
+  let product_inventory = $state(data.shadow_info != undefined ? data.shadow_info.inventory : 0);
+  let title_imgs = $state(data.shadow_info != undefined ? data.shadow_info.title_imgs : []);
+  let page_imgs = $state(data.shadow_info != undefined ? data.shadow_info.page_imgs : []);
+  let offer_details = $state(data.shadow_info != undefined ? data.shadow_info.offer_details : {});
+  let additional_properties = $state(data.shadow_info != undefined ? data.shadow_info.additional_properties : {});
 
   let open = $state(false);
   let dialog_title = $state('Are you sure?');

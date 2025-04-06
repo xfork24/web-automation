@@ -10,7 +10,7 @@ export const load = async () => {
     });
     const body = await response.json();
     body.data.forEach((shadow: ShadowProductInfo) => {
-      if (shadow.hasOwnProperty('additional_properties') && shadow.additional_properties.hasOwnProperty('llm_analysis')) {
+      if (shadow.additional_properties.hasOwnProperty('llm_analysis')) {
         shadow.keyword = shadow.additional_properties.llm_analysis.keyword;
         shadow.category = shadow.additional_properties.llm_analysis.category;
         shadow.digital = shadow.additional_properties.llm_analysis.digital;

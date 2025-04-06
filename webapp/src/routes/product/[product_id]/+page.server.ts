@@ -16,7 +16,7 @@ export const load = async ({url}) => {
       }
     });
     const product = await product_response.json();
-    if (product.data.hasOwnProperty('additional_properties') && product.data.additional_properties.hasOwnProperty('llm_analysis')) {
+    if (product.hasOwnProperty('data') && product.data.hasOwnProperty('additional_properties') && product.data.additional_properties.hasOwnProperty('llm_analysis')) {
       product.data.keyword = product.data.additional_properties.llm_analysis.keyword;
       product.data.category = product.data.additional_properties.llm_analysis.category;
       product.data.digital = product.data.additional_properties.llm_analysis.digital;

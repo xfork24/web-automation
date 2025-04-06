@@ -222,15 +222,14 @@
   });
 
   const filter_fields = [
-    {value: 'updater', label: 'Updater'},
     {value: 'update_id', label: 'Operator ID'},
     {value: 'update_role', label: 'Operator Role'}
   ];
 
-  let value = $state('updater');
+  let value = $state('update_id');
 
   const triggerContent = $derived(
-    filter_fields.find((f) => f.value === value)?.label ?? 'Updater'
+    filter_fields.find((f) => f.value === value)?.label ?? 'Operator ID'
   );
 
   function clearAllTableFilters() {
