@@ -312,6 +312,46 @@ def run_all_in_one_crawler_task(update_id):
     run_shop_crawler_tasks(update_id)
     analyze_and_fix_shadow_products(update_id)
     run_detail_crawler_tasks(update_id)
+    run_product_manage_tasks(update_id)
+
+
+def run_product_manage_tasks(update_id):
+    logger = get_logger()
+    start_ts = int(time.time()) - TB_PRODUCT_MANAGE_TASK_PERIOD_IN_SECONDS
+    logger.info(f'run product manage tasks with start_ts={start_ts}')
+    tasks = ProductManageTask.select().where(ProductManageTask.status != TASK_STATUS_DONE,
+                                             ProductManageTask.status != TASK_STATUS_ARCHIVED,
+                                             ProductManageTask.update_ts > start_ts).order_by(
+        ProductManageTask.update_ts)
+    for task in tasks:
+        if not handle_error_task(task, update_id):
+            continue
+        task.try_count = task.try_count + 1
+        update_task_info(task, update_id, TASK_STATUS_RUNNING)
+        try:
+            logger.info(
+                f'handling product manage task id={task.id} with product_id={task.product_id}, shop_name={task.shop_name}, operation={task.operation}')
+            if task.operation == PRODUCT_MANAGE_OPERATION_READY:
+                product_manage_ready(task.product_id, task.shop_name, task.id)
+            elif task.operation == PRODUCT_MANAGE_OPERATION_ONSHELF:
+                product_manage_on_shelf(task.product_id, task.shop_name, task.id)
+            elif task.operation == PRODUCT_MANAGE_OPERATION_ONLINE:
+                product_manage_online(task.product_id, task.shop_name, task.id)
+            elif task.operation == PRODUCT_MANAGE_OPERATION_OFFLINE:
+                product_manage_offline(task.product_id, task.shop_name, task.id)
+            elif task.operation == PRODUCT_MANAGE_OPERATION_OFFSHELF:
+                product_manage_off_shelf(task.product_id, task.shop_name, task.id)
+        except Exception:
+            logger.error(
+                f'get unhandled exception while handling product manage task id={task.id} with product_id={task.product_id}, shop_name={task.shop_name}, operation={task.operation}, just continue')
+            traceback.print_exc()
+            update_task_info(task, update_id, TASK_STATUS_ERROR,
+                             err_code=TASK_FAILED_UNEXPECTED_ERROR,
+                             call_stack=traceback.format_exc())
+            continue
+        update_task_info(task, update_id, TASK_STATUS_DONE)
+        time.sleep(DETAIL_CRAWL_GAP_IN_SECONDS)
+    return
 
 
 # 分析并自动添加shadow products, 同时生成detail_crawl_task和llm_analyze_task
@@ -319,33 +359,14 @@ def run_all_in_one_crawler_task(update_id):
 def analyze_and_fix_shadow_products(update_id):
     logger = get_logger()
     ts = int(time.time())
-    # TODO: 按一定标准生成shadow_products
+    # TODO: 按一定标准自动生成shadow_products
     # check and update shadow product status
     shadow_products = ShadowProductInfo.select().where(ShadowProductInfo.status == SHADOW_PRODUCT_STATUS_NEW,
                                                        ShadowProductInfo.update_ts > ts - TB_SHADOW_PRODUCT_CHECK_PERIOD_IN_SECONDS)
     for sp in shadow_products:
         try:
             p = ProductInfo.get(ProductInfo.product_id == sp.product_id)
-            title_imgs = json_loads(p.title_imgs)
-            page_imgs = json_loads(p.page_imgs)
-            offer_details = json_loads(p.offer_details)
             additional_properties = json_loads(p.additional_properties)
-            if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
-                resource_root = additional_properties[RESOURCE_ROOT_KEY]
-                title_imgs = [
-                    f'{resource_root}/title_images/{title_img[title_img.rfind("/") + 1:title_img.rfind(".")]}.png' for
-                    title_img in title_imgs]
-                page_imgs = [f'{resource_root}/page_images/{page_img[page_img.rfind("/") + 1:page_img.rfind(".")]}.png'
-                             for page_img
-                             in page_imgs]
-                status = SHADOW_PRODUCT_STATUS_READY
-            else:
-                status = SHADOW_PRODUCT_STATUS_NEW
-            # 我们总是将shadow_product更新到最新，只要它还是NEW状态
-            update_shadow_product_info(p.product_id, status, update_id,
-                                       analyze_and_fix_shadow_products.__name__, SHADOW_PRODUCT_DEFAULT_ID,
-                                       p.product_title, p.shop_name, p.price_unit, p.display_price, 0,
-                                       title_imgs, page_imgs, offer_details, additional_properties)
             if RESOURCE_ROOT_KEY not in additional_properties:
                 tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == p.product_id,
                                                        DetailCrawlTask.update_ts > ts - TB_DETAIL_CRAWL_TASK_DEDUP_IN_SECONDS).order_by(
@@ -362,6 +383,10 @@ def analyze_and_fix_shadow_products(update_id):
                     logger.info(f'add llm analyze task to fix shadow product, product_id={p.product_id}')
                     add_llm_analyze_task(p.product_id, p.product_title, {}, update_id,
                                          analyze_and_fix_shadow_products.__name__)
+            if sp.status == SHADOW_PRODUCT_STATUS_NEW:
+                logger.info(f'add product_manage_task to sync shadow product, product_id={sp.product_id}')
+                add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_OPERATION_READY, {}, update_id,
+                                        analyze_and_fix_shadow_products.__name__)
         except DoesNotExist:
             logger.error(f'product_id={sp.product_id} does not exist while updating shadow product, just continue')
             continue

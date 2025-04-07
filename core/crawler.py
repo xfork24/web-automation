@@ -979,7 +979,33 @@ def save_taobao_detail_result(product_id, sku_id, product_title, product_link,
 
 
 def product_manage_ready(product_id, shop_name, update_id):
-    pass
+    logger = get_logger()
+    shadow_product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+    if shadow_product.status == SHADOW_PRODUCT_STATUS_NEW:
+        product = ProductInfo.get(ProductInfo.product_id == product_id)
+        title_imgs = json_loads(product.title_imgs)
+        page_imgs = json_loads(product.page_imgs)
+        offer_details = json_loads(product.offer_details)
+        additional_properties = json_loads(product.additional_properties)
+        if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
+            resource_root = additional_properties[RESOURCE_ROOT_KEY]
+            title_imgs = [
+                f'{resource_root}/title_images/{title_img[title_img.rfind("/") + 1:title_img.rfind(".")]}.png' for
+                title_img in title_imgs]
+            page_imgs = [f'{resource_root}/page_images/{page_img[page_img.rfind("/") + 1:page_img.rfind(".")]}.png'
+                         for page_img
+                         in page_imgs]
+            status = SHADOW_PRODUCT_STATUS_READY
+        else:
+            status = SHADOW_PRODUCT_STATUS_NEW
+        # 我们总是将shadow_product更新到最新，只要它还是NEW状态
+        update_shadow_product_info(product.product_id, status, update_id,
+                                   product_manage_ready.__name__,
+                                   SHADOW_PRODUCT_DEFAULT_ID, product.product_title, product.shop_name,
+                                   product.price_unit, product.display_price, 0,
+                                   title_imgs, page_imgs, offer_details, additional_properties)
+    else:
+        logger.info(f'shadow product_id={product_id}, shop_name={shop_name} is not in NEW status, just ignore')
 
 
 def product_manage_on_shelf(product_id, shop_name, update_id):
