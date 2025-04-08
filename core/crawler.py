@@ -16,7 +16,7 @@ from core.config import *
 from core.exceptions import *
 from core.models import *
 
-WEBDRIVER_OPTION_HEADLESS = False
+WEBDRIVER_OPTION_HEADLESS = True
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_ONSHELF_PAGE = 'https://item.upload.taobao.com/sell/v2/publish.htm?catId=201160807'
@@ -79,6 +79,9 @@ DETAIL_PRICE_VAL_RE_EXP = re.compile('^\w+--text--\\w+')
 DETAIL_MAIN_IMGS_SINGLE_IMG_V8_RE_EXP = re.compile('^descV8-singleImage$')
 DETAIL_MAIN_IMGS_RICHTEXT_V8_RE_EXP = re.compile('^descV8-richtext$')
 DETAIL_IMG_LINK_VALIDATE_RE_EXP = re.compile('^https://\\w+')
+
+# Taobao product manage controls
+ONSHELF_TAOBAO_NAV_BAR_RE_EXP = re.compile('^PicGroupList_treeDom__\\w+$')
 
 # others
 SHOP_PRODUCT_COVER_PLACEHOLDER_LINK = 'https://gw.alicdn.com/imgextra/i4/O1CN01CYtPWu1MUBqQAUK9D_!!6000000001437-2-tps-2-2.png'
@@ -266,15 +269,20 @@ def handle_taobao_login_page(user):
             logger.info('navigate to taobao login page and wait in seconds')
             Driver.get(TB_LOGIN_PAGE)
             time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
-            user_input = Driver.find_element(By.ID, 'fm-login-id')
-            passwd_input = Driver.find_element(By.ID, 'fm-login-password')
             login_button = Driver.find_element(By.CLASS_NAME, 'fm-btn').find_element(By.XPATH, 'button')
-            assert (user_input is not None and passwd_input is not None and login_button is not None)
-            user_input.clear()
-            user_input.send_keys(user)
-            passwd_input.clear()
-            passwd_input.send_keys(TB_USERS[user])
-            element_click(login_button)
+            assert (login_button is not None)
+            if login_button.text == '快速进入':
+                # already logged in
+                element_click(login_button)
+            else:
+                user_input = Driver.find_element(By.ID, 'fm-login-id')
+                passwd_input = Driver.find_element(By.ID, 'fm-login-password')
+                assert (user_input is not None and passwd_input is not None)
+                user_input.clear()
+                user_input.send_keys(user)
+                passwd_input.clear()
+                passwd_input.send_keys(TB_USERS[user])
+                element_click(login_button)
             # check whether slide check is required
             try:
                 if WEBDRIVER_OPTION_HEADLESS:
@@ -990,20 +998,18 @@ def product_manage_ready(product_id, shop_name, platform, update_id):
     shadow_product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
     if shadow_product.status == SHADOW_PRODUCT_STATUS_NEW:
         product = ProductInfo.get(ProductInfo.product_id == product_id)
-        title_imgs = json_loads(product.title_imgs)
-        page_imgs = json_loads(product.page_imgs)
-        offer_details = json_loads(product.offer_details)
         additional_properties = json_loads(product.additional_properties)
         if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
-            resource_root = additional_properties[RESOURCE_ROOT_KEY]
-            title_imgs = [
-                f'{resource_root}/title_images/{title_img[title_img.rfind("/") + 1:title_img.rfind(".")]}.png' for
-                title_img in title_imgs]
-            page_imgs = [f'{resource_root}/page_images/{page_img[page_img.rfind("/") + 1:page_img.rfind(".")]}.png'
-                         for page_img
-                         in page_imgs]
+            title_imgs = [f'{title_img[title_img.rfind("/") + 1:title_img.rfind(".")]}.png' for
+                          title_img in json_loads(product.title_imgs)]
+            page_imgs = [f'{page_img[page_img.rfind("/") + 1:page_img.rfind(".")]}.png'
+                         for page_img in json_loads(product.page_imgs)]
+            offer_details = json_loads(product.offer_details)
             status = SHADOW_PRODUCT_STATUS_READY
         else:
+            title_imgs = []
+            page_imgs = []
+            offer_details = {}
             status = SHADOW_PRODUCT_STATUS_NEW
         # 我们总是将shadow_product更新到最新，只要它还是NEW状态
         update_shadow_product_info(product.product_id, status, update_id,
@@ -1016,7 +1022,75 @@ def product_manage_ready(product_id, shop_name, platform, update_id):
 
 
 def handle_taobao_on_shelf(product_id, shop_name, update_id):
-    pass
+    logger = get_logger()
+    product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+    Driver.get(TB_ONSHELF_PAGE)
+    time.sleep(PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS)
+    # product title
+    title_span = Driver.find_element(By.XPATH, '//*[@id="sell-field-title"]/div[2]/div[1]/div/div/span/span/span')
+    assert (title_span.get_attribute('class') == 'input-wrap')
+    title_input = title_span.find_element(By.XPATH, 'span/input')
+    title_input.send_keys(product.product_title)
+    # delivery promise
+    delivery_div = Driver.find_element(By.CLASS_NAME, 'sell-component-delivery-time')
+    delivery_span = delivery_div.find_element(By.XPATH, 'span/span[1]/label/span')
+    element_click(delivery_span)
+    # price
+    price_span = Driver.find_element(By.XPATH, '//*[@id="sell-field-price"]/div[2]/div/div/span/span[1]')
+    assert (price_span.get_attribute('class') == 'input-wrap')
+    price_input = price_span.find_element(By.XPATH, 'span/input')
+    price_input.send_keys(product.price / 100)
+    # inventory
+    inventory_span = Driver.find_element(By.XPATH, '//*[@id="sell-field-quantity"]/div[2]/div/div/span/span[1]')
+    assert (inventory_span.get_attribute('class') == 'input-wrap')
+    inventory_input = inventory_span.find_element(By.XPATH, 'span/input')
+    inventory_input.send_keys(product.inventory)
+    # transport
+    transport_div = Driver.find_element(By.CLASS_NAME, 'sell-transport')
+    transport_label = transport_div.find_element(By.XPATH, 'span/div[1]/div[1]/div[1]/label')
+    element_click(transport_label)
+    transport_template_span = transport_div.find_element(By.XPATH, 'span/div[1]/div[2]/div/div[1]/div[2]/span')
+    element_click(transport_template_span)
+    default_transport_template = Driver.find_element(By.XPATH,
+                                                     'span/div[1]/div[2]/div/div[1]/div[2]/span/span[1]/span[1]/span/input')
+    element_click(default_transport_template)
+    # inventory deduction
+    inventory_deduction_span = Driver.find_element(By.XPATH,
+                                                   '//*[@id="sell-field-subStock"]/div[2]/div/div/span/span[2]')
+    element_click(inventory_deduction_span)
+    # title images
+    title_img_upload_div = Driver.find_element(By.XPATH,
+                                               '//*[@id="struct-mainImagesGroup"]/div/div[1]/div/div/div/div/div')
+    element_click(title_img_upload_div)
+    ti_iframe = Driver.find_element(By.XPATH, '//*[@id="mainImagesGroup"]')
+    switch_to_frame(ti_iframe)
+    navbar_div = None
+    divs = Driver.find_elements(By.XPATH, '//div')
+    for div in divs:
+        cls_name = div.get_attribute('class')
+        if cls_name is None:
+            continue
+        elif re.match(ONSHELF_TAOBAO_NAV_BAR_RE_EXP, cls_name):
+            navbar_div = div
+            break
+    assert (navbar_div is not None)
+    navbar_products_li = None
+    for navbar_li in navbar_div.find_elements(By.XPATH, 'ul/li'):
+        name_span = navbar_li.find_element(By.XPATH, 'div/div/div/div/span')
+        if name_span.get_attribute('title') == 'products':
+            navbar_products_li = navbar_li
+            break
+    assert (navbar_products_li is not None)
+    navbar_product_li = None
+    for navbar_li in navbar_products_li.find_elements(By.XPATH, 'ul/li'):
+        name_span = navbar_li.find_element(By.XPATH, 'div/div/div/div/span')
+        if name_span.get_attribute('title') == product.product_id:
+            navbar_product_li = navbar_li
+            break
+    assert (navbar_product_li is not None)
+    navbar_ts_li = None
+    for navbar_li in navbar_product_li.find_elements(By.XPATH, 'ul/li'):
+        pass
 
 
 def handle_rednote_on_shelf(product_id, shop_name, update_id):

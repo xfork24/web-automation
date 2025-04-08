@@ -518,16 +518,18 @@ def create_shadow_product_by_id():
     except DoesNotExist:
         try:
             p = ProductInfo.get(ProductInfo.product_id == payload.get('product_id'))
-            title_imgs = json_loads(p.title_imgs)
-            page_imgs = json_loads(p.page_imgs)
-            offer_details = json_loads(p.offer_details)
             additional_properties = json_loads(p.additional_properties)
             if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
-                resource_root = additional_properties[RESOURCE_ROOT_KEY]
-                title_imgs = [f'{resource_root}/{title_img[title_img.rfind("/") + 1:]}' for title_img in title_imgs]
-                page_imgs = [f'{resource_root}/{page_img[page_img.rfind("/") + 1:]}' for page_img in page_imgs]
+                title_imgs = [f'{title_img[title_img.rfind("/") + 1:title_img.rfind(".")]}.png' for title_img in
+                              json_loads(p.title_imgs)]
+                page_imgs = [f'{page_img[page_img.rfind("/") + 1:page_img.rfind(".")]}.png' for page_img in
+                             json_loads(p.page_imgs)]
+                offer_details = json_loads(p.offer_details)
                 status = SHADOW_PRODUCT_STATUS_READY
             else:
+                title_imgs = []
+                page_imgs = []
+                offer_details = {}
                 status = SHADOW_PRODUCT_STATUS_NEW
             update_shadow_product_info(p.product_id, status, payload.get('update_id'),
                                        create_shadow_product_by_id.__name__, SHADOW_PRODUCT_DEFAULT_ID,

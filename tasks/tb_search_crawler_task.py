@@ -13,5 +13,5 @@ if __name__ == '__main__':
     while True:
         # scan search_crawl_task and get all unfinished tasks
         run_search_crawler_task(UPDATE_ID)
-        analyze_and_generate_fix_tasks(UPDATE_ID)
+        generate_crawl_fix_tasks(UPDATE_ID)
         time.sleep(SEARCH_SCAN_NAP_IN_SECONDS)

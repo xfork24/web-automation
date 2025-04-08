@@ -4,8 +4,8 @@
 
 from core import *
 
-LOG_FILE_NAME = './logs/tb_llm_analyze_task.log'
-UPDATE_ID = 'tb_llm_analyze_task'
+LOG_FILE_NAME = './logs/llm_analyze_task.log'
+UPDATE_ID = 'llm_analyze_task'
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)

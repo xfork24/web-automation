@@ -280,7 +280,8 @@
             {#each title_imgs as title_img (title_img)}
               <Popover.Root>
                 <Popover.Trigger>
-                  <img class="h-32 w-32 object-scale-down mr-2" src={title_img} alt={title_img}/>
+                  <img class="h-32 w-32 object-scale-down mr-2"
+                       src={additional_properties.resource_root + '/title_images/' + title_img} alt={title_img}/>
                 </Popover.Trigger>
                 <Popover.Content class="w-30">
                   <div class="grid gap-4">
@@ -301,7 +302,8 @@
             {#each page_imgs as page_img (page_img)}
               <Popover.Root>
                 <Popover.Trigger>
-                  <img class="h-32 w-32 object-scale-down mr-2" src={page_img} alt={page_img}/>
+                  <img class="h-32 w-32 object-scale-down mr-2"
+                       src={additional_properties.resource_root + '/page_images/' + page_img} alt={page_img}/>
                 </Popover.Trigger>
                 <Popover.Content class="w-30">
                   <div class="grid gap-4">

@@ -137,14 +137,14 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
 # 1. display_sale和estimated_revenue为-1，表示我们目前没获取到这些信息
 # 2. 缺失大模型分析结果，默认所有商品信息都没有这个信息
 # 通过生成对应task的方式来获取这些信息
-def analyze_and_generate_fix_tasks(update_id,
-                                   fix_shop_title=True,
-                                   fix_product_sale=True,
-                                   fix_product_sale_by_search=False,
-                                   fix_product_sale_by_shop=True,
-                                   fix_llm_analysis=True):
+def generate_crawl_fix_tasks(update_id,
+                             fix_shop_title=True,
+                             fix_product_sale=True,
+                             fix_product_sale_by_search=False,
+                             fix_product_sale_by_shop=True,
+                             fix_llm_analysis=True):
     logger = get_logger()
-    update_role = analyze_and_generate_fix_tasks.__name__
+    update_role = generate_crawl_fix_tasks.__name__
     ts = int(time.time())
     # 处理可能的店铺问题
     if fix_shop_title:
@@ -307,7 +307,7 @@ def download_product_resources(product_id, update_id, ts=None, force_download=Fa
 
 def run_taobao_crawler_tasks(update_id):
     run_search_crawler_task(update_id)
-    analyze_and_generate_fix_tasks(update_id)
+    generate_crawl_fix_tasks(update_id)
     run_shop_search_crawler_task(update_id)
     run_shop_crawler_tasks(update_id)
     run_detail_crawler_tasks(update_id)
@@ -315,7 +315,7 @@ def run_taobao_crawler_tasks(update_id):
 
 def run_shadow_product_tasks(update_id):
     analyze_and_add_shadow_products(update_id)
-    analyze_and_fix_shadow_products(update_id)
+    generate_shadow_fix_tasks(update_id)
     run_product_manage_tasks(update_id)
 
 
@@ -365,7 +365,7 @@ def analyze_and_add_shadow_products(update_id):
 
 # 分析并自动添加shadow products, 同时生成detail_crawl_task和llm_analyze_task
 # 然后检查并更新所有状态为NEW的shadow_product
-def analyze_and_fix_shadow_products(update_id):
+def generate_shadow_fix_tasks(update_id):
     logger = get_logger()
     ts = int(time.time())
     # check and update shadow product status
@@ -382,7 +382,7 @@ def analyze_and_fix_shadow_products(update_id):
                 if len(tasks) == 0:
                     logger.info(f'add detail crawl task to fix shadow product, product_id={p.product_id}')
                     add_detail_crawl_task(p.product_id, p.product_link, {}, update_id,
-                                          analyze_and_fix_shadow_products.__name__)
+                                          generate_shadow_fix_tasks.__name__)
             if LLM_ANALYSIS_KEY not in additional_properties:
                 tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == p.product_id,
                                                       LLMAnalyzeTask.update_ts > ts - TB_LLM_ANALYZE_TASK_DEDUP_IN_SECONDS).order_by(
@@ -390,12 +390,12 @@ def analyze_and_fix_shadow_products(update_id):
                 if len(tasks) == 0:
                     logger.info(f'add llm analyze task to fix shadow product, product_id={p.product_id}')
                     add_llm_analyze_task(p.product_id, p.product_title, {}, update_id,
-                                         analyze_and_fix_shadow_products.__name__)
+                                         generate_shadow_fix_tasks.__name__)
             if sp.status == SHADOW_PRODUCT_STATUS_NEW:
                 logger.info(f'add product_manage_task to sync shadow product, product_id={sp.product_id}')
                 add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_PLATFORM_ALL,
                                         PRODUCT_MANAGE_OPERATION_READY, {}, update_id,
-                                        analyze_and_fix_shadow_products.__name__)
+                                        generate_shadow_fix_tasks.__name__)
         except DoesNotExist:
             logger.error(f'product_id={sp.product_id} does not exist while updating shadow product, just continue')
             continue

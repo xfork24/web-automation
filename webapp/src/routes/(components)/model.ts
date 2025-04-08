@@ -12,6 +12,7 @@ export type AdditionalProperties = {
   llm_analysis: LLMAnalyzeResult;
   errors: ErrorEntity[];
   diff: string;
+  resource_root: string;
 }
 export type OperationHistory = {
   id: number;
