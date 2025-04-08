@@ -20,12 +20,13 @@ export const load = async ({url}) => {
       product.data.keyword = product.data.additional_properties.llm_analysis.keyword;
       product.data.category = product.data.additional_properties.llm_analysis.category;
       product.data.digital = product.data.additional_properties.llm_analysis.digital;
-    } else {
+      product.data.digital_str = product.data.digital ? 'TRUE' : 'FALSE';
+    } else if (product.hasOwnProperty('data')) {
       product.data.keyword = '';
       product.data.category = '';
       product.data.digital = false;
+      product.data.digital_str = product.data.digital ? 'TRUE' : 'FALSE';
     }
-    product.data.digital_str = product.data.digital ? 'TRUE' : 'FALSE';
 
     const end = today(getLocalTimeZone()).add({days: 1});
     const start_ts = end.add({days: -30}).toDate(getLocalTimeZone()).getTime() / 1000;
