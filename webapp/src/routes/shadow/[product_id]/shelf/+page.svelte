@@ -50,9 +50,14 @@
     handler = onSaveProduct;
   }
 
-  function onSubmitProductDialog() {
-    dialog_body = 'This action will onshelf this product. The task will be scheduled later.';
-    handler = onSubmitProduct;
+  function onShelfTaobaoDialog() {
+    dialog_body = 'This action will onshelf this product to Taobao. The task will be scheduled later.';
+    handler = onShelfTaobao;
+  }
+
+  function onShelfRednoteDialog() {
+    dialog_body = 'This action will onshelf this product to Rednote. The task will be scheduled later.';
+    handler = onShelfRednote;
   }
 
   async function onResetProduct() {
@@ -103,7 +108,7 @@
     }
   }
 
-  async function onSubmitProduct() {
+  async function onShelfTaobao() {
     try {
       if (data.shadow_info.status !== 1) {
         open = false;
@@ -139,6 +144,60 @@
           body: JSON.stringify({
             'product_id': product_id,
             'shop_name': '归去来宝藏店',
+            'platform': 1,
+            'operation': 2,
+            'update_id': data.user.name
+          })
+        });
+        const task_result = await task_response.json();
+        if (task_result.code == 0) {
+          open = false;
+          await invalidateAll();
+          toast("Operation Successful");
+        }
+      }
+    } catch (error) {
+      console.error(`Error in function: ${error}`);
+    }
+  }
+
+  async function onShelfRednote() {
+    try {
+      if (data.shadow_info.status !== 1) {
+        open = false;
+        await invalidateAll();
+        toast("Operation Failed: Product must be in READY status.");
+        return;
+      }
+      const save_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8'
+        },
+        body: JSON.stringify({
+          'status': 1,
+          'update_id': data.user.name,
+          'product_title': product_title,
+          'shop_name': shop_name,
+          'price': product_price,
+          'inventory': product_inventory,
+          'title_imgs': title_imgs,
+          'page_imgs': page_imgs,
+          'offer_details': offer_details,
+          'additional_properties': additional_properties,
+        })
+      });
+      const save_result = await save_response.json();
+      if (save_result.code == 0) {
+        const task_response = await fetch('http://localhost:8000/api/v1/product_task', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+          },
+          body: JSON.stringify({
+            'product_id': product_id,
+            'shop_name': '归去来兮薯的店',
+            'platform': 2,
             'operation': 2,
             'update_id': data.user.name
           })
@@ -264,7 +323,10 @@
               <Button variant="destructive" class="mr-2" onclick={() => onSaveProductDialog()}>Save</Button>
             </Dialog.Trigger>
             <Dialog.Trigger>
-              <Button variant="destructive" class="mr-2" onclick={() => onSubmitProductDialog()}>Submit</Button>
+              <Button variant="destructive" class="mr-2" onclick={() => onShelfTaobaoDialog()}>Onshelf Taobao</Button>
+            </Dialog.Trigger>
+            <Dialog.Trigger>
+              <Button variant="destructive" class="mr-2" onclick={() => onShelfRednoteDialog()}>Onshelf RedNote</Button>
             </Dialog.Trigger>
           </div>
           <Dialog.Content>

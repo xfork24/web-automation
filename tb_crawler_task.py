@@ -24,7 +24,7 @@ if __name__ == '__main__':
     while True:
         # scan search_crawl_task and get all unfinished tasks
         try:
-            run_all_in_one_crawler_task(UPDATE_ID)
+            run_taobao_crawler_tasks(UPDATE_ID)
         except Exception as e:
             logger.error(f'get unhandled exception while execute run_all_in_one_crawler_task, {e}')
             traceback.print_exc()

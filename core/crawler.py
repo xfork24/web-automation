@@ -16,9 +16,12 @@ from core.config import *
 from core.exceptions import *
 from core.models import *
 
-WEBDRIVER_OPTION_HEADLESS = True
+WEBDRIVER_OPTION_HEADLESS = False
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
+TB_ONSHELF_PAGE = 'https://item.upload.taobao.com/sell/v2/publish.htm?catId=201160807'
+REDNOTE_LOGIN_PAGE = 'https://customer.xiaohongshu.com/login?service=https://ark.xiaohongshu.com/app-item/good/create'
+REDNOTE_ONSHELF_PAGE = 'https://ark.xiaohongshu.com/app-item/good/create'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
 TB_SHOP_BROWSE_TITLE_NAME = '店铺浏览-淘宝网'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
@@ -320,6 +323,10 @@ def login_taobao(user=TB_CRAWL_USER):
     handle_taobao_login_page(user)
     handle_taobao_post_login_page(user)
     set_window_size()
+
+
+def login_rednote(user=REDNOTE_SHOP_USER):
+    pass
 
 
 def crawl_taobao_search_results(search_key, num_of_pages, sale_order, update_id, target_product_ids=None):
@@ -978,7 +985,7 @@ def save_taobao_detail_result(product_id, sku_id, product_title, product_link,
     update_shop_info(shop_name, update_id, update_role, shop_link, '', None)
 
 
-def product_manage_ready(product_id, shop_name, update_id):
+def product_manage_ready(product_id, shop_name, platform, update_id):
     logger = get_logger()
     shadow_product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
     if shadow_product.status == SHADOW_PRODUCT_STATUS_NEW:
@@ -1008,19 +1015,30 @@ def product_manage_ready(product_id, shop_name, update_id):
         logger.info(f'shadow product_id={product_id}, shop_name={shop_name} is not in NEW status, just ignore')
 
 
-def product_manage_on_shelf(product_id, shop_name, update_id):
+def handle_taobao_on_shelf(product_id, shop_name, update_id):
     pass
 
 
-def product_manage_online(shadow_id, shop_name, update_id):
+def handle_rednote_on_shelf(product_id, shop_name, update_id):
     pass
 
 
-def product_manage_offline(shadow_id, shop_name, update_id):
+def product_manage_on_shelf(product_id, shop_name, platform, update_id):
+    if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
+        handle_taobao_on_shelf(product_id, shop_name, update_id)
+    elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
+        handle_rednote_on_shelf(product_id, shop_name, update_id)
+
+
+def product_manage_online(shadow_id, shop_name, platform, update_id):
     pass
 
 
-def product_manage_off_shelf(shadow_id, shop_name, update_id):
+def product_manage_offline(shadow_id, shop_name, platform, update_id):
+    pass
+
+
+def product_manage_off_shelf(shadow_id, shop_name, platform, update_id):
     pass
 
 

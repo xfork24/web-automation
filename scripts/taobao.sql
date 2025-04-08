@@ -232,6 +232,7 @@ CREATE TABLE IF NOT EXISTS product_manage_task
     id                    varchar(32)  NOT NULL,
     product_id            varchar(32)  NOT NULL,
     shop_name             varchar(128) NOT NULL,
+    platform              tinyint      NOT NULL,
     operation             tinyint      NOT NULL,
     status                tinyint      NOT NULL,
     try_count             int          NOT NULL,

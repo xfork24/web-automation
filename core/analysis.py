@@ -305,13 +305,17 @@ def download_product_resources(product_id, update_id, ts=None, force_download=Fa
                         additional_properties=additional_properties)
 
 
-def run_all_in_one_crawler_task(update_id):
+def run_taobao_crawler_tasks(update_id):
     run_search_crawler_task(update_id)
     analyze_and_generate_fix_tasks(update_id)
     run_shop_search_crawler_task(update_id)
     run_shop_crawler_tasks(update_id)
-    analyze_and_fix_shadow_products(update_id)
     run_detail_crawler_tasks(update_id)
+
+
+def run_shadow_product_tasks(update_id):
+    analyze_and_add_shadow_products(update_id)
+    analyze_and_fix_shadow_products(update_id)
     run_product_manage_tasks(update_id)
 
 
@@ -332,15 +336,15 @@ def run_product_manage_tasks(update_id):
             logger.info(
                 f'handling product manage task id={task.id} with product_id={task.product_id}, shop_name={task.shop_name}, operation={task.operation}')
             if task.operation == PRODUCT_MANAGE_OPERATION_READY:
-                product_manage_ready(task.product_id, task.shop_name, task.id)
+                product_manage_ready(task.product_id, task.shop_name, task.platform, task.id)
             elif task.operation == PRODUCT_MANAGE_OPERATION_ONSHELF:
-                product_manage_on_shelf(task.product_id, task.shop_name, task.id)
+                product_manage_on_shelf(task.product_id, task.shop_name, task.platform, task.id)
             elif task.operation == PRODUCT_MANAGE_OPERATION_ONLINE:
-                product_manage_online(task.product_id, task.shop_name, task.id)
+                product_manage_online(task.product_id, task.shop_name, task.platform, task.id)
             elif task.operation == PRODUCT_MANAGE_OPERATION_OFFLINE:
-                product_manage_offline(task.product_id, task.shop_name, task.id)
+                product_manage_offline(task.product_id, task.shop_name, task.platform, task.id)
             elif task.operation == PRODUCT_MANAGE_OPERATION_OFFSHELF:
-                product_manage_off_shelf(task.product_id, task.shop_name, task.id)
+                product_manage_off_shelf(task.product_id, task.shop_name, task.platform, task.id)
         except Exception:
             logger.error(
                 f'get unhandled exception while handling product manage task id={task.id} with product_id={task.product_id}, shop_name={task.shop_name}, operation={task.operation}, just continue')
@@ -354,12 +358,16 @@ def run_product_manage_tasks(update_id):
     return
 
 
+def analyze_and_add_shadow_products(update_id):
+    # 按一定标准自动生成shadow_products
+    pass
+
+
 # 分析并自动添加shadow products, 同时生成detail_crawl_task和llm_analyze_task
 # 然后检查并更新所有状态为NEW的shadow_product
 def analyze_and_fix_shadow_products(update_id):
     logger = get_logger()
     ts = int(time.time())
-    # TODO: 按一定标准自动生成shadow_products
     # check and update shadow product status
     shadow_products = ShadowProductInfo.select().where(ShadowProductInfo.status == SHADOW_PRODUCT_STATUS_NEW,
                                                        ShadowProductInfo.update_ts > ts - TB_SHADOW_PRODUCT_CHECK_PERIOD_IN_SECONDS)
@@ -385,7 +393,8 @@ def analyze_and_fix_shadow_products(update_id):
                                          analyze_and_fix_shadow_products.__name__)
             if sp.status == SHADOW_PRODUCT_STATUS_NEW:
                 logger.info(f'add product_manage_task to sync shadow product, product_id={sp.product_id}')
-                add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_OPERATION_READY, {}, update_id,
+                add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_PLATFORM_ALL,
+                                        PRODUCT_MANAGE_OPERATION_READY, {}, update_id,
                                         analyze_and_fix_shadow_products.__name__)
         except DoesNotExist:
             logger.error(f'product_id={sp.product_id} does not exist while updating shadow product, just continue')

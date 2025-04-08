@@ -33,6 +33,10 @@ TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
 TASK_STATUS_ARCHIVED = 5
 
+PRODUCT_MANAGE_PLATFORM_ALL = 0
+PRODUCT_MANAGE_PLATFORM_TAOBAO = 1
+PRODUCT_MANAGE_PLATFORM_REDNOTE = 2
+
 PRODUCT_MANAGE_OPERATION_READY = 1
 PRODUCT_MANAGE_OPERATION_ONSHELF = 2
 PRODUCT_MANAGE_OPERATION_ONLINE = 3
@@ -313,6 +317,7 @@ class ProductManageTask(BaseModel):
     id = CharField(max_length=32, primary_key=True)
     product_id = ForeignKeyField(ProductInfo, backref='product_manage_tasks', column_name='product_id', lazy_load=False)
     shop_name = ForeignKeyField(ShopInfo, backref='product_manage_tasks', column_name='shop_name', lazy_load=False)
+    platform = SmallIntegerField()
     operation = SmallIntegerField()
     status = SmallIntegerField(index=True)
     try_count = IntegerField()
@@ -748,7 +753,7 @@ def add_llm_analyze_task(product_id, product_title, additional_properties, updat
     return pk
 
 
-def add_product_manage_task(product_id, shop_name, operation, additional_properties, update_id, update_role):
+def add_product_manage_task(product_id, shop_name, platform, operation, additional_properties, update_id, update_role):
     logger = get_logger()
     ts = int(time.time())
     pk = uuid4().hex
@@ -756,6 +761,7 @@ def add_product_manage_task(product_id, shop_name, operation, additional_propert
     new_pmt.id = pk
     new_pmt.product_id = product_id
     new_pmt.shop_name = shop_name
+    new_pmt.platform = platform
     new_pmt.operation = operation
     new_pmt.status = TASK_STATUS_NEW
     new_pmt.try_count = 0

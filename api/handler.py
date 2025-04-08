@@ -1564,10 +1564,11 @@ def create_product_manage_task():
         if len(tasks) == 0 or payload.get('force') == 'true':
             task_id = add_product_manage_task(payload.get('product_id'),
                                               payload.get('shop_name'),
+                                              payload.get('platform'),
                                               payload.get('operation'),
                                               {},
                                               payload.get('update_id'),
-                                              add_product_manage_task.__name__)
+                                              create_product_manage_task.__name__)
         else:
             logger.info(
                 f'same task already exist for product_id={payload.get("product_id")} and "force" is not set to "true", just ignore')
