@@ -267,15 +267,17 @@ def download_product_resources(product_id, update_id, ts=None, force_download=Fa
     title_imgs = json_loads(exist_pi.title_imgs)
     if len(title_imgs) > 0:
         Path(f'{product_root_dir}/title_images').mkdir()
+    idx = 0
     for title_img in title_imgs:
         try:
+            idx += 1
             Driver.get(title_img)
             time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
             img = Driver.find_element(By.XPATH, '//img')
             assert (img is not None)
             logger.info(f'download product title_image={title_img}')
             element_screenshot(img,
-                               f'{product_root_dir}/title_images/{title_img[title_img.rfind("/") + 1:title_img.rfind(".")]}.png')
+                               f'{product_root_dir}/title_images/{idx}.png')
         except Exception:
             logger.error(f'get unhandled exception while get page image link={title_img}, arise the exception')
             traceback.print_exc()
@@ -286,15 +288,17 @@ def download_product_resources(product_id, update_id, ts=None, force_download=Fa
     page_imgs = json_loads(exist_pi.page_imgs)
     if len(page_imgs) > 0:
         Path(f'{product_root_dir}/page_images').mkdir()
+    idx = 0
     for page_img in page_imgs:
         try:
+            idx += 1
             Driver.get(page_img)
             time.sleep(TB_SKU_RESOURCE_DOWNLOAD_WAIT_IN_SECONDS)
             img = Driver.find_element(By.XPATH, '//img')
             assert (img is not None)
             logger.info(f'download product page_image={page_img}')
             element_screenshot(img,
-                               f'{product_root_dir}/page_images/{page_img[page_img.rfind("/") + 1:page_img.rfind(".")]}.png')
+                               f'{product_root_dir}/page_images/{idx}.png')
         except Exception:
             logger.error(f'get unhandled exception while get page image link={page_img}, arise the exception')
             traceback.print_exc()
@@ -328,23 +332,23 @@ def run_product_manage_tasks(update_id):
                                              ProductManageTask.update_ts > start_ts).order_by(
         ProductManageTask.update_ts)
     for task in tasks:
-        if not handle_error_task(task, update_id):
-            continue
+        # 这个任务不处理 handle_error_task
         task.try_count = task.try_count + 1
         update_task_info(task, update_id, TASK_STATUS_RUNNING)
         try:
             logger.info(
                 f'handling product manage task id={task.id} with product_id={task.product_id}, shop_name={task.shop_name}, operation={task.operation}')
+            success = False
             if task.operation == PRODUCT_MANAGE_OPERATION_READY:
-                product_manage_ready(task.product_id, task.shop_name, task.platform, task.id)
+                success = product_manage_ready(task.product_id, task.shop_name, task.platform, task.id)
             elif task.operation == PRODUCT_MANAGE_OPERATION_ONSHELF:
-                product_manage_on_shelf(task.product_id, task.shop_name, task.platform, task.id)
+                success = product_manage_on_shelf(task.product_id, task.shop_name, task.platform, task.id)
             elif task.operation == PRODUCT_MANAGE_OPERATION_ONLINE:
-                product_manage_online(task.product_id, task.shop_name, task.platform, task.id)
+                success = product_manage_online(task.product_id, task.shop_name, task.platform, task.id)
             elif task.operation == PRODUCT_MANAGE_OPERATION_OFFLINE:
-                product_manage_offline(task.product_id, task.shop_name, task.platform, task.id)
+                success = product_manage_offline(task.product_id, task.shop_name, task.platform, task.id)
             elif task.operation == PRODUCT_MANAGE_OPERATION_OFFSHELF:
-                product_manage_off_shelf(task.product_id, task.shop_name, task.platform, task.id)
+                success = product_manage_off_shelf(task.product_id, task.shop_name, task.platform, task.id)
         except Exception:
             logger.error(
                 f'get unhandled exception while handling product manage task id={task.id} with product_id={task.product_id}, shop_name={task.shop_name}, operation={task.operation}, just continue')
@@ -353,7 +357,7 @@ def run_product_manage_tasks(update_id):
                              err_code=TASK_FAILED_UNEXPECTED_ERROR,
                              call_stack=traceback.format_exc())
             continue
-        update_task_info(task, update_id, TASK_STATUS_DONE)
+        update_task_info(task, update_id, TASK_STATUS_DONE if success else TASK_STATUS_NEW)
         time.sleep(DETAIL_CRAWL_GAP_IN_SECONDS)
     return
 
@@ -392,10 +396,14 @@ def generate_shadow_fix_tasks(update_id):
                     add_llm_analyze_task(p.product_id, p.product_title, {}, update_id,
                                          generate_shadow_fix_tasks.__name__)
             if sp.status == SHADOW_PRODUCT_STATUS_NEW:
-                logger.info(f'add product_manage_task to sync shadow product, product_id={sp.product_id}')
-                add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_PLATFORM_ALL,
-                                        PRODUCT_MANAGE_OPERATION_READY, {}, update_id,
-                                        generate_shadow_fix_tasks.__name__)
+                tasks = ProductManageTask.select().where(ProductManageTask.product_id == p.product_id,
+                                                         ProductManageTask.update_ts > ts - TB_PRODUCT_MANAGE_TASK_DEDUP_IN_SECONDS).order_by(
+                    ProductManageTask.update_ts.desc())
+                if len(tasks) == 0:
+                    logger.info(f'add product_manage_task to sync shadow product, product_id={sp.product_id}')
+                    add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_PLATFORM_NONE,
+                                            PRODUCT_MANAGE_OPERATION_READY, {}, update_id,
+                                            generate_shadow_fix_tasks.__name__)
         except DoesNotExist:
             logger.error(f'product_id={sp.product_id} does not exist while updating shadow product, just continue')
             continue

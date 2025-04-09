@@ -18,6 +18,7 @@ def main():
         try:
             product = ProductInfo.get(ProductInfo.product_id == product_id)
             craw_taobao_detail_page(product.product_id, product.product_link, UPDATE_ID)
+            download_product_resources(product_id, UPDATE_ID)
         except DoesNotExist:
             logger.error(f'can not find product [{product_id}] in database')
         except Exception as e:

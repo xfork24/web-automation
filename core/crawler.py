@@ -37,6 +37,7 @@ TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 SHOP_PAGE_MAX_SKU_NUM = 100
 SHOP_PAGE_LOAD_MAX_COUNT = 10
 SHOP_PAGE_PRODUCT_COVER_TRY_COUNT = 5
+ONSHELF_PAGE_INVENTORY_TRY_COUNT = 5
 PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS = 5
 
 # search page related controls
@@ -167,11 +168,11 @@ def element_screenshot(element, file_path):
     time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
 
 
-def element_click(element):
+def element_click(element, sleep=DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS):
     logger = get_logger()
     logger.info(f'element={element.accessible_name} clicked and wait for seconds')
     element.click()
-    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+    time.sleep(sleep)
 
 
 def switch_to_frame(iframe):
@@ -186,6 +187,15 @@ def switch_to_default():
     logger.info(f'switch to default frame and wait for seconds')
     Driver.switch_to.default_content()
     time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+
+def parse_product_id_from_post_onshelf_link(link):
+    result = urlparse(link)
+    qs = parse_qs(result.query)
+    if 'primaryId' in qs and len(qs['primaryId']) == 1:
+        return qs['primaryId'][0]
+    else:
+        return None
 
 
 def parse_product_id_from_item(item_id):
@@ -611,6 +621,7 @@ def craw_taobao_shop_sku(shop_sku_div, shop_name, shop_link, update_id, target_p
         logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
     else:
         logger.info(f'parsed product_id={product_id} not in target_product_ids={target_product_ids}, crawl it too')
+    product_cover = SHOP_PRODUCT_COVER_PLACEHOLDER_LINK
     for _ in range(SHOP_PAGE_PRODUCT_COVER_TRY_COUNT):
         scroll_window_to_element(shop_sku_div)
         product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
@@ -1000,10 +1011,8 @@ def product_manage_ready(product_id, shop_name, platform, update_id):
         product = ProductInfo.get(ProductInfo.product_id == product_id)
         additional_properties = json_loads(product.additional_properties)
         if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
-            title_imgs = [f'{title_img[title_img.rfind("/") + 1:title_img.rfind(".")]}.png' for
-                          title_img in json_loads(product.title_imgs)]
-            page_imgs = [f'{page_img[page_img.rfind("/") + 1:page_img.rfind(".")]}.png'
-                         for page_img in json_loads(product.page_imgs)]
+            title_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(product.title_imgs)))]
+            page_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(product.page_imgs)))]
             offer_details = json_loads(product.offer_details)
             status = SHADOW_PRODUCT_STATUS_READY
         else:
@@ -1015,10 +1024,12 @@ def product_manage_ready(product_id, shop_name, platform, update_id):
         update_shadow_product_info(product.product_id, status, update_id,
                                    product_manage_ready.__name__,
                                    SHADOW_PRODUCT_DEFAULT_ID, product.product_title, product.shop_name,
-                                   product.price_unit, product.display_price, 0,
+                                   product.price_unit, product.display_price, SHADOW_PRODUCT_DEFAULT_INVENTORY_SIZE,
                                    title_imgs, page_imgs, offer_details, additional_properties)
+        return True if status == SHADOW_PRODUCT_STATUS_READY else False
     else:
         logger.info(f'shadow product_id={product_id}, shop_name={shop_name} is not in NEW status, just ignore')
+        return True
 
 
 def handle_taobao_on_shelf(product_id, shop_name, update_id):
@@ -1032,6 +1043,7 @@ def handle_taobao_on_shelf(product_id, shop_name, update_id):
     title_input = title_span.find_element(By.XPATH, 'span/input')
     title_input.send_keys(product.product_title)
     # delivery promise
+    scroll_window_to_element(Driver.find_element(By.ID, 'sale-card'))
     delivery_div = Driver.find_element(By.CLASS_NAME, 'sell-component-delivery-time')
     delivery_span = delivery_div.find_element(By.XPATH, 'span/span[1]/label/span')
     element_click(delivery_span)
@@ -1044,53 +1056,98 @@ def handle_taobao_on_shelf(product_id, shop_name, update_id):
     inventory_span = Driver.find_element(By.XPATH, '//*[@id="sell-field-quantity"]/div[2]/div/div/span/span[1]')
     assert (inventory_span.get_attribute('class') == 'input-wrap')
     inventory_input = inventory_span.find_element(By.XPATH, 'span/input')
+    for _ in range(ONSHELF_PAGE_INVENTORY_TRY_COUNT):
+        inventory_input.send_keys(Keys.BACK_SPACE)
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
     inventory_input.send_keys(product.inventory)
     # transport
-    transport_div = Driver.find_element(By.CLASS_NAME, 'sell-transport')
-    transport_label = transport_div.find_element(By.XPATH, 'span/div[1]/div[1]/div[1]/label')
-    element_click(transport_label)
-    transport_template_span = transport_div.find_element(By.XPATH, 'span/div[1]/div[2]/div/div[1]/div[2]/span')
-    element_click(transport_template_span)
-    default_transport_template = Driver.find_element(By.XPATH,
-                                                     'span/div[1]/div[2]/div/div[1]/div[2]/span/span[1]/span[1]/span/input')
-    element_click(default_transport_template)
+    scroll_window_to_element(Driver.find_element(By.ID, 'struct-multiDiscountPromotion'))
+    transport_label = Driver.find_element(By.XPATH,
+                                          '//*[@id="sell-field-tbExtractWay"]/div[2]/div/div/div/span/div[1]/div[1]/div[1]/label')
+    if transport_label.get_attribute('class').find('checked') == -1:
+        element_click(transport_label)
+
+        transport_template_span = Driver.find_element(By.XPATH,
+                                                      '//*[@id="sell-field-tbExtractWay"]/div[2]/div/div/div/span/div[1]/div[2]/div/div[1]/div[2]/span/span[1]/span[1]/span')
+        element_click(transport_template_span)
+        spans = Driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
+        for span in spans:
+            if span.text == '系统模板-商家默认模板':
+                element_click(span)
+                break
     # inventory deduction
+    scroll_window_to_element(Driver.find_element(By.ID, 'struct-regionLimitSale'))
     inventory_deduction_span = Driver.find_element(By.XPATH,
                                                    '//*[@id="sell-field-subStock"]/div[2]/div/div/span/span[2]')
     element_click(inventory_deduction_span)
+    additional_properties = json_loads(product.additional_properties)
+    resource_root = additional_properties[RESOURCE_ROOT_KEY][1:]
     # title images
+    scroll_window_to_element(Driver.find_element(By.ID, 'desc-card'))
     title_img_upload_div = Driver.find_element(By.XPATH,
                                                '//*[@id="struct-mainImagesGroup"]/div/div[1]/div/div/div/div/div')
-    element_click(title_img_upload_div)
+    element_click(title_img_upload_div, PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS)
     ti_iframe = Driver.find_element(By.XPATH, '//*[@id="mainImagesGroup"]')
     switch_to_frame(ti_iframe)
-    navbar_div = None
+    handle_iframe_select_images(f'{resource_root}/title_images')
+    switch_to_default()
+    # page images
+    scroll_window_to_element(Driver.find_element(By.ID, 'struct-guideMaterial'))
+    page_img_upload_div = Driver.find_element(By.XPATH, '//*[@id="panel_edit"]/div[1]/div[1]/div[1]')
+    element_click(page_img_upload_div, PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS)
+    frame_div = Driver.find_element(By.CLASS_NAME, 'media-img-plug')
+    pi_iframe = frame_div.find_element(By.XPATH, 'iframe')
+    switch_to_frame(pi_iframe)
+    handle_iframe_select_images(f'{resource_root}/page_images', True)
+    switch_to_default()
+    # onshelf time
+    scroll_window_to_element(Driver.find_element(By.ID, 'post-sale-service-card'))
+    onshelf_span = Driver.find_element(By.XPATH, '//*[@id="sell-field-startTime"]/div[2]/div[2]/div/div/span/span[1]')
+    element_click(onshelf_span)
+    # submit onshelf
+    submit_btn = Driver.find_element(By.XPATH, '//*[@id="struct-buttons"]/button')
+    element_click(submit_btn)
+    logger.info(f'onshelf product_id={product_id} to taobao successfully')
+    time.sleep(PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS)
+
+
+def handle_iframe_select_images(path, confirm=False):
+    navbar_root = None
     divs = Driver.find_elements(By.XPATH, '//div')
     for div in divs:
         cls_name = div.get_attribute('class')
         if cls_name is None:
             continue
         elif re.match(ONSHELF_TAOBAO_NAV_BAR_RE_EXP, cls_name):
-            navbar_div = div
+            navbar_root = div
             break
-    assert (navbar_div is not None)
-    navbar_products_li = None
-    for navbar_li in navbar_div.find_elements(By.XPATH, 'ul/li'):
-        name_span = navbar_li.find_element(By.XPATH, 'div/div/div/div/span')
-        if name_span.get_attribute('title') == 'products':
-            navbar_products_li = navbar_li
+    assert (navbar_root is not None)
+    sort_span = Driver.find_element(By.XPATH,
+                                    '//*[@id="sucai-tu-selector-container"]/div[3]/div[2]/div[3]/div/div[1]/span[3]/span[1]/span[1]/span/input')
+    element_click(sort_span)
+    spans = Driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
+    for span in spans:
+        if span.text == '文件名升序':
+            element_click(span)
             break
-    assert (navbar_products_li is not None)
-    navbar_product_li = None
-    for navbar_li in navbar_products_li.find_elements(By.XPATH, 'ul/li'):
-        name_span = navbar_li.find_element(By.XPATH, 'div/div/div/div/span')
-        if name_span.get_attribute('title') == product.product_id:
-            navbar_product_li = navbar_li
-            break
-    assert (navbar_product_li is not None)
-    navbar_ts_li = None
-    for navbar_li in navbar_product_li.find_elements(By.XPATH, 'ul/li'):
-        pass
+    path_list = path.split('/')
+    parent_li = navbar_root
+    for token in path_list:
+        child_li = None
+        for child in parent_li.find_elements(By.XPATH, 'ul/li'):
+            name_span = child.find_element(By.XPATH, 'div/div/div/div/span')
+            if name_span.get_attribute('title') == token:
+                child_li = child
+                break
+        assert (child_li is not None)
+        token_div = child_li.find_element(By.XPATH, 'div')
+        element_click(token_div)
+        parent_li = child_li
+    image_divs = Driver.find_element(By.XPATH, '//*[@id="sucai_tu_selector_scrollMain"]').find_elements(By.XPATH, 'div')
+    [element_click(image_div) for image_div in image_divs]
+    if confirm:
+        confirm_btn = Driver.find_element(By.XPATH, '//*[@id="sucai-tu-selector-container"]/div[4]/div[3]/button')
+        element_click(confirm_btn)
 
 
 def handle_rednote_on_shelf(product_id, shop_name, update_id):
@@ -1098,10 +1155,18 @@ def handle_rednote_on_shelf(product_id, shop_name, update_id):
 
 
 def product_manage_on_shelf(product_id, shop_name, platform, update_id):
-    if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
+    if platform & PRODUCT_MANAGE_PLATFORM_TAOBAO:
         handle_taobao_on_shelf(product_id, shop_name, update_id)
-    elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
+        # 获取上架后的product_id
+        shadow_id = parse_product_id_from_post_onshelf_link(Driver.current_url)
+        assert (shadow_id is not None)
+        update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
+                                   product_manage_on_shelf.__name__, shadow_id=shadow_id)
+    if platform & PRODUCT_MANAGE_PLATFORM_REDNOTE:
         handle_rednote_on_shelf(product_id, shop_name, update_id)
+        update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
+                                   product_manage_on_shelf.__name__)
+    return True
 
 
 def product_manage_online(shadow_id, shop_name, platform, update_id):
