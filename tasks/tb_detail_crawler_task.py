@@ -9,8 +9,9 @@ UPDATE_ID = 'tb_detail_crawler_task'
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
-    login_taobao()
+    ctr = CrawlTaskRunner()
+    ctr.login()
     while True:
         # scan detail_crawl_task and get all unfinished tasks
-        run_detail_crawler_tasks(UPDATE_ID)
-        time.sleep(DETAIL_SCAN_NAP_IN_SECONDS)
+        ctr.run_detail_crawler_tasks(UPDATE_ID)
+        time.sleep(TASK_SCAN_WAIT_IN_SECONDS)

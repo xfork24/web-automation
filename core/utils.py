@@ -13,8 +13,6 @@ from jsondiff import diff
 TESSERACT_PRICE_OCR_CONFIG = '--psm 7 --oem 1 tessedit_char_whitelist=0123456789.'
 PYOCR_PRICE_ALLOW_LIST = '0123456789.'
 
-EasyOcrReader = easyocr.Reader(['en'])
-
 
 def init_logger(log_format, file, level, debug):
     if debug:
@@ -30,59 +28,6 @@ def get_logger(module_name=__name__):
     return logger
 
 
-def parse_price_unit(unit):
-    if unit == '¥':
-        return 'CNY'
-    return unit
-
-
-def parse_price(price):
-    return int(float(price) * 100)
-
-
-def parse_price_ocr_by_pytesseract(image_file_path, config=TESSERACT_PRICE_OCR_CONFIG):
-    logger = get_logger()
-    price_raw = pytesseract.image_to_string(Image.open(image_file_path), config=config).strip(' \t\r\n')
-    price = 0 if price_raw == '' else int(float(price_raw) * 100)
-    if price == 0:
-        msg = f'parse_price_ocr_by_pytesseract failed with price_raw={price_raw} while handling file={image_file_path}, config={config}'
-        logger.error(msg)
-        raise PriceOCRError(msg)
-    logger.info(
-        f'parse_price_ocr_by_pytesseract parsed price_raw={price_raw}, price={price} while handling file={image_file_path}, config={config}')
-    return price
-
-
-def parse_price_ocr_by_pyocr(image_file_path, allowlist=PYOCR_PRICE_ALLOW_LIST):
-    logger = get_logger()
-    result = EasyOcrReader.readtext(image_file_path, allowlist=allowlist)
-    if len(result) != 1:
-        msg = f'parse_price_ocr_by_pyocr failed with result={result} while parsing {image_file_path}, allowlist={allowlist}'
-        logger.error(msg)
-        raise PriceOCRError(msg)
-    price_raw = result[0][1].strip(' \t\r\n')
-    price = 0 if price_raw == '' else int(float(price_raw) * 100)
-    if price == 0:
-        msg = f'parse_price_ocr_by_pyocr failed with result={result}, price_raw={price_raw} while parsing {image_file_path}, allowlist={allowlist}'
-        logger.error(msg)
-        raise PriceOCRError(msg)
-    logger.info(
-        f'parse_price_ocr_by_pyocr parsed result={result}, price_raw={price_raw}, price={price} while parsing {image_file_path}, allowlist={allowlist}')
-    return price
-
-
-def par_price_ocr(image_file_path):
-    try:
-        return parse_price_ocr_by_pyocr(image_file_path)
-    except PriceOCRError:
-        pass
-    try:
-        return parse_price_ocr_by_pytesseract(image_file_path)
-    except PriceOCRError:
-        pass
-    raise PriceOCRError()
-
-
 def json_dumps(content):
     return dumps(content, ensure_ascii=False)
 
@@ -93,3 +38,48 @@ def json_loads(content):
 
 def json_diff(a, b):
     return diff(a, b, marshal=True)
+
+
+class OcrParser:
+    def __init__(self):
+        self.logger = get_logger()
+        self.logger.info('initialize EasyOCRReader ...')
+        self.easyOcrReader = easyocr.Reader(['en'])
+
+    def parse_price_ocr_by_pytesseract(self, image_file_path, config=TESSERACT_PRICE_OCR_CONFIG):
+        price_raw = pytesseract.image_to_string(Image.open(image_file_path), config=config).strip(' \t\r\n')
+        price = 0 if price_raw == '' else int(float(price_raw) * 100)
+        if price == 0:
+            msg = f'parse_price_ocr_by_pytesseract failed with price_raw={price_raw} while handling file={image_file_path}, config={config}'
+            self.logger.error(msg)
+            raise PriceOCRError(msg)
+        self.logger.info(
+            f'parse_price_ocr_by_pytesseract parsed price_raw={price_raw}, price={price} while handling file={image_file_path}, config={config}')
+        return price
+
+    def parse_price_ocr_by_pyocr(self, image_file_path, allowlist=PYOCR_PRICE_ALLOW_LIST):
+        result = self.easyOcrReader.readtext(image_file_path, allowlist=allowlist)
+        if len(result) != 1:
+            msg = f'parse_price_ocr_by_pyocr failed with result={result} while parsing {image_file_path}, allowlist={allowlist}'
+            self.logger.error(msg)
+            raise PriceOCRError(msg)
+        price_raw = result[0][1].strip(' \t\r\n')
+        price = 0 if price_raw == '' else int(float(price_raw) * 100)
+        if price == 0:
+            msg = f'parse_price_ocr_by_pyocr failed with result={result}, price_raw={price_raw} while parsing {image_file_path}, allowlist={allowlist}'
+            self.logger.error(msg)
+            raise PriceOCRError(msg)
+        self.logger.info(
+            f'parse_price_ocr_by_pyocr parsed result={result}, price_raw={price_raw}, price={price} while parsing {image_file_path}, allowlist={allowlist}')
+        return price
+
+    def par_price_ocr(self, image_file_path):
+        try:
+            return self.parse_price_ocr_by_pyocr(image_file_path)
+        except PriceOCRError:
+            pass
+        try:
+            return self.parse_price_ocr_by_pytesseract(image_file_path)
+        except PriceOCRError:
+            pass
+        raise PriceOCRError()

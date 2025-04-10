@@ -2,6 +2,8 @@
 # !./bin/python
 
 import os
+import shutil
+from pathlib import Path
 import traceback
 import uuid
 from enum import Enum
@@ -16,7 +18,6 @@ from core.config import *
 from core.exceptions import *
 from core.models import *
 
-WEBDRIVER_OPTION_HEADLESS = True
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_ONSHELF_PAGE = 'https://item.upload.taobao.com/sell/v2/publish.htm?catId=201160807'
@@ -26,19 +27,14 @@ TB_HOMEPAGE_TITLE_NAME = '淘宝'
 TB_SHOP_BROWSE_TITLE_NAME = '店铺浏览-淘宝网'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_LOGIN_AUTH_TITLE_NAME = '登录-身份验证'
-LOGIN_CHECK_WAIT_IN_SECONDS = 5
-LOGIN_RETRY_MAX_NUM = 5
-LOGIN_CONFIRM_WAIT_IN_SECONDS = 15
-SEARCH_WAIT_IN_SECONDS = 5
-DETAIL_PAGE_WAIT_IN_SECONDS = 5
-SHOP_PAGE_WAIT_IN_SECONDS = 5
+
+CRAWL_PAGE_WAIT_IN_SECONDS = 5
+CRAWL_OPERATION_TRY_COUNT = 3
+LOGIN_CONFIRM_PAGE_WAIT_IN_SECONDS = 15
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 SHOP_PAGE_MAX_SKU_NUM = 100
 SHOP_PAGE_LOAD_MAX_COUNT = 10
-SHOP_PAGE_PRODUCT_COVER_TRY_COUNT = 5
-ONSHELF_PAGE_INVENTORY_TRY_COUNT = 5
-PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS = 5
 
 # search page related controls
 SEARCH_MAIN_PIC_AND_DESC_RE_EXP = re.compile('^mainPicAndDesc--\\w+')
@@ -93,102 +89,6 @@ class WebDriverType(Enum):
     SafariDriver = 2
 
 
-def init_webdriver(webdriver_type: WebDriverType):
-    logger = get_logger()
-    if DEBUG:
-        os.chdir(DEBUG_ROOT_DIR)
-    driver = None
-    if webdriver_type == WebDriverType.ChromDriver:
-        # TBD: handle hiding selenium from chrome, remove 'chrome is controlled by automated test software'
-        driver_service = ChromeDriverService('./chromedriver')
-        options = webdriver.ChromeOptions()
-        options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
-        options.add_argument('--disable-blink-features=AutomationControlled')
-        if WEBDRIVER_OPTION_HEADLESS:
-            options.add_argument('--headless')
-        options.add_argument('--disable-gpu')
-        driver = webdriver.Chrome(options=options, service=driver_service)
-    elif webdriver_type == WebDriverType.SafariDriver:
-        options = webdriver.SafariOptions()
-        driver = webdriver.Safari(options=options)
-    assert (driver is not None)
-    logger.info(f'{webdriver_type.name} is initialized')
-    return driver
-
-
-def close_driver():
-    logger = get_logger()
-    logger.info('quit webdriver ...')
-    Driver.quit()
-
-
-def zoom_content(ratio=1.0):
-    logger = get_logger()
-    zoom_script = 'document.body.style.zoom="%f"' % ratio
-    logger.info(f'executing script {zoom_script} and wait for seconds')
-    Driver.execute_script(zoom_script)
-    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
-
-
-def scroll_window(pos=None):
-    logger = get_logger()
-    x = pos[0] if pos is not None else 'document.body.scrollWidth'
-    y = pos[1] if pos is not None else 'document.body.scrollHeight'
-    scroll_script = 'window.scrollTo(%s, %s)' % (str(x), str(y))
-    logger.info(f'executing script {scroll_script} and wait for seconds')
-    Driver.execute_script(scroll_script)
-    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
-
-
-def set_window_size(size=None):
-    logger = get_logger()
-    if size is None:
-        logger.info('maximizing window and wait for seconds')
-        Driver.maximize_window()
-    else:
-        logger.info(f'set window size to ({size[0]},{size[1]}) and wait for seconds')
-        Driver.set_window_size(size[0], size[1])
-    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
-
-
-def scroll_window_to_element(element):
-    logger = get_logger()
-    script = 'arguments[0].scrollIntoView();'
-    logger.info(f'executing script {script} to element location ({element.location["x"]},{element.location["y"]}) '
-                'and wait for seconds')
-    Driver.execute_script('arguments[0].scrollIntoView();', element)
-    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
-
-
-def element_screenshot(element, file_path):
-    logger = get_logger()
-    logger.info(f'take screenshot for element location ({element.location["x"]},{element.location["y"]}) '
-                f'to file {file_path} and wait for seconds')
-    element.screenshot(file_path)
-    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
-
-
-def element_click(element, sleep=DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS):
-    logger = get_logger()
-    logger.info(f'element={element.accessible_name} clicked and wait for seconds')
-    element.click()
-    time.sleep(sleep)
-
-
-def switch_to_frame(iframe):
-    logger = get_logger()
-    logger.info(f'switch to iframe={iframe.accessible_name} and wait for seconds')
-    Driver.switch_to.frame(iframe)
-    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
-
-
-def switch_to_default():
-    logger = get_logger()
-    logger.info(f'switch to default frame and wait for seconds')
-    Driver.switch_to.default_content()
-    time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
-
-
 def parse_product_id_from_post_onshelf_link(link):
     result = urlparse(link)
     qs = parse_qs(result.query)
@@ -196,13 +96,6 @@ def parse_product_id_from_post_onshelf_link(link):
         return qs['primaryId'][0]
     else:
         return None
-
-
-def parse_product_id_from_item(item_id):
-    assert (item_id is not None and item_id.rfind('_') != -1)
-    product_id = item_id[item_id.rfind('_') + 1:]
-    assert (len(product_id) > 0)
-    return product_id
 
 
 def parse_product_id_from_product_link(link):
@@ -214,8 +107,11 @@ def parse_product_id_from_product_link(link):
         return None
 
 
-def parse_product_title(title):
-    return title.replace('̷', '')
+def parse_product_id_from_item(item_id):
+    assert (item_id is not None and item_id.rfind('_') != -1)
+    product_id = item_id[item_id.rfind('_') + 1:]
+    assert (len(product_id) > 0)
+    return product_id
 
 
 def parse_sku_id_from_product_link(link):
@@ -225,6 +121,10 @@ def parse_sku_id_from_product_link(link):
         return qs['skuId'][0]
     else:
         return None
+
+
+def parse_product_title(title):
+    return title.replace('̷', '')
 
 
 def parse_sale_in_search(sale):
@@ -265,920 +165,1038 @@ def is_valid_image_link(link):
         return True
 
 
-def handle_taobao_login_page(user):
-    global Driver
-    logger = get_logger()
-    try_count = 0
-    while True:
-        try:
-            try_count += 1
-            if try_count >= LOGIN_RETRY_MAX_NUM:
-                msg = 'login retry max count exceeded, login failed.'
-                logger.error(msg)
-                raise LoginFailed(msg)
-            logger.info('navigate to taobao login page and wait in seconds')
-            Driver.get(TB_LOGIN_PAGE)
-            time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
-            login_button = Driver.find_element(By.CLASS_NAME, 'fm-btn').find_element(By.XPATH, 'button')
-            assert (login_button is not None)
-            if login_button.text == '快速进入':
-                # already logged in
-                element_click(login_button)
-            else:
-                user_input = Driver.find_element(By.ID, 'fm-login-id')
-                passwd_input = Driver.find_element(By.ID, 'fm-login-password')
-                assert (user_input is not None and passwd_input is not None)
-                user_input.clear()
-                user_input.send_keys(user)
-                passwd_input.clear()
-                passwd_input.send_keys(TB_USERS[user])
-                element_click(login_button)
-            # check whether slide check is required
+def parse_price_unit(unit):
+    if unit == '¥':
+        return 'CNY'
+    return unit
+
+
+def parse_price(price):
+    return int(float(price) * 100)
+
+
+class Crawler:
+    def __init__(self, webdriver_type=WebDriverType.ChromDriver, headless=True, debug=True):
+        self.logger = get_logger()
+        self.headless = headless
+        self.debug = debug
+        if debug:
+            os.chdir(DEBUG_ROOT_DIR)
+        self.driver = self.init_webdriver(webdriver_type, headless)
+        self.ocr = OcrParser()
+
+    def __del__(self):
+        self.close_driver()
+
+    def init_webdriver(self, webdriver_type: WebDriverType, headless):
+        if DEBUG:
+            os.chdir(DEBUG_ROOT_DIR)
+        driver = None
+        if webdriver_type == WebDriverType.ChromDriver:
+            # TBD: handle hiding selenium from chrome, remove 'chrome is controlled by automated test software'
+            driver_service = ChromeDriverService('./chromedriver')
+            options = webdriver.ChromeOptions()
+            options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            if headless:
+                options.add_argument('--headless')
+            options.add_argument('--disable-gpu')
+            driver = webdriver.Chrome(options=options, service=driver_service)
+        elif webdriver_type == WebDriverType.SafariDriver:
+            options = webdriver.SafariOptions()
+            driver = webdriver.Safari(options=options)
+        assert (driver is not None)
+        self.logger.info(f'{webdriver_type.name} is initialized')
+        return driver
+
+    def close_driver(self):
+        self.logger.info('quit webdriver ...')
+        self.driver.quit()
+
+    def zoom_content(self, ratio=1.0):
+        zoom_script = 'document.body.style.zoom="%f"' % ratio
+        self.logger.info(f'executing script {zoom_script} and wait for seconds')
+        self.driver.execute_script(zoom_script)
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+    def scroll_window(self, pos=None):
+        x = pos[0] if pos is not None else 'document.body.scrollWidth'
+        y = pos[1] if pos is not None else 'document.body.scrollHeight'
+        scroll_script = 'window.scrollTo(%s, %s)' % (str(x), str(y))
+        self.logger.info(f'executing script {scroll_script} and wait for seconds')
+        self.driver.execute_script(scroll_script)
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+    def set_window_size(self, size=None):
+        if size is None:
+            self.logger.info('maximizing window and wait for seconds')
+            self.driver.maximize_window()
+        else:
+            self.logger.info(f'set window size to ({size[0]},{size[1]}) and wait for seconds')
+            self.driver.set_window_size(size[0], size[1])
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+    def scroll_window_to_element(self, element):
+        script = 'arguments[0].scrollIntoView();'
+        self.logger.info(
+            f'executing script {script} to element location ({element.location["x"]},{element.location["y"]}) '
+            'and wait for seconds')
+        self.driver.execute_script('arguments[0].scrollIntoView();', element)
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+    def element_screenshot(self, element, file_path):
+        self.logger.info(f'take screenshot for element location ({element.location["x"]},{element.location["y"]}) '
+                         f'to file {file_path} and wait for seconds')
+        element.screenshot(file_path)
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+    def element_click(self, element, sleep=DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS):
+        self.logger.info(f'element={element.accessible_name} clicked and wait for seconds')
+        element.click()
+        time.sleep(sleep)
+
+    def switch_to_frame(self, iframe):
+        self.logger.info(f'switch to iframe={iframe.accessible_name} and wait for seconds')
+        self.driver.switch_to.frame(iframe)
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+    def switch_to_default(self):
+        self.logger.info(f'switch to default frame and wait for seconds')
+        self.driver.switch_to.default_content()
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+
+    def handle_taobao_login_page(self, user):
+        try_count = 0
+        while True:
             try:
-                if WEBDRIVER_OPTION_HEADLESS:
-                    Driver.find_element(By.XPATH, '//*[@id="baxia-dialog-content"]')
-                    logger.info('slide check needed, just try to bypass it by reinitialize webdriver')
-                    close_driver()
-                    Driver = init_webdriver(WebDriverType.ChromDriver)
-                    continue
-            except NoSuchElementException:
-                logger.info('do not need slide check this time, just continue')
-            time.sleep(LOGIN_CONFIRM_WAIT_IN_SECONDS)
-            break
-        except NoSuchElementException:
-            logger.info('can not find login form, wait for seconds an retry')
-            time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
-
-
-def handle_taobao_post_login_page(user):
-    logger = get_logger()
-    logger.info('check if we are in taobao/personal homepage')
-    while True:
-        if Driver.title == TB_PERSONAL_HOMEPAGE_TITLE_NAME or Driver.title == TB_HOMEPAGE_TITLE_NAME:
-            logger.info('we are already in taobao/personal homepage, now perform following crawling')
-            break
-        elif Driver.title == TB_LOGIN_AUTH_TITLE_NAME:
-            logger.info('we are in login verification page, use SMS to get auth code')
-            iframe = Driver.find_element(By.XPATH, '//*[@id="content"]/div/div[1]/iframe')
-            Driver.switch_to.frame(iframe)
-            code_input = Driver.find_element(By.ID, 'J_Phone_Checkcode')
-            sms_btn = Driver.find_element(By.ID, 'J_GetCode')
-            confirm_btn = Driver.find_element(By.ID, 'submitBtn')
-            sms_btn.click()
-            sms_code = input(f'Please input SMS verification code for user={user}: ')
-            code_input.send_keys(sms_code)
-            confirm_btn.click()
-            time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
-            break
-        else:
-            logger.info(
-                'we are not in taobao/personal homepage, '
-                'finish authentication and navigate to taobao/personal homepage to continue crawling...')
-            time.sleep(LOGIN_CHECK_WAIT_IN_SECONDS)
-
-
-def login_taobao(user=TB_CRAWL_USER):
-    handle_taobao_login_page(user)
-    handle_taobao_post_login_page(user)
-    set_window_size()
-
-
-def login_rednote(user=REDNOTE_SHOP_USER):
-    pass
-
-
-def crawl_taobao_search_results(search_key, num_of_pages, sale_order, update_id, target_product_ids=None):
-    logger = get_logger()
-    logger.info(
-        f'navigate to taobao search page with search_key={search_key} and num_of_pages={num_of_pages}, sale_order={sale_order}')
-    Driver.get(TB_SEARCH_PAGE)
-    qbox = Driver.find_element(By.ID, 'q')
-    qbox.clear()
-    qbox.send_keys(search_key)
-    qbox.send_keys(Keys.RETURN)
-    ids_set = set()
-    for page in range(1, num_of_pages + 1):
-        try:
-            logger.info('wait search results ready for seconds')
-            time.sleep(SEARCH_WAIT_IN_SECONDS)
-            # press '销量' navigate bar on first page if sale_order is True
-            if page == 1 and sale_order:
-                sale_order_div = None
-                divs = Driver.find_elements(By.CLASS_NAME, 'next-tabs-tab-inner')
-                for div in divs:
-                    if div.text == '销量':
-                        sale_order_div = div
-                        break
-                assert (sale_order_div is not None)
-                element_click(sale_order_div)
-                logger.info('wait search results ready by press order first for seconds')
-                time.sleep(SEARCH_WAIT_IN_SECONDS)
-            search_result_wrapper = Driver.find_element(By.ID, 'content_items_wrapper')
-            search_results = search_result_wrapper.find_elements(By.XPATH, 'div/a')
-            logger.info(f'find {len(search_results)} search results with search_key={search_key} and page= {page}')
-            for search_result in search_results:
-                parse_taobao_search_result(search_result, ids_set, update_id, target_product_ids)
-            if page < num_of_pages:
-                btn_pages = Driver.find_elements(By.CLASS_NAME, 'next-pagination-pages')
-                assert (len(btn_pages) >= 1)  # 至少下面会有一个导航栏
-                btn_list = btn_pages[-1].find_elements(By.XPATH, 'button')
-                assert (len(btn_list) == 3)  # 下面导航栏里直属三个按钮：上一页，下一页，确定
-                logger.info(
-                    f'get next page search results for search_key={search_key} and page={page + 1} by press next page')
-                element_click(btn_list[1])
-        except AssertionError:
-            logger.error(
-                'assertion failed in search result page, just stop crawling')
-            traceback.print_exc()
-            break
-        except Exception:
-            logger.error('get unexcepted exception while parsing search results, just stop crawling')
-            traceback.print_exc()
-            break
-
-
-def parse_taobao_search_result(search_result, ids_set, update_id, target_product_ids=None):
-    logger = get_logger()
-    try:
-        logger.info(f'parsing search result: {search_result.accessible_name}')
-        product_id = parse_product_id_from_item(search_result.get_attribute('id'))
-        target_product_ids = target_product_ids or []  # None表示不限制target product id
-        if len(target_product_ids) == 0 or product_id in target_product_ids:
-            logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
-        else:
-            logger.info(f'parsed product_id={product_id} not in target_product_ids={target_product_ids}, crawl it too')
-        product_link = search_result.get_attribute('href')
-        sku_id = parse_sku_id_from_product_link(product_link) or '0'
-        product_items = search_result.find_elements(By.XPATH, 'div/div')
-        sku_summary, shop_summary = None, None
-        for item in product_items:
-            cls_name = item.get_attribute('class')
-            if cls_name is None:
-                continue
-            elif re.match(SEARCH_MAIN_PIC_AND_DESC_RE_EXP, cls_name):
-                sku_summary = item
-            elif re.match(SEARCH_SHOP_INFO_RE_EXP, cls_name):
-                shop_summary = item
-        assert (sku_summary is not None and shop_summary is not None)
-        sku_items = sku_summary.find_elements(By.XPATH, 'div')
-        image_wrapper, sku_title_wrapper, price_wrapper = None, None, None
-        for item in sku_items:
-            cls_name = item.get_attribute('class')
-            if cls_name is None:
-                continue
-            elif re.match(SEARCH_DESC_WRAPPER_RE_EXP, cls_name):
-                sku_title_wrapper = item
-            elif re.match(SEARCH_PRICE_WRAPPER_RE_EXP, cls_name):
-                price_wrapper = item
-            elif re.match(SEARCH_IMAGE_WRAPPER_RE_EXP, cls_name):
-                image_wrapper = item
-        assert (sku_title_wrapper is not None and price_wrapper is not None and image_wrapper is not None)
-        product_title = parse_product_title(sku_title_wrapper.find_element(By.XPATH, 'div/span').text)
-        if len(product_title) == 0:
-            title_spans = sku_title_wrapper.find_elements(By.XPATH, 'div/span/span')
-            if len(title_spans) > 0:
-                for title_span in title_spans:
-                    product_title += parse_product_title(title_span.text)
-        product_cover = image_wrapper.find_element(By.XPATH, 'img').get_attribute('src')
-        price_unit_span, display_sale_span = None, None
-        for span in price_wrapper.find_elements(By.XPATH, 'div/span'):
-            cls_name = span.get_attribute('class')
-            if cls_name is None:
-                continue
-            elif re.match(SEARCH_SKU_UNIT_RE_EXP, cls_name):
-                price_unit_span = span
-            elif re.match(SEARCH_SKU_SALE_RE_EXP, cls_name):
-                display_sale_span = span
-        assert (price_unit_span is not None and display_sale_span is not None)
-        price_unit = parse_price_unit(price_unit_span.text)
-        display_sale = parse_sale_in_search(display_sale_span.text)
-        price_divs = price_wrapper.find_elements(By.XPATH, 'div/div/div')
-        assert (len(price_divs) == 2)
-        display_price = parse_price('%s%s' % (price_divs[0].text, price_divs[1].text))
-        shop_link = shop_summary.find_element(By.XPATH, 'div/a').get_attribute('href') or ''
-        shop_name = shop_summary.find_elements(By.XPATH, 'div/a/div/span')[-1].text
-        if product_id not in ids_set:
-            save_taobao_search_result(product_id, sku_id, product_title,
-                                      product_link, product_cover,
-                                      shop_name, shop_link,
-                                      price_unit, display_price, display_sale,
-                                      update_id)
-        ids_set.add(product_id)
-    except AssertionError:
-        logger.error(f'assertion failed while parsing {search_result.accessible_name}, just ignore')
-        traceback.print_exc()
-        return
-    except Exception:
-        logger.error(f'get unhandled exception while parsing {search_result.accessible_name}, just ignore')
-        traceback.print_exc()
-        return
-
-
-def save_taobao_search_result(product_id, sku_id, product_title, product_link, product_cover,
-                              shop_name, shop_link, price_unit,
-                              display_price, display_sale, update_id):
-    logger = get_logger()
-    logger.info(f'save_taobao_search_result parsed record:\n'
-                f'\t\tproduct_id={product_id}\n'
-                f'\t\tsku_id={sku_id}\n'
-                f'\t\tproduct_title={product_title}\n'
-                f'\t\tproduct_cover={product_cover}\n'
-                f'\t\tproduct_link={product_link}\n'
-                f'\t\tshop_name={shop_name}\n'
-                f'\t\tshop_link={shop_link}\n'
-                f'\t\tprice_unit={price_unit}\n'
-                f'\t\tdisplay_price={display_price}\n'
-                f'\t\tdisplay_sale={display_sale}\n'
-                f'\t\tupdate_id={update_id}\n')
-    # save shop info
-    update_role = save_taobao_search_result.__name__
-    # save shop info
-    update_shop_info(shop_name, update_id, update_role, shop_link, '', None)
-    # save product info
-    update_product_info(product_id, update_id, update_role,
-                        sku_id, product_title, product_link, product_cover,
-                        shop_name, shop_link,
-                        price_unit, display_price, display_sale,
-                        None, None, None, None)
-    # save product sales info,
-    # remember there can be same product in different search pages,
-    # we only add one sale record for same product in one search process.
-    add_product_sale(product_id, shop_name,
-                     price_unit, display_price, display_sale, None,
-                     update_id, update_role)
-
-
-def craw_taobao_shop_page(shop_link, sale_order, update_id, target_product_ids=None):
-    logger = get_logger()
-    load_shop_and_products(shop_link, sale_order)
-    divs = Driver.find_elements(By.XPATH, '//div')
-    shop_name = None
-    shop_cover = ''
-    sku_divs = []
-    for div in divs:
-        cls_name = div.get_attribute('class')
-        if cls_name is None:
-            continue
-        elif re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
-            sku_divs.append(div)
-        elif re.match(SHOP_NAME_RE_EXP, cls_name):
-            child_spans = div.find_elements(By.XPATH, 'span')
-            if len(child_spans) == 0:
-                shop_name = div.text
-            else:
-                shop_name = child_spans[0].text
-        elif re.match(SHOP_IMG_WRAPPER_RE_EXP, cls_name):
-            shop_cover = div.find_element(By.XPATH, 'img').get_attribute('src')
-    assert (shop_name is not None)
-    update_shop_info(shop_name, update_id, craw_taobao_shop_page.__name__, shop_link, shop_cover, None)
-    for sku_div in sku_divs:
-        try:
-            craw_taobao_shop_sku(sku_div, shop_name, shop_link, update_id, target_product_ids)
-        except PriceOCRError as e:
-            logger.error(f'get PriceOCRGetEmptyError={e}, nothing will be updated and just continue')
-            traceback.print_exc()
-            continue
-
-
-def load_shop_and_products(shop_link, sale_order):
-    logger = get_logger()
-    logger.info(f'navigate to shop_link={shop_link} and wait for seconds')
-    Driver.get(shop_link)
-    time.sleep(SHOP_PAGE_WAIT_IN_SECONDS)
-    if Driver.title == TB_SHOP_BROWSE_TITLE_NAME or Driver.title == TB_HOMEPAGE_TITLE_NAME:
-        # "没有找到相应的店铺信息" 页面
-        msg = f'shop_link={shop_link} not found'
-        logger.error(msg)
-        raise ShopLinkNotFound(msg)
-    if len(Driver.find_elements(By.ID, 'banner')) > 0 and len(Driver.find_elements(By.ID, 'err')) > 0:
-        tip = Driver.find_element(By.ID, 'err').find_elements(By.XPATH, 'div/p')[0].text
-        if tip == '抱歉！页面无法访问……':
-            # "抱歉！页面无法访问" 页面
-            msg = f'shop_link={shop_link} can not be accessed now'
-            logger.error(msg)
-            raise ShopLinkNotAccessible(msg)
-    # 如果找到销量排序按钮，点击按销量排序
-    if sale_order:
-        divs = Driver.find_elements(By.XPATH, '//div')
-        for div in divs:
-            cls_name = div.get_attribute('class')
-            if cls_name is None:
-                continue
-            elif re.match(SHOP_SALE_ORDER_TAGS_RE_EXP, cls_name):
-                tag_divs = div.find_elements(By.XPATH, 'div/div')
-                for tag_div in tag_divs:
-                    if tag_div.find_element(By.XPATH, 'span').text == '销量':
-                        element_click(tag_div)
-                        break
+                try_count += 1
+                if try_count >= CRAWL_OPERATION_TRY_COUNT:
+                    msg = 'login retry max count exceeded, login failed.'
+                    self.logger.error(msg)
+                    raise LoginFailed(msg)
+                self.logger.info('navigate to taobao login page and wait in seconds')
+                self.driver.get(TB_LOGIN_PAGE)
+                time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+                login_button = self.driver.find_element(By.CLASS_NAME, 'fm-btn').find_element(By.XPATH, 'button')
+                assert (login_button is not None)
+                if login_button.text == '快速进入':
+                    # already logged in
+                    self.element_click(login_button)
+                else:
+                    user_input = self.driver.find_element(By.ID, 'fm-login-id')
+                    passwd_input = self.driver.find_element(By.ID, 'fm-login-password')
+                    assert (user_input is not None and passwd_input is not None)
+                    user_input.clear()
+                    user_input.send_keys(user)
+                    passwd_input.clear()
+                    passwd_input.send_keys(TB_USERS[user])
+                    self.element_click(login_button)
+                # check whether slide check is required
+                try:
+                    if self.headless:
+                        self.driver.find_element(By.XPATH, '//*[@id="baxia-dialog-content"]')
+                        self.logger.info('slide check needed, just try to bypass it by reinitialize webdriver')
+                        self.close_driver()
+                        self.driver = self.init_webdriver(WebDriverType.ChromDriver)
+                        continue
+                except NoSuchElementException:
+                    self.logger.info('do not need slide check this time, just continue')
+                time.sleep(LOGIN_CONFIRM_PAGE_WAIT_IN_SECONDS)
                 break
-    load_count = 0
-    while True:
-        if load_count >= SHOP_PAGE_LOAD_MAX_COUNT:
-            logger.info('may not scrolled to the end of shop page, max load_count exceeded')
-            break
-        divs = Driver.find_elements(By.XPATH, '//div')
-        num_of_skus = 0
-        sku_exceeded = False
-        load_more_flag_div = None
-        loaded = False
+            except NoSuchElementException:
+                self.logger.info('can not find login form, wait for seconds an retry')
+                time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+
+    def handle_taobao_post_login_page(self, user):
+        self.logger.info('check if we are in taobao/personal homepage')
+        while True:
+            if self.driver.title == TB_PERSONAL_HOMEPAGE_TITLE_NAME or self.driver.title == TB_HOMEPAGE_TITLE_NAME:
+                self.logger.info('we are already in taobao/personal homepage, now perform following crawling')
+                break
+            elif self.driver.title == TB_LOGIN_AUTH_TITLE_NAME:
+                self.logger.info('we are in login verification page, use SMS to get auth code')
+                iframe = self.driver.find_element(By.XPATH, '//*[@id="content"]/div/div[1]/iframe')
+                self.driver.switch_to.frame(iframe)
+                code_input = self.driver.find_element(By.ID, 'J_Phone_Checkcode')
+                sms_btn = self.driver.find_element(By.ID, 'J_GetCode')
+                confirm_btn = self.driver.find_element(By.ID, 'submitBtn')
+                sms_btn.click()
+                sms_code = input(f'Please input SMS verification code for user={user}: ')
+                code_input.send_keys(sms_code)
+                confirm_btn.click()
+                time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+                break
+            else:
+                self.logger.info(
+                    'we are not in taobao/personal homepage, '
+                    'finish authentication and navigate to taobao/personal homepage to continue crawling...')
+                time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+
+    def login_taobao(self, user=TB_CRAWL_USER):
+        self.handle_taobao_login_page(user)
+        self.handle_taobao_post_login_page(user)
+        self.set_window_size()
+
+    def login_rednote(self, user=REDNOTE_SHOP_USER):
+        pass
+
+    def crawl_taobao_search_results(self, search_key, num_of_pages, sale_order, update_id, target_product_ids=None):
+        self.logger.info(
+            f'navigate to taobao search page with search_key={search_key} and num_of_pages={num_of_pages}, sale_order={sale_order}')
+        self.driver.get(TB_SEARCH_PAGE)
+        qbox = self.driver.find_element(By.ID, 'q')
+        qbox.clear()
+        qbox.send_keys(search_key)
+        qbox.send_keys(Keys.RETURN)
+        ids_set = set()
+        for page in range(1, num_of_pages + 1):
+            try:
+                self.logger.info('wait search results ready for seconds')
+                time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+                # press '销量' navigate bar on first page if sale_order is True
+                if page == 1 and sale_order:
+                    sale_order_div = None
+                    divs = self.driver.find_elements(By.CLASS_NAME, 'next-tabs-tab-inner')
+                    for div in divs:
+                        if div.text == '销量':
+                            sale_order_div = div
+                            break
+                    assert (sale_order_div is not None)
+                    self.element_click(sale_order_div)
+                    self.logger.info('wait search results ready by press order first for seconds')
+                    time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+                search_result_wrapper = self.driver.find_element(By.ID, 'content_items_wrapper')
+                search_results = search_result_wrapper.find_elements(By.XPATH, 'div/a')
+                self.logger.info(
+                    f'find {len(search_results)} search results with search_key={search_key} and page= {page}')
+                for search_result in search_results:
+                    self.parse_taobao_search_result(search_result, ids_set, update_id, target_product_ids)
+                if page < num_of_pages:
+                    btn_pages = self.driver.find_elements(By.CLASS_NAME, 'next-pagination-pages')
+                    assert (len(btn_pages) >= 1)  # 至少下面会有一个导航栏
+                    btn_list = btn_pages[-1].find_elements(By.XPATH, 'button')
+                    assert (len(btn_list) == 3)  # 下面导航栏里直属三个按钮：上一页，下一页，确定
+                    self.logger.info(
+                        f'get next page search results for search_key={search_key} and page={page + 1} by press next page')
+                    self.element_click(btn_list[1])
+            except AssertionError:
+                self.logger.error(
+                    'assertion failed in search result page, just stop crawling')
+                traceback.print_exc()
+                break
+            except Exception:
+                self.logger.error('get unexcepted exception while parsing search results, just stop crawling')
+                traceback.print_exc()
+                break
+
+    def parse_taobao_search_result(self, search_result, ids_set, update_id, target_product_ids=None):
+        try:
+            self.logger.info(f'parsing search result: {search_result.accessible_name}')
+            product_id = parse_product_id_from_item(search_result.get_attribute('id'))
+            target_product_ids = target_product_ids or []  # None表示不限制target product id
+            if len(target_product_ids) == 0 or product_id in target_product_ids:
+                self.logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
+            else:
+                self.logger.info(
+                    f'parsed product_id={product_id} not in target_product_ids={target_product_ids}, crawl it too')
+            product_link = search_result.get_attribute('href')
+            sku_id = parse_sku_id_from_product_link(product_link) or '0'
+            product_items = search_result.find_elements(By.XPATH, 'div/div')
+            sku_summary, shop_summary = None, None
+            for item in product_items:
+                cls_name = item.get_attribute('class')
+                if cls_name is None:
+                    continue
+                elif re.match(SEARCH_MAIN_PIC_AND_DESC_RE_EXP, cls_name):
+                    sku_summary = item
+                elif re.match(SEARCH_SHOP_INFO_RE_EXP, cls_name):
+                    shop_summary = item
+            assert (sku_summary is not None and shop_summary is not None)
+            sku_items = sku_summary.find_elements(By.XPATH, 'div')
+            image_wrapper, sku_title_wrapper, price_wrapper = None, None, None
+            for item in sku_items:
+                cls_name = item.get_attribute('class')
+                if cls_name is None:
+                    continue
+                elif re.match(SEARCH_DESC_WRAPPER_RE_EXP, cls_name):
+                    sku_title_wrapper = item
+                elif re.match(SEARCH_PRICE_WRAPPER_RE_EXP, cls_name):
+                    price_wrapper = item
+                elif re.match(SEARCH_IMAGE_WRAPPER_RE_EXP, cls_name):
+                    image_wrapper = item
+            assert (sku_title_wrapper is not None and price_wrapper is not None and image_wrapper is not None)
+            product_title = parse_product_title(sku_title_wrapper.find_element(By.XPATH, 'div/span').text)
+            if len(product_title) == 0:
+                title_spans = sku_title_wrapper.find_elements(By.XPATH, 'div/span/span')
+                if len(title_spans) > 0:
+                    for title_span in title_spans:
+                        product_title += parse_product_title(title_span.text)
+            product_cover = image_wrapper.find_element(By.XPATH, 'img').get_attribute('src')
+            price_unit_span, display_sale_span = None, None
+            for span in price_wrapper.find_elements(By.XPATH, 'div/span'):
+                cls_name = span.get_attribute('class')
+                if cls_name is None:
+                    continue
+                elif re.match(SEARCH_SKU_UNIT_RE_EXP, cls_name):
+                    price_unit_span = span
+                elif re.match(SEARCH_SKU_SALE_RE_EXP, cls_name):
+                    display_sale_span = span
+            assert (price_unit_span is not None and display_sale_span is not None)
+            price_unit = parse_price_unit(price_unit_span.text)
+            display_sale = parse_sale_in_search(display_sale_span.text)
+            price_divs = price_wrapper.find_elements(By.XPATH, 'div/div/div')
+            assert (len(price_divs) == 2)
+            display_price = parse_price('%s%s' % (price_divs[0].text, price_divs[1].text))
+            shop_link = shop_summary.find_element(By.XPATH, 'div/a').get_attribute('href') or ''
+            shop_name = shop_summary.find_elements(By.XPATH, 'div/a/div/span')[-1].text
+            if product_id not in ids_set:
+                self.save_taobao_search_result(product_id, sku_id, product_title,
+                                               product_link, product_cover,
+                                               shop_name, shop_link,
+                                               price_unit, display_price, display_sale,
+                                               update_id)
+            ids_set.add(product_id)
+        except AssertionError:
+            self.logger.error(f'assertion failed while parsing {search_result.accessible_name}, just ignore')
+            traceback.print_exc()
+            return
+        except Exception:
+            self.logger.error(f'get unhandled exception while parsing {search_result.accessible_name}, just ignore')
+            traceback.print_exc()
+            return
+
+    def save_taobao_search_result(self, product_id, sku_id, product_title, product_link, product_cover,
+                                  shop_name, shop_link, price_unit,
+                                  display_price, display_sale, update_id):
+        self.logger.info(f'save_taobao_search_result parsed record:\n'
+                         f'\t\tproduct_id={product_id}\n'
+                         f'\t\tsku_id={sku_id}\n'
+                         f'\t\tproduct_title={product_title}\n'
+                         f'\t\tproduct_cover={product_cover}\n'
+                         f'\t\tproduct_link={product_link}\n'
+                         f'\t\tshop_name={shop_name}\n'
+                         f'\t\tshop_link={shop_link}\n'
+                         f'\t\tprice_unit={price_unit}\n'
+                         f'\t\tdisplay_price={display_price}\n'
+                         f'\t\tdisplay_sale={display_sale}\n'
+                         f'\t\tupdate_id={update_id}\n')
+        # save shop info
+        update_role = self.save_taobao_search_result.__name__
+        # save shop info
+        update_shop_info(shop_name, update_id, update_role, shop_link, SHOP_COVER_DEFAULT_LINK, None)
+        # save product info
+        update_product_info(product_id, update_id, update_role,
+                            sku_id, product_title, product_link, product_cover,
+                            shop_name, shop_link,
+                            price_unit, display_price, display_sale,
+                            None, None, None, None)
+        # save product sales info,
+        # remember there can be same product in different search pages,
+        # we only add one sale record for same product in one search process.
+        add_product_sale(product_id, shop_name,
+                         price_unit, display_price, display_sale, None,
+                         update_id, update_role)
+
+    def craw_taobao_shop_page(self, shop_link, sale_order, update_id, target_product_ids=None):
+        self.load_shop_and_products(shop_link, sale_order)
+        divs = self.driver.find_elements(By.XPATH, '//div')
+        shop_name = None
+        shop_cover = ''
+        sku_divs = []
         for div in divs:
             cls_name = div.get_attribute('class')
             if cls_name is None:
                 continue
             elif re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
-                num_of_skus += 1
-                if num_of_skus > SHOP_PAGE_MAX_SKU_NUM:
-                    logger.info('may not scrolled to the end of shop page, max sku exceeded')
-                    sku_exceeded = True
-                    break
-            elif re.match(SHOP_LOAD_STATUS_RE_EXP, cls_name):
-                if div.text == '没有更多商品':
-                    logger.info('scrolled to the end of shop page')
-                    loaded = True
-                    break
-            elif re.match(SHOP_LOAD_MORE_FLAG_RE_EXP, cls_name):
-                load_more_flag_div = div
-        if loaded or sku_exceeded:
-            scroll_window((0, 0))
-            break
-        # 有些特殊店铺没有 load_more_flag_div, 会触发此处断言。这种店铺是完全定制的页面（非淘宝模板）
-        # 我们暂时不支持这种店铺，未来可能将对重点其他模板进行支持。
-        # 这种店铺的商品仍然可以通过search或detail页面抓取来收录
-        if load_more_flag_div is None:
-            msg = f'shop is not taobao standard shop page, shop_link={shop_link}'
-            logger.error(msg)
-            raise NotStandardShop(msg)
-        scroll_window_to_element(load_more_flag_div)
-        load_count += 1
-
-
-def craw_taobao_shop_sku(shop_sku_div, shop_name, shop_link, update_id, target_product_ids=None):
-    logger = get_logger()
-    target_product_ids = target_product_ids or []
-    product_link = shop_sku_div.find_element(By.XPATH, 'a').get_attribute('href')
-    product_id = parse_product_id_from_product_link(product_link)
-    if len(target_product_ids) == 0 or product_id in target_product_ids:
-        logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
-    else:
-        logger.info(f'parsed product_id={product_id} not in target_product_ids={target_product_ids}, crawl it too')
-    product_cover = SHOP_PRODUCT_COVER_PLACEHOLDER_LINK
-    for _ in range(SHOP_PAGE_PRODUCT_COVER_TRY_COUNT):
-        scroll_window_to_element(shop_sku_div)
-        product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
-        if product_cover != SHOP_PRODUCT_COVER_PLACEHOLDER_LINK:
-            break
-    sku_id = parse_sku_id_from_product_link(product_link) or ''
-    divs = shop_sku_div.find_elements(By.XPATH, './/div')
-    title_div, price_div, sale_div = None, None, None
-    for div in divs:
-        cls_name = div.get_attribute('class')
-        if cls_name is None:
-            continue
-        elif re.match(SHOP_SKU_CARD_TITLE_RE_EXP, cls_name):
-            title_div = div
-        elif re.match(SHOP_SKU_CARD_PRICE_RE_EXP, cls_name):
-            price_div = div
-        elif re.match(SHOP_SKU_CARD_SALE_RE_EXP, cls_name):
-            sale_div = div
-    assert (title_div is not None and price_div is not None and sale_div is not None)
-    product_title = parse_product_title(title_div.text)
-    price_spans = price_div.find_elements(By.XPATH, 'span')
-    assert (len(price_spans) == 2)
-    price_unit = parse_price_unit(price_spans[0].text)
-    display_price = parse_price_span(price_spans[1], product_id)
-    product_sale = parse_sale_in_search(sale_div.text)
-    # update product_info and product_sales table
-    save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover,
-                                shop_name, shop_link,
-                                price_unit, display_price, product_sale, update_id)
-
-
-def save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover,
-                                shop_name, shop_link,
-                                price_unit, display_price, display_sale, update_id):
-    logger = get_logger()
-    logger.info(f'save_taobao_shop_sku_result parsed record:\n'
-                f'\t\tproduct_id={product_id}\n'
-                f'\t\tsku_id={sku_id}\n'
-                f'\t\tproduct_title={product_title}\n'
-                f'\t\tproduct_link={product_link}\n'
-                f'\t\tproduct_cover={product_cover}\n'
-                f'\t\tshop_name={shop_name}\n'
-                f'\t\tshop_link={shop_link}\n'
-                f'\t\tprice_unit={price_unit}\n'
-                f'\t\tdisplay_price={display_price}\n'
-                f'\t\tdisplay_sale={display_sale}\n'
-                f'\t\tupdate_id={update_id}\n')
-    update_role = save_taobao_shop_sku_result.__name__
-    update_product_info(product_id, update_id, update_role,
-                        sku_id, product_title, product_link, product_cover,
-                        shop_name, shop_link,
-                        price_unit, display_price, display_sale,
-                        None, None, None, None)
-    add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None, update_id, update_role)
-
-
-def crawl_taobao_shop_link_by_search(shop_name, update_id):
-    logger = get_logger()
-    logger.info('navigate to taobao shop search page')
-    Driver.get(TB_SEARCH_PAGE)
-    divs = Driver.find_elements(By.XPATH, '//div')
-    shop_tab_div = None
-    for div in divs:
-        title = div.text.strip()
-        if title == '店铺':
-            shop_tab_div = div
-            break
-    assert (shop_tab_div is not None)
-    element_click(shop_tab_div)
-    qbox = Driver.find_element(By.ID, 'q')
-    qbox.clear()
-    qbox.send_keys(shop_name)
-    qbox.send_keys(Keys.RETURN)
-    logger.info(f'search shop_name={shop_name} and wait for seconds')
-    time.sleep(SEARCH_WAIT_IN_SECONDS)
-    shop_wrapper_div = Driver.find_element(By.ID, 'srp_shopLayout_shopContentWrapper')
-    assert (shop_wrapper_div is not None)
-    for div in shop_wrapper_div.find_elements(By.XPATH, 'div/div'):
-        cls_name = div.get_attribute('class')
-        if cls_name is None:
-            continue
-        elif re.match(SHOP_SEARCH_TIPS_RE_EXP, cls_name) and div.text == '“没有找到相关宝贝”':
-            msg = f'can not find shop_name={shop_name} by shop search, no results found'
-            logger.error(msg)
-            raise ShopNotFoundInSearch(msg)
-    shop_link = None
-    shop_cover = ''
-    for shop_a in shop_wrapper_div.find_elements(By.XPATH, 'a'):
-        shop_divs = shop_a.find_elements(By.XPATH, './/div')
-        shop_found = False
-        for shop_div in shop_divs:
-            cls_name = shop_div.get_attribute('class')
-            if cls_name is None:
-                continue
-            elif re.match(SHOP_SEARCH_TITLE_RE_EXP, cls_name) and shop_name == shop_div.text.strip():
-                shop_link = shop_a.get_attribute('href')
-                shop_found = True
-            elif re.match(SHOP_SEARCH_IMG_RE_EXP, cls_name):
-                shop_cover = shop_div.find_element(By.XPATH, 'img').get_attribute('src')
-        if shop_found:
-            break
-    if shop_link is not None:
-        logger.info(f'update shop_name={shop_name} and shop_link={shop_link}')
-        update_shop_info(shop_name, update_id, crawl_taobao_shop_link_by_search.__name__, shop_link, shop_cover, None)
-    else:
-        msg = f'can not find shop_name={shop_name} by shop search, all results parsed'
-        logger.error(msg)
-        raise ShopNotFoundInSearch(msg)
-
-
-def parse_price_span(price_span, product_id):
-    temp_file_name = f'{IMAGE_DIR}/{product_id}-{uuid.uuid4().hex}.png'
-    element_screenshot(price_span, temp_file_name)
-    return par_price_ocr(temp_file_name)
-
-
-def craw_taobao_detail_page(product_id, product_link, update_id):
-    logger = get_logger()
-    logger.info(f'navigate to product_id={product_id} with product_link={product_link} and wait for seconds')
-    Driver.get(product_link)
-    time.sleep(DETAIL_PAGE_WAIT_IN_SECONDS)
-    # set zoom ratio
-    zoom_content(TB_PAGE_DEFAULT_ZOOM_RATIO)
-    # parse detail page
-    title_div, price_div, shop_info_div = None, None, None
-    display_sale_div = None
-    title_image_div = None
-    page_image_v6_div, page_image_v8_div = None, None
-    offer_items_divs_wrapper = []
-    divs = Driver.find_elements(By.XPATH, '//div')
-    for div in divs:
-        cls_name = div.get_attribute('class')
-        if cls_name is None:
-            continue
-        elif re.match(DETAIL_OFFER_ITEMS_RE_EXP, cls_name):
-            offer_items_divs_wrapper.append(div)
-        elif re.match(DETAIL_PRICE_RE_EXP, cls_name):
-            price_div = div
-        elif re.match(DETAIL_SALE_RE_EXP, cls_name):
-            display_sale_div = div
-        elif re.match(DETAIL_TITLE_IMGS_RE_EXP, cls_name):
-            title_image_div = div
-        elif re.match(DETAIL_MAIN_IMGS_V8_RE_EXP, cls_name):
-            page_image_v8_div = div
-        elif re.match(DETAIL_MAIN_IMGS_V6_RE_EXP, cls_name):
-            page_image_v6_div = div
-        elif re.match(DETAIL_SHOP_INFO_RE_EXP, cls_name):
-            shop_info_div = div
-        elif re.match(DETAIL_PRODUCT_TITLE_RE_EXP, cls_name):
-            title_div = div
-    assert (title_div is not None and price_div is not None and shop_info_div is not None)
-    assert (title_image_div is not None)
-    assert (page_image_v8_div is not None or page_image_v6_div is not None)
-    # parse product title and shop info
-    sku_id = parse_sku_id_from_product_link(product_link) or '0'
-    product_title = parse_product_title(title_div.find_element(By.XPATH, 'h1').text)
-    shop_info_inner = shop_info_div.find_element(By.XPATH, 'a')
-    shop_name = shop_info_inner.find_element(By.XPATH, 'div/div/span').text
-    shop_link = shop_info_inner.get_attribute('href')
-    # parse product sale
-    display_sale = parse_sale_in_detail(display_sale_div.text) if display_sale_div is not None else -1
-    # parse product offer items
-    offer_details, price_unit, lowest_price = craw_taobao_detail_offer_details(offer_items_divs_wrapper, price_div)
-    # parse title images
-    title_images = crawl_taobao_detail_title_images(title_image_div)
-    # parse main images
-    main_images = crawl_taobao_detail_main_images(page_image_v8_div, page_image_v6_div)
-    # update product info in DB
-    save_taobao_detail_result(product_id, sku_id, product_title, product_link,
-                              shop_name, shop_link,
-                              price_unit, lowest_price, display_sale,
-                              title_images, main_images, offer_details,
-                              update_id)
-
-
-def craw_taobao_detail_offer_details(offer_items_divs_wrapper, price_div):
-    logger = get_logger()
-    offer_items_divs = []
-    offer_items = []
-    for offer_items_div in offer_items_divs_wrapper:
-        content_div = None
-        inner_divs = offer_items_div.find_elements(By.XPATH, 'div')
-        for inner_div in inner_divs:
-            cls_name = inner_div.get_attribute('class')
-            if cls_name is None:
-                continue
-            elif re.match(DETAIL_OFFER_INNER_ITEMS_RE_EXP, cls_name):
-                content_div = inner_div
-                break
-        assert (content_div is not None)
-        offer_item_divs_inner = content_div.find_elements(By.XPATH, 'div')
-        offer_items_divs.append(offer_item_divs_inner)
-        offer_items.append([craw_taobao_detail_offer_items(v) for v in offer_item_divs_inner])
-    logger.info(f'get offer items: {offer_items}')
-    # parse all offers
-    offers, price_unit, lowest_price = craw_taobao_detail_offers(offer_items_divs, price_div)
-    offer_details = {
-        "offer_items": offer_items,
-        "valid_offers": offers
-    }
-    logger.info(f'get offer details: {offer_details}')
-    return offer_details, price_unit, lowest_price
-
-
-def crawl_taobao_detail_title_images(title_image_div):
-    logger = get_logger()
-    title_imgs = title_image_div.find_elements(By.XPATH, 'ul/li/img')
-    title_images = [title_img.get_attribute('src') for title_img in title_imgs]
-    logger.info(f'get title image list: {title_images}')
-    return title_images
-
-
-def crawl_taobao_detail_main_images(page_image_v8_div, page_image_v6_div):
-    main_images = []
-    if page_image_v8_div is not None:
-        main_images = crawl_taobao_detail_main_images_v8(page_image_v8_div)
-    elif page_image_v6_div is not None:
-        main_images = crawl_taobao_detail_main_images_v6(page_image_v6_div)
-    return main_images
-
-
-def crawl_taobao_detail_main_images_v8(page_image_v8_div):
-    logger = get_logger()
-    main_images = []
-    main_imgs = page_image_v8_div.find_elements(By.XPATH, './/div')
-    for main_img in main_imgs:
-        cls_name = main_img.get_attribute('class')
-        if cls_name is None:
-            continue
-        elif re.match(DETAIL_MAIN_IMGS_SINGLE_IMG_V8_RE_EXP, cls_name):
-            # we only get pic links and ignore other format
-            try:
-                data_src = main_img.find_element(By.XPATH, 'img').get_attribute('data-src')
-                if data_src is not None and is_valid_image_link(data_src):
-                    main_images.append(data_src)
+                sku_divs.append(div)
+            elif re.match(SHOP_NAME_RE_EXP, cls_name):
+                child_spans = div.find_elements(By.XPATH, 'span')
+                if len(child_spans) == 0:
+                    shop_name = div.text
                 else:
-                    src = main_img.find_element(By.XPATH, 'img').get_attribute('src')
-                    if is_valid_image_link(src):
-                        main_images.append(src)
-            except NoSuchElementException:
-                logger.info('detail page material is not an image, ignore')
-        elif re.match(DETAIL_MAIN_IMGS_RICHTEXT_V8_RE_EXP, cls_name):
-            # we only get pic links and ignore other format
+                    shop_name = child_spans[0].text
+            elif re.match(SHOP_IMG_WRAPPER_RE_EXP, cls_name):
+                shop_cover = div.find_element(By.XPATH, 'img').get_attribute('src')
+        assert (shop_name is not None)
+        update_shop_info(shop_name, update_id, self.craw_taobao_shop_page.__name__, shop_link, shop_cover, None)
+        for sku_div in sku_divs:
             try:
-                for img_element in main_img.find_elements(By.XPATH, 'p/img'):
-                    scroll_window_to_element(img_element)  # the resource is lazy loaded
-                img_elements = main_img.find_elements(By.XPATH, 'p/img')
-                for img_element in img_elements:
-                    src = img_element.get_attribute('src')
-                    if is_valid_image_link(src):
-                        main_images.append(src)
-            except NoSuchElementException:
-                logger.info('detail page material is not an image, ignore')
-    logger.info(f'get main image list: {main_images}')
-    return main_images
+                self.craw_taobao_shop_sku(sku_div, shop_name, shop_link, update_id, target_product_ids)
+            except PriceOCRError as e:
+                self.logger.error(f'get PriceOCRGetEmptyError={e}, nothing will be updated and just continue')
+                traceback.print_exc()
+                continue
 
-
-def crawl_taobao_detail_main_images_v6(page_image_v6_div):
-    logger = get_logger()
-    main_images = []
-    for img_element in page_image_v6_div.find_elements(By.XPATH, 'div/div/img'):
-        scroll_window_to_element(img_element)  # the resource is lazy loaded
-    for img_element in page_image_v6_div.find_elements(By.XPATH, 'div/div/img'):
-        src = img_element.get_attribute('src')
-        if is_valid_image_link(src):
-            main_images.append(src)
-    logger.info(f'get main image list: {main_images}')
-    return main_images
-
-
-def craw_taobao_detail_offers(value_items_divs, sku_price_div):
-    logger = get_logger()
-    combos = get_value_item_combos(value_items_divs)
-    offers = []
-    lowest_price = 6553500
-    price_unit = ''
-    for combo in combos:
-        offer = []
-        valid = True
-        for value_item in combo:
-            cls_name = value_item.get_attribute('class')
-            if cls_name is not None and cls_name.find('isDisabled') != -1:
-                valid = False
+    def load_shop_and_products(self, shop_link, sale_order):
+        self.logger.info(f'navigate to shop_link={shop_link} and wait for seconds')
+        self.driver.get(shop_link)
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        if self.driver.title == TB_SHOP_BROWSE_TITLE_NAME or self.driver.title == TB_HOMEPAGE_TITLE_NAME:
+            # "没有找到相应的店铺信息" 页面
+            msg = f'shop_link={shop_link} not found'
+            self.logger.error(msg)
+            raise ShopLinkNotFound(msg)
+        if len(self.driver.find_elements(By.ID, 'banner')) > 0 and len(self.driver.find_elements(By.ID, 'err')) > 0:
+            tip = self.driver.find_element(By.ID, 'err').find_elements(By.XPATH, 'div/p')[0].text
+            if tip == '抱歉！页面无法访问……':
+                # "抱歉！页面无法访问" 页面
+                msg = f'shop_link={shop_link} can not be accessed now'
+                self.logger.error(msg)
+                raise ShopLinkNotAccessible(msg)
+        # 如果找到销量排序按钮，点击按销量排序
+        if sale_order:
+            divs = self.driver.find_elements(By.XPATH, '//div')
+            for div in divs:
+                cls_name = div.get_attribute('class')
+                if cls_name is None:
+                    continue
+                elif re.match(SHOP_SALE_ORDER_TAGS_RE_EXP, cls_name):
+                    tag_divs = div.find_elements(By.XPATH, 'div/div')
+                    for tag_div in tag_divs:
+                        if tag_div.find_element(By.XPATH, 'span').text == '销量':
+                            self.element_click(tag_div)
+                            break
+                    break
+        load_count = 0
+        while True:
+            if load_count >= SHOP_PAGE_LOAD_MAX_COUNT:
+                self.logger.info('may not scrolled to the end of shop page, max load_count exceeded')
                 break
-            span = value_item.find_element(By.XPATH, 'span')
-            offer.append(span.text)
-            try:
-                element_click(value_item)
-            except ElementClickInterceptedException:
-                scroll_window_to_element(value_item)
-                element_click(value_item)
-        if not valid:
-            continue
-        price_spans = sku_price_div.find_elements(By.XPATH, 'span')
-        assert (len(price_spans) >= 2)
-        price_unit_span = None
-        price_val_span = None
-        for price_span in price_spans:
-            cls_name = price_span.get_attribute('class')
+            divs = self.driver.find_elements(By.XPATH, '//div')
+            num_of_skus = 0
+            sku_exceeded = False
+            load_more_flag_div = None
+            loaded = False
+            for div in divs:
+                cls_name = div.get_attribute('class')
+                if cls_name is None:
+                    continue
+                elif re.match(SHOP_SKU_CARD_RE_EXP, cls_name):
+                    num_of_skus += 1
+                    if num_of_skus > SHOP_PAGE_MAX_SKU_NUM:
+                        self.logger.info('may not scrolled to the end of shop page, max sku exceeded')
+                        sku_exceeded = True
+                        break
+                elif re.match(SHOP_LOAD_STATUS_RE_EXP, cls_name):
+                    if div.text == '没有更多商品':
+                        self.logger.info('scrolled to the end of shop page')
+                        loaded = True
+                        break
+                elif re.match(SHOP_LOAD_MORE_FLAG_RE_EXP, cls_name):
+                    load_more_flag_div = div
+            if loaded or sku_exceeded:
+                self.scroll_window((0, 0))
+                break
+            # 有些特殊店铺没有 load_more_flag_div, 会触发此处断言。这种店铺是完全定制的页面（非淘宝模板）
+            # 我们暂时不支持这种店铺，未来可能将对重点其他模板进行支持。
+            # 这种店铺的商品仍然可以通过search或detail页面抓取来收录
+            if load_more_flag_div is None:
+                msg = f'shop is not taobao standard shop page, shop_link={shop_link}'
+                self.logger.error(msg)
+                raise NotStandardShop(msg)
+            self.scroll_window_to_element(load_more_flag_div)
+            load_count += 1
+
+    def craw_taobao_shop_sku(self, shop_sku_div, shop_name, shop_link, update_id, target_product_ids=None):
+        target_product_ids = target_product_ids or []
+        product_link = shop_sku_div.find_element(By.XPATH, 'a').get_attribute('href')
+        product_id = parse_product_id_from_product_link(product_link)
+        if len(target_product_ids) == 0 or product_id in target_product_ids:
+            self.logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
+        else:
+            self.logger.info(
+                f'parsed product_id={product_id} not in target_product_ids={target_product_ids}, crawl it too')
+        product_cover = SHOP_PRODUCT_COVER_PLACEHOLDER_LINK
+        for _ in range(CRAWL_OPERATION_TRY_COUNT):
+            self.scroll_window_to_element(shop_sku_div)
+            product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
+            if product_cover != SHOP_PRODUCT_COVER_PLACEHOLDER_LINK:
+                break
+        sku_id = parse_sku_id_from_product_link(product_link) or ''
+        divs = shop_sku_div.find_elements(By.XPATH, './/div')
+        title_div, price_div, sale_div = None, None, None
+        for div in divs:
+            cls_name = div.get_attribute('class')
             if cls_name is None:
                 continue
-            elif re.match(DETAIL_PRICE_UNIT_RE_EXP, cls_name):
-                price_unit_span = price_span
-            elif re.match(DETAIL_PRICE_VAL_RE_EXP, cls_name):
-                price_val_span = price_span
-        assert (price_unit_span is not None and price_val_span is not None)
-        price_unit = parse_price_unit(price_unit_span.text)
-        offer.append(price_unit)
-        price_val = parse_price(price_val_span.text)
-        if price_val < lowest_price:
-            lowest_price = price_val
-        offer.append(price_val)
-        offers.append(offer)
-    logger.info(f'get offers={offers}, price_unit={price_unit}, lowest_price={lowest_price}')
-    return offers, price_unit, lowest_price
+            elif re.match(SHOP_SKU_CARD_TITLE_RE_EXP, cls_name):
+                title_div = div
+            elif re.match(SHOP_SKU_CARD_PRICE_RE_EXP, cls_name):
+                price_div = div
+            elif re.match(SHOP_SKU_CARD_SALE_RE_EXP, cls_name):
+                sale_div = div
+        assert (title_div is not None and price_div is not None and sale_div is not None)
+        product_title = parse_product_title(title_div.text)
+        price_spans = price_div.find_elements(By.XPATH, 'span')
+        assert (len(price_spans) == 2)
+        price_unit = parse_price_unit(price_spans[0].text)
+        display_price = self.parse_price_span(price_spans[1], product_id)
+        product_sale = parse_sale_in_search(sale_div.text)
+        # update product_info and product_sales table
+        self.save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover,
+                                         shop_name, shop_link,
+                                         price_unit, display_price, product_sale, update_id)
 
+    def save_taobao_shop_sku_result(self, product_id, sku_id, product_title, product_link, product_cover,
+                                    shop_name, shop_link,
+                                    price_unit, display_price, display_sale, update_id):
+        logger = get_logger()
+        logger.info(f'save_taobao_shop_sku_result parsed record:\n'
+                    f'\t\tproduct_id={product_id}\n'
+                    f'\t\tsku_id={sku_id}\n'
+                    f'\t\tproduct_title={product_title}\n'
+                    f'\t\tproduct_link={product_link}\n'
+                    f'\t\tproduct_cover={product_cover}\n'
+                    f'\t\tshop_name={shop_name}\n'
+                    f'\t\tshop_link={shop_link}\n'
+                    f'\t\tprice_unit={price_unit}\n'
+                    f'\t\tdisplay_price={display_price}\n'
+                    f'\t\tdisplay_sale={display_sale}\n'
+                    f'\t\tupdate_id={update_id}\n')
+        update_role = self.save_taobao_shop_sku_result.__name__
+        update_product_info(product_id, update_id, update_role,
+                            sku_id, product_title, product_link, product_cover,
+                            shop_name, shop_link,
+                            price_unit, display_price, display_sale,
+                            None, None, None, None)
+        add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None, update_id, update_role)
 
-def get_value_item_combos(value_items_divs):
-    combos, combo = [], []
-    inner_get_value_item_combos(value_items_divs, 0, combo, combos)
-    return combos
-
-
-def inner_get_value_item_combos(value_items_divs, cur, combo, combos):
-    if len(combo) == len(value_items_divs):
-        combos.append(combo.copy())
-        return
-    for value_item in value_items_divs[cur]:
-        combo.append(value_item)
-        inner_get_value_item_combos(value_items_divs, cur + 1, combo, combos)
-        combo.pop()
-
-
-def craw_taobao_detail_offer_items(offer_item_div):
-    logger = get_logger()
-    offer_item = {}
-    try:
-        span = offer_item_div.find_element(By.XPATH, 'span')
-        offer_item['name'] = span.text
-    except Exception:
-        logger.error(f'get exception while parsing offer_item span {offer_item_div.accessible_name}')
-        traceback.print_exc()
-        return None
-    try:
-        img = offer_item_div.find_element(By.XPATH, 'img')
-        offer_item['img'] = img.get_attribute('src')
-    except Exception:
-        logger.error('some sku_item do not have img, just ignore')
-    return offer_item
-
-
-def save_taobao_detail_result(product_id, sku_id, product_title, product_link,
-                              shop_name, shop_link,
-                              price_unit, display_price, display_sale,
-                              title_images, main_images, offer_details,
-                              update_id):
-    logger = get_logger()
-    logger.info(f'save_taobao_detail_result parsed record:\n'
-                f'\t\tproduct_id={product_id}\n'
-                f'\t\tsku_id={sku_id}\n'
-                f'\t\tproduct_title={product_title}\n'
-                f'\t\tproduct_link={product_link}\n'
-                f'\t\tshop_name={shop_name}\n'
-                f'\t\tshop_link={shop_link}\n'
-                f'\t\tprice_unit={price_unit}\n'
-                f'\t\tdisplay_price={display_price}\n'
-                f'\t\tdisplay_sale={display_sale}\n'
-                f'\t\ttitle_images={title_images}\n'
-                f'\t\tmain_images={main_images}\n'
-                f'\t\toffer_details={offer_details}\n'
-                f'\t\tupdate_id={update_id}\n')
-    update_role = save_taobao_detail_result.__name__
-    update_product_info(product_id, update_id, update_role,
-                        sku_id, product_title, product_link, '',
-                        shop_name, shop_link,
-                        price_unit, display_price, display_sale,
-                        title_images, main_images, offer_details, None)
-    add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None,
-                     update_id, update_role)
-    update_shop_info(shop_name, update_id, update_role, shop_link, '', None)
-
-
-def product_manage_ready(product_id, shop_name, platform, update_id):
-    logger = get_logger()
-    shadow_product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
-    if shadow_product.status == SHADOW_PRODUCT_STATUS_NEW:
-        product = ProductInfo.get(ProductInfo.product_id == product_id)
-        additional_properties = json_loads(product.additional_properties)
-        if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
-            title_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(product.title_imgs)))]
-            page_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(product.page_imgs)))]
-            offer_details = json_loads(product.offer_details)
-            status = SHADOW_PRODUCT_STATUS_READY
+    def crawl_taobao_shop_link_by_search(self, shop_name, update_id):
+        self.logger.info('navigate to taobao shop search page')
+        self.driver.get(TB_SEARCH_PAGE)
+        divs = self.driver.find_elements(By.XPATH, '//div')
+        shop_tab_div = None
+        for div in divs:
+            title = div.text.strip()
+            if title == '店铺':
+                shop_tab_div = div
+                break
+        assert (shop_tab_div is not None)
+        self.element_click(shop_tab_div)
+        qbox = self.driver.find_element(By.ID, 'q')
+        qbox.clear()
+        qbox.send_keys(shop_name)
+        qbox.send_keys(Keys.RETURN)
+        self.logger.info(f'search shop_name={shop_name} and wait for seconds')
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        shop_wrapper_div = self.driver.find_element(By.ID, 'srp_shopLayout_shopContentWrapper')
+        assert (shop_wrapper_div is not None)
+        for div in shop_wrapper_div.find_elements(By.XPATH, 'div/div'):
+            cls_name = div.get_attribute('class')
+            if cls_name is None:
+                continue
+            elif re.match(SHOP_SEARCH_TIPS_RE_EXP, cls_name) and div.text == '“没有找到相关宝贝”':
+                msg = f'can not find shop_name={shop_name} by shop search, no results found'
+                self.logger.error(msg)
+                raise ShopNotFoundInSearch(msg)
+        shop_link = None
+        shop_cover = ''
+        for shop_a in shop_wrapper_div.find_elements(By.XPATH, 'a'):
+            shop_divs = shop_a.find_elements(By.XPATH, './/div')
+            shop_found = False
+            for shop_div in shop_divs:
+                cls_name = shop_div.get_attribute('class')
+                if cls_name is None:
+                    continue
+                elif re.match(SHOP_SEARCH_TITLE_RE_EXP, cls_name) and shop_name == shop_div.text.strip():
+                    shop_link = shop_a.get_attribute('href')
+                    shop_found = True
+                elif re.match(SHOP_SEARCH_IMG_RE_EXP, cls_name):
+                    shop_cover = shop_div.find_element(By.XPATH, 'img').get_attribute('src')
+            if shop_found:
+                break
+        if shop_link is not None:
+            self.logger.info(f'update shop_name={shop_name} and shop_link={shop_link}')
+            update_shop_info(shop_name, update_id, self.crawl_taobao_shop_link_by_search.__name__, shop_link,
+                             shop_cover, None)
         else:
-            title_imgs = []
-            page_imgs = []
-            offer_details = {}
-            status = SHADOW_PRODUCT_STATUS_NEW
-        # 我们总是将shadow_product更新到最新，只要它还是NEW状态
-        update_shadow_product_info(product.product_id, status, update_id,
-                                   product_manage_ready.__name__,
-                                   SHADOW_PRODUCT_DEFAULT_ID, product.product_title, product.shop_name,
-                                   product.price_unit, product.display_price, SHADOW_PRODUCT_DEFAULT_INVENTORY_SIZE,
-                                   title_imgs, page_imgs, offer_details, additional_properties)
-        return True if status == SHADOW_PRODUCT_STATUS_READY else False
-    else:
-        logger.info(f'shadow product_id={product_id}, shop_name={shop_name} is not in NEW status, just ignore')
+            msg = f'can not find shop_name={shop_name} by shop search, all results parsed'
+            self.logger.error(msg)
+            raise ShopNotFoundInSearch(msg)
+
+    def parse_price_span(self, price_span, product_id):
+        temp_file_name = f'{IMAGE_DIR}/{product_id}-{uuid.uuid4().hex}.png'
+        self.element_screenshot(price_span, temp_file_name)
+        return self.ocr.par_price_ocr(temp_file_name)
+
+    def craw_taobao_detail_page(self, product_id, product_link, update_id):
+        self.logger.info(f'navigate to product_id={product_id} with product_link={product_link} and wait for seconds')
+        self.driver.get(product_link)
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        # set zoom ratio
+        self.zoom_content(TB_PAGE_DEFAULT_ZOOM_RATIO)
+        # parse detail page
+        title_div, price_div, shop_info_div = None, None, None
+        display_sale_div = None
+        title_image_div = None
+        page_image_v6_div, page_image_v8_div = None, None
+        offer_items_divs_wrapper = []
+        divs = self.driver.find_elements(By.XPATH, '//div')
+        for div in divs:
+            cls_name = div.get_attribute('class')
+            if cls_name is None:
+                continue
+            elif re.match(DETAIL_OFFER_ITEMS_RE_EXP, cls_name):
+                offer_items_divs_wrapper.append(div)
+            elif re.match(DETAIL_PRICE_RE_EXP, cls_name):
+                price_div = div
+            elif re.match(DETAIL_SALE_RE_EXP, cls_name):
+                display_sale_div = div
+            elif re.match(DETAIL_TITLE_IMGS_RE_EXP, cls_name):
+                title_image_div = div
+            elif re.match(DETAIL_MAIN_IMGS_V8_RE_EXP, cls_name):
+                page_image_v8_div = div
+            elif re.match(DETAIL_MAIN_IMGS_V6_RE_EXP, cls_name):
+                page_image_v6_div = div
+            elif re.match(DETAIL_SHOP_INFO_RE_EXP, cls_name):
+                shop_info_div = div
+            elif re.match(DETAIL_PRODUCT_TITLE_RE_EXP, cls_name):
+                title_div = div
+        assert (title_div is not None and price_div is not None and shop_info_div is not None)
+        assert (title_image_div is not None)
+        assert (page_image_v8_div is not None or page_image_v6_div is not None)
+        # parse product title and shop info
+        sku_id = parse_sku_id_from_product_link(product_link) or '0'
+        product_title = parse_product_title(title_div.find_element(By.XPATH, 'h1').text)
+        shop_info_inner = shop_info_div.find_element(By.XPATH, 'a')
+        shop_name = shop_info_inner.find_element(By.XPATH, 'div/div/span').text
+        shop_link = shop_info_inner.get_attribute('href')
+        # parse product sale
+        display_sale = parse_sale_in_detail(display_sale_div.text) if display_sale_div is not None else -1
+        # parse product offer items
+        offer_details, price_unit, lowest_price = self.craw_taobao_detail_offer_details(offer_items_divs_wrapper,
+                                                                                        price_div)
+        # parse title images
+        title_images = self.crawl_taobao_detail_title_images(title_image_div)
+        # parse main images
+        main_images = self.crawl_taobao_detail_main_images(page_image_v8_div, page_image_v6_div)
+        # update product info in DB
+        self.save_taobao_detail_result(product_id, sku_id, product_title, product_link,
+                                       shop_name, shop_link,
+                                       price_unit, lowest_price, display_sale,
+                                       title_images, main_images, offer_details,
+                                       update_id)
+
+    def craw_taobao_detail_offer_details(self, offer_items_divs_wrapper, price_div):
+        offer_items_divs = []
+        offer_items = []
+        for offer_items_div in offer_items_divs_wrapper:
+            content_div = None
+            inner_divs = offer_items_div.find_elements(By.XPATH, 'div')
+            for inner_div in inner_divs:
+                cls_name = inner_div.get_attribute('class')
+                if cls_name is None:
+                    continue
+                elif re.match(DETAIL_OFFER_INNER_ITEMS_RE_EXP, cls_name):
+                    content_div = inner_div
+                    break
+            assert (content_div is not None)
+            offer_item_divs_inner = content_div.find_elements(By.XPATH, 'div')
+            offer_items_divs.append(offer_item_divs_inner)
+            offer_items.append([self.craw_taobao_detail_offer_items(v) for v in offer_item_divs_inner])
+        self.logger.info(f'get offer items: {offer_items}')
+        # parse all offers
+        offers, price_unit, lowest_price = self.craw_taobao_detail_offers(offer_items_divs, price_div)
+        offer_details = {
+            "offer_items": offer_items,
+            "valid_offers": offers
+        }
+        self.logger.info(f'get offer details: {offer_details}')
+        return offer_details, price_unit, lowest_price
+
+    def crawl_taobao_detail_title_images(self, title_image_div):
+        title_imgs = title_image_div.find_elements(By.XPATH, 'ul/li/img')
+        title_images = [title_img.get_attribute('src') for title_img in title_imgs]
+        self.logger.info(f'get title image list: {title_images}')
+        return title_images
+
+    def crawl_taobao_detail_main_images(self, page_image_v8_div, page_image_v6_div):
+        main_images = []
+        if page_image_v8_div is not None:
+            main_images = self.crawl_taobao_detail_main_images_v8(page_image_v8_div)
+        elif page_image_v6_div is not None:
+            main_images = self.crawl_taobao_detail_main_images_v6(page_image_v6_div)
+        return main_images
+
+    def crawl_taobao_detail_main_images_v8(self, page_image_v8_div):
+        main_images = []
+        main_imgs = page_image_v8_div.find_elements(By.XPATH, './/div')
+        for main_img in main_imgs:
+            cls_name = main_img.get_attribute('class')
+            if cls_name is None:
+                continue
+            elif re.match(DETAIL_MAIN_IMGS_SINGLE_IMG_V8_RE_EXP, cls_name):
+                # we only get pic links and ignore other format
+                try:
+                    data_src = main_img.find_element(By.XPATH, 'img').get_attribute('data-src')
+                    if data_src is not None and is_valid_image_link(data_src):
+                        main_images.append(data_src)
+                    else:
+                        src = main_img.find_element(By.XPATH, 'img').get_attribute('src')
+                        if is_valid_image_link(src):
+                            main_images.append(src)
+                except NoSuchElementException:
+                    self.logger.info('detail page material is not an image, ignore')
+            elif re.match(DETAIL_MAIN_IMGS_RICHTEXT_V8_RE_EXP, cls_name):
+                # we only get pic links and ignore other format
+                try:
+                    for img_element in main_img.find_elements(By.XPATH, 'p/img'):
+                        self.scroll_window_to_element(img_element)  # the resource is lazy loaded
+                    img_elements = main_img.find_elements(By.XPATH, 'p/img')
+                    for img_element in img_elements:
+                        src = img_element.get_attribute('src')
+                        if is_valid_image_link(src):
+                            main_images.append(src)
+                except NoSuchElementException:
+                    self.logger.info('detail page material is not an image, ignore')
+        self.logger.info(f'get main image list: {main_images}')
+        return main_images
+
+    def crawl_taobao_detail_main_images_v6(self, page_image_v6_div):
+        main_images = []
+        for img_element in page_image_v6_div.find_elements(By.XPATH, 'div/div/img'):
+            self.scroll_window_to_element(img_element)  # the resource is lazy loaded
+        for img_element in page_image_v6_div.find_elements(By.XPATH, 'div/div/img'):
+            src = img_element.get_attribute('src')
+            if is_valid_image_link(src):
+                main_images.append(src)
+        self.logger.info(f'get main image list: {main_images}')
+        return main_images
+
+    def craw_taobao_detail_offers(self, value_items_divs, sku_price_div):
+        combos = self.get_value_item_combos(value_items_divs)
+        offers = []
+        lowest_price = 6553500
+        price_unit = ''
+        for combo in combos:
+            offer = []
+            valid = True
+            for value_item in combo:
+                cls_name = value_item.get_attribute('class')
+                if cls_name is not None and cls_name.find('isDisabled') != -1:
+                    valid = False
+                    break
+                span = value_item.find_element(By.XPATH, 'span')
+                offer.append(span.text)
+                try:
+                    self.element_click(value_item)
+                except ElementClickInterceptedException:
+                    self.scroll_window_to_element(value_item)
+                    self.element_click(value_item)
+            if not valid:
+                continue
+            price_spans = sku_price_div.find_elements(By.XPATH, 'span')
+            assert (len(price_spans) >= 2)
+            price_unit_span = None
+            price_val_span = None
+            for price_span in price_spans:
+                cls_name = price_span.get_attribute('class')
+                if cls_name is None:
+                    continue
+                elif re.match(DETAIL_PRICE_UNIT_RE_EXP, cls_name):
+                    price_unit_span = price_span
+                elif re.match(DETAIL_PRICE_VAL_RE_EXP, cls_name):
+                    price_val_span = price_span
+            assert (price_unit_span is not None and price_val_span is not None)
+            price_unit = parse_price_unit(price_unit_span.text)
+            offer.append(price_unit)
+            price_val = parse_price(price_val_span.text)
+            if price_val < lowest_price:
+                lowest_price = price_val
+            offer.append(price_val)
+            offers.append(offer)
+        self.logger.info(f'get offers={offers}, price_unit={price_unit}, lowest_price={lowest_price}')
+        return offers, price_unit, lowest_price
+
+    def get_value_item_combos(self, value_items_divs):
+        combos, combo = [], []
+        self.inner_get_value_item_combos(value_items_divs, 0, combo, combos)
+        return combos
+
+    def inner_get_value_item_combos(self, value_items_divs, cur, combo, combos):
+        if len(combo) == len(value_items_divs):
+            combos.append(combo.copy())
+            return
+        for value_item in value_items_divs[cur]:
+            combo.append(value_item)
+            self.inner_get_value_item_combos(value_items_divs, cur + 1, combo, combos)
+            combo.pop()
+
+    def craw_taobao_detail_offer_items(self, offer_item_div):
+        offer_item = {}
+        try:
+            span = offer_item_div.find_element(By.XPATH, 'span')
+            offer_item['name'] = span.text
+        except Exception:
+            self.logger.error(f'get exception while parsing offer_item span {offer_item_div.accessible_name}')
+            traceback.print_exc()
+            return None
+        try:
+            img = offer_item_div.find_element(By.XPATH, 'img')
+            offer_item['img'] = img.get_attribute('src')
+        except Exception:
+            self.logger.error('some sku_item do not have img, just ignore')
+        return offer_item
+
+    def save_taobao_detail_result(self, product_id, sku_id, product_title, product_link,
+                                  shop_name, shop_link,
+                                  price_unit, display_price, display_sale,
+                                  title_images, main_images, offer_details,
+                                  update_id):
+        self.logger.info(f'save_taobao_detail_result parsed record:\n'
+                         f'\t\tproduct_id={product_id}\n'
+                         f'\t\tsku_id={sku_id}\n'
+                         f'\t\tproduct_title={product_title}\n'
+                         f'\t\tproduct_link={product_link}\n'
+                         f'\t\tshop_name={shop_name}\n'
+                         f'\t\tshop_link={shop_link}\n'
+                         f'\t\tprice_unit={price_unit}\n'
+                         f'\t\tdisplay_price={display_price}\n'
+                         f'\t\tdisplay_sale={display_sale}\n'
+                         f'\t\ttitle_images={title_images}\n'
+                         f'\t\tmain_images={main_images}\n'
+                         f'\t\toffer_details={offer_details}\n'
+                         f'\t\tupdate_id={update_id}\n')
+        update_role = self.save_taobao_detail_result.__name__
+        update_product_info(product_id, update_id, update_role,
+                            sku_id, product_title, product_link, '',
+                            shop_name, shop_link,
+                            price_unit, display_price, display_sale,
+                            title_images, main_images, offer_details, None)
+        add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None,
+                         update_id, update_role)
+        update_shop_info(shop_name, update_id, update_role, shop_link, SHOP_COVER_DEFAULT_LINK, None)
+
+    def download_product_resources(self, product_id, update_id, ts=None, force_download=False):
+        try:
+            exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
+        except DoesNotExist:
+            self.logger.error(f'No product info found for product_id={product_id}, just return')
+            return
+        # create download folder
+        product_root_dir = f'{PRODUCT_DIR}/{product_id}/{int(time.time()) if ts is None else ts}'
+        product_path = Path(product_root_dir)
+        if product_path.exists():
+            if force_download:
+                self.logger.info(
+                    f'product path already exist with root_dir={product_root_dir}, will force clean it and redownload')
+                shutil.rmtree(product_root_dir, ignore_errors=True)
+            else:
+                self.logger.info(
+                    f'product path already exist with root_dir={product_root_dir}, just ignore')
+                return
+        self.logger.info(f'create product_root_dir={product_root_dir}')
+        product_path.mkdir(parents=True, exist_ok=True)
+        # download title images
+        self.logger.info(
+            f'download product title images with product_id={exist_pi.product_id} and title_imgs={exist_pi.title_imgs}')
+        title_imgs = json_loads(exist_pi.title_imgs)
+        if len(title_imgs) > 0:
+            Path(f'{product_root_dir}/title_images').mkdir()
+        idx = 0
+        for title_img in title_imgs:
+            try:
+                idx += 1
+                self.download_product_image(title_img, f'{product_root_dir}/title_images/{idx}.png')
+            except Exception:
+                self.logger.error(f'get unhandled exception while get page image link={title_img}, arise the exception')
+                traceback.print_exc()
+                raise
+        # download page images
+        self.logger.info(
+            f'download product title images with product_id={exist_pi.product_id} and title_imgs={exist_pi.page_imgs}')
+        page_imgs = json_loads(exist_pi.page_imgs)
+        if len(page_imgs) > 0:
+            Path(f'{product_root_dir}/page_images').mkdir()
+        idx = 0
+        for page_img in page_imgs:
+            try:
+                idx += 1
+                self.download_product_image(page_img, f'{product_root_dir}/page_images/{idx}.png')
+            except Exception:
+                self.logger.error(f'get unhandled exception while get page image link={page_img}, arise the exception')
+                traceback.print_exc()
+                raise
+        additional_properties = json_loads(exist_pi.additional_properties)
+        additional_properties[RESOURCE_ROOT_KEY] = product_root_dir[product_root_dir.find(PRODUCT_DIR_KEY):]
+        update_product_info(exist_pi.product_id, update_id, self.download_product_resources.__name__,
+                            additional_properties=additional_properties)
+
+    def download_product_image(self, image_url, file_path):
+        self.driver.get(image_url)
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        img = self.driver.find_element(By.XPATH, '//img')
+        assert (img is not None)
+        self.logger.info(f'download product title_image={image_url}')
+        self.element_screenshot(img, file_path)
+
+    def product_manage_ready(self, product_id, shop_name, platform, update_id):
+        shadow_product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+        if shadow_product.status == SHADOW_PRODUCT_STATUS_NEW:
+            product = ProductInfo.get(ProductInfo.product_id == product_id)
+            additional_properties = json_loads(product.additional_properties)
+            if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
+                title_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(product.title_imgs)))]
+                page_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(product.page_imgs)))]
+                offer_details = json_loads(product.offer_details)
+                status = SHADOW_PRODUCT_STATUS_READY
+            else:
+                title_imgs = []
+                page_imgs = []
+                offer_details = {}
+                status = SHADOW_PRODUCT_STATUS_NEW
+            # 我们总是将shadow_product更新到最新，只要它还是NEW状态
+            update_shadow_product_info(product.product_id, status, update_id,
+                                       self.product_manage_ready.__name__,
+                                       SHADOW_PRODUCT_DEFAULT_ID, product.product_title, product.shop_name,
+                                       product.price_unit, product.display_price, SHADOW_PRODUCT_DEFAULT_INVENTORY_SIZE,
+                                       title_imgs, page_imgs, offer_details, additional_properties)
+            return True if status == SHADOW_PRODUCT_STATUS_READY else False
+        else:
+            self.logger.info(f'shadow product_id={product_id}, shop_name={shop_name} is not in NEW status, just ignore')
+            return True
+
+    def handle_taobao_on_shelf(self, product_id, shop_name, update_id):
+        product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+        self.driver.get(TB_ONSHELF_PAGE)
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        # product title
+        title_span = self.driver.find_element(By.XPATH,
+                                              '//*[@id="sell-field-title"]/div[2]/div[1]/div/div/span/span/span')
+        assert (title_span.get_attribute('class') == 'input-wrap')
+        title_input = title_span.find_element(By.XPATH, 'span/input')
+        title_input.send_keys(product.product_title)
+        # delivery promise
+        self.scroll_window_to_element(self.driver.find_element(By.ID, 'sale-card'))
+        delivery_div = self.driver.find_element(By.CLASS_NAME, 'sell-component-delivery-time')
+        delivery_span = delivery_div.find_element(By.XPATH, 'span/span[1]/label/span')
+        self.element_click(delivery_span)
+        # price
+        price_span = self.driver.find_element(By.XPATH, '//*[@id="sell-field-price"]/div[2]/div/div/span/span[1]')
+        assert (price_span.get_attribute('class') == 'input-wrap')
+        price_input = price_span.find_element(By.XPATH, 'span/input')
+        price_input.send_keys(product.price / 100)
+        # inventory
+        inventory_span = self.driver.find_element(By.XPATH,
+                                                  '//*[@id="sell-field-quantity"]/div[2]/div/div/span/span[1]')
+        assert (inventory_span.get_attribute('class') == 'input-wrap')
+        inventory_input = inventory_span.find_element(By.XPATH, 'span/input')
+        for _ in range(CRAWL_OPERATION_TRY_COUNT):
+            inventory_input.send_keys(Keys.BACK_SPACE)
+            time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
+        inventory_input.send_keys(product.inventory)
+        # transport
+        self.scroll_window_to_element(self.driver.find_element(By.ID, 'struct-multiDiscountPromotion'))
+        transport_label = self.driver.find_element(By.XPATH,
+                                                   '//*[@id="sell-field-tbExtractWay"]/div[2]/div/div/div/span/div[1]/div[1]/div[1]/label')
+        if transport_label.get_attribute('class').find('checked') == -1:
+            self.element_click(transport_label)
+            transport_template_span = self.driver.find_element(By.XPATH,
+                                                               '//*[@id="sell-field-tbExtractWay"]/div[2]/div/div/div/span/div[1]/div[2]/div/div[1]/div[2]/span/span[1]/span[1]/span')
+            self.element_click(transport_template_span)
+            spans = self.driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
+            for span in spans:
+                if span.text == '系统模板-商家默认模板':
+                    self.element_click(span)
+                    break
+        # inventory deduction
+        self.scroll_window_to_element(self.driver.find_element(By.ID, 'struct-regionLimitSale'))
+        inventory_deduction_span = self.driver.find_element(By.XPATH,
+                                                            '//*[@id="sell-field-subStock"]/div[2]/div/div/span/span[2]')
+        self.element_click(inventory_deduction_span)
+        additional_properties = json_loads(product.additional_properties)
+        resource_root = additional_properties[RESOURCE_ROOT_KEY][1:]
+        # title images
+        self.scroll_window_to_element(self.driver.find_element(By.ID, 'desc-card'))
+        title_img_upload_div = self.driver.find_element(By.XPATH,
+                                                        '//*[@id="struct-mainImagesGroup"]/div/div[1]/div/div/div/div/div')
+        self.element_click(title_img_upload_div, CRAWL_PAGE_WAIT_IN_SECONDS)
+        ti_iframe = self.driver.find_element(By.XPATH, '//*[@id="mainImagesGroup"]')
+        self.switch_to_frame(ti_iframe)
+        self.handle_iframe_select_images(f'{resource_root}/title_images')
+        self.switch_to_default()
+        # page images
+        self.scroll_window_to_element(self.driver.find_element(By.ID, 'struct-guideMaterial'))
+        page_img_upload_div = self.driver.find_element(By.XPATH, '//*[@id="panel_edit"]/div[1]/div[1]/div[1]')
+        self.element_click(page_img_upload_div, CRAWL_PAGE_WAIT_IN_SECONDS)
+        frame_div = self.driver.find_element(By.CLASS_NAME, 'media-img-plug')
+        pi_iframe = frame_div.find_element(By.XPATH, 'iframe')
+        self.switch_to_frame(pi_iframe)
+        self.handle_iframe_select_images(f'{resource_root}/page_images', True)
+        self.switch_to_default()
+        # onshelf time
+        self.scroll_window_to_element(self.driver.find_element(By.ID, 'post-sale-service-card'))
+        onshelf_span = self.driver.find_element(By.XPATH,
+                                                '//*[@id="sell-field-startTime"]/div[2]/div[2]/div/div/span/span[1]')
+        self.element_click(onshelf_span)
+        # submit onshelf
+        submit_btn = self.driver.find_element(By.XPATH, '//*[@id="struct-buttons"]/button')
+        self.element_click(submit_btn)
+        self.logger.info(f'onshelf product_id={product_id} to taobao successfully')
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+
+    def handle_iframe_select_images(self, path, confirm=False):
+        navbar_root = None
+        divs = self.driver.find_elements(By.XPATH, '//div')
+        for div in divs:
+            cls_name = div.get_attribute('class')
+            if cls_name is None:
+                continue
+            elif re.match(ONSHELF_TAOBAO_NAV_BAR_RE_EXP, cls_name):
+                navbar_root = div
+                break
+        assert (navbar_root is not None)
+        sort_span = self.driver.find_element(By.XPATH,
+                                             '//*[@id="sucai-tu-selector-container"]/div[3]/div[2]/div[3]/div/div[1]/span[3]/span[1]/span[1]/span/input')
+        self.element_click(sort_span)
+        spans = self.driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
+        for span in spans:
+            if span.text == '文件名升序':
+                self.element_click(span)
+                break
+        path_list = path.split('/')
+        parent_li = navbar_root
+        for token in path_list:
+            child_li = None
+            for child in parent_li.find_elements(By.XPATH, 'ul/li'):
+                name_span = child.find_element(By.XPATH, 'div/div/div/div/span')
+                if name_span.get_attribute('title') == token:
+                    child_li = child
+                    break
+            assert (child_li is not None)
+            token_div = child_li.find_element(By.XPATH, 'div')
+            self.element_click(token_div)
+            parent_li = child_li
+        image_divs = self.driver.find_element(By.XPATH, '//*[@id="sucai_tu_selector_scrollMain"]').find_elements(
+            By.XPATH, 'div')
+        [self.element_click(image_div) for image_div in image_divs]
+        if confirm:
+            confirm_btn = self.driver.find_element(By.XPATH,
+                                                   '//*[@id="sucai-tu-selector-container"]/div[4]/div[3]/button')
+            self.element_click(confirm_btn)
+
+    def handle_rednote_on_shelf(self, product_id, shop_name, update_id):
+        pass
+
+    def product_manage_on_shelf(self, product_id, shop_name, platform, update_id):
+        if platform & PRODUCT_MANAGE_PLATFORM_TAOBAO:
+            self.handle_taobao_on_shelf(product_id, shop_name, update_id)
+            # 获取上架后的product_id
+            shadow_id = parse_product_id_from_post_onshelf_link(self.driver.current_url)
+            assert (shadow_id is not None)
+            update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
+                                       self.product_manage_on_shelf.__name__, shadow_id=shadow_id)
+        if platform & PRODUCT_MANAGE_PLATFORM_REDNOTE:
+            self.handle_rednote_on_shelf(product_id, shop_name, update_id)
+            update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
+                                       self.product_manage_on_shelf.__name__)
         return True
 
+    def product_manage_online(self, shadow_id, shop_name, platform, update_id):
+        pass
 
-def handle_taobao_on_shelf(product_id, shop_name, update_id):
-    logger = get_logger()
-    product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
-    Driver.get(TB_ONSHELF_PAGE)
-    time.sleep(PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS)
-    # product title
-    title_span = Driver.find_element(By.XPATH, '//*[@id="sell-field-title"]/div[2]/div[1]/div/div/span/span/span')
-    assert (title_span.get_attribute('class') == 'input-wrap')
-    title_input = title_span.find_element(By.XPATH, 'span/input')
-    title_input.send_keys(product.product_title)
-    # delivery promise
-    scroll_window_to_element(Driver.find_element(By.ID, 'sale-card'))
-    delivery_div = Driver.find_element(By.CLASS_NAME, 'sell-component-delivery-time')
-    delivery_span = delivery_div.find_element(By.XPATH, 'span/span[1]/label/span')
-    element_click(delivery_span)
-    # price
-    price_span = Driver.find_element(By.XPATH, '//*[@id="sell-field-price"]/div[2]/div/div/span/span[1]')
-    assert (price_span.get_attribute('class') == 'input-wrap')
-    price_input = price_span.find_element(By.XPATH, 'span/input')
-    price_input.send_keys(product.price / 100)
-    # inventory
-    inventory_span = Driver.find_element(By.XPATH, '//*[@id="sell-field-quantity"]/div[2]/div/div/span/span[1]')
-    assert (inventory_span.get_attribute('class') == 'input-wrap')
-    inventory_input = inventory_span.find_element(By.XPATH, 'span/input')
-    for _ in range(ONSHELF_PAGE_INVENTORY_TRY_COUNT):
-        inventory_input.send_keys(Keys.BACK_SPACE)
-        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
-    inventory_input.send_keys(product.inventory)
-    # transport
-    scroll_window_to_element(Driver.find_element(By.ID, 'struct-multiDiscountPromotion'))
-    transport_label = Driver.find_element(By.XPATH,
-                                          '//*[@id="sell-field-tbExtractWay"]/div[2]/div/div/div/span/div[1]/div[1]/div[1]/label')
-    if transport_label.get_attribute('class').find('checked') == -1:
-        element_click(transport_label)
+    def product_manage_offline(self, shadow_id, shop_name, platform, update_id):
+        pass
 
-        transport_template_span = Driver.find_element(By.XPATH,
-                                                      '//*[@id="sell-field-tbExtractWay"]/div[2]/div/div/div/span/div[1]/div[2]/div/div[1]/div[2]/span/span[1]/span[1]/span')
-        element_click(transport_template_span)
-        spans = Driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
-        for span in spans:
-            if span.text == '系统模板-商家默认模板':
-                element_click(span)
-                break
-    # inventory deduction
-    scroll_window_to_element(Driver.find_element(By.ID, 'struct-regionLimitSale'))
-    inventory_deduction_span = Driver.find_element(By.XPATH,
-                                                   '//*[@id="sell-field-subStock"]/div[2]/div/div/span/span[2]')
-    element_click(inventory_deduction_span)
-    additional_properties = json_loads(product.additional_properties)
-    resource_root = additional_properties[RESOURCE_ROOT_KEY][1:]
-    # title images
-    scroll_window_to_element(Driver.find_element(By.ID, 'desc-card'))
-    title_img_upload_div = Driver.find_element(By.XPATH,
-                                               '//*[@id="struct-mainImagesGroup"]/div/div[1]/div/div/div/div/div')
-    element_click(title_img_upload_div, PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS)
-    ti_iframe = Driver.find_element(By.XPATH, '//*[@id="mainImagesGroup"]')
-    switch_to_frame(ti_iframe)
-    handle_iframe_select_images(f'{resource_root}/title_images')
-    switch_to_default()
-    # page images
-    scroll_window_to_element(Driver.find_element(By.ID, 'struct-guideMaterial'))
-    page_img_upload_div = Driver.find_element(By.XPATH, '//*[@id="panel_edit"]/div[1]/div[1]/div[1]')
-    element_click(page_img_upload_div, PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS)
-    frame_div = Driver.find_element(By.CLASS_NAME, 'media-img-plug')
-    pi_iframe = frame_div.find_element(By.XPATH, 'iframe')
-    switch_to_frame(pi_iframe)
-    handle_iframe_select_images(f'{resource_root}/page_images', True)
-    switch_to_default()
-    # onshelf time
-    scroll_window_to_element(Driver.find_element(By.ID, 'post-sale-service-card'))
-    onshelf_span = Driver.find_element(By.XPATH, '//*[@id="sell-field-startTime"]/div[2]/div[2]/div/div/span/span[1]')
-    element_click(onshelf_span)
-    # submit onshelf
-    submit_btn = Driver.find_element(By.XPATH, '//*[@id="struct-buttons"]/button')
-    element_click(submit_btn)
-    logger.info(f'onshelf product_id={product_id} to taobao successfully')
-    time.sleep(PRODUCT_MANAGE_PAGE_WAIT_IN_SECONDS)
-
-
-def handle_iframe_select_images(path, confirm=False):
-    navbar_root = None
-    divs = Driver.find_elements(By.XPATH, '//div')
-    for div in divs:
-        cls_name = div.get_attribute('class')
-        if cls_name is None:
-            continue
-        elif re.match(ONSHELF_TAOBAO_NAV_BAR_RE_EXP, cls_name):
-            navbar_root = div
-            break
-    assert (navbar_root is not None)
-    sort_span = Driver.find_element(By.XPATH,
-                                    '//*[@id="sucai-tu-selector-container"]/div[3]/div[2]/div[3]/div/div[1]/span[3]/span[1]/span[1]/span/input')
-    element_click(sort_span)
-    spans = Driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
-    for span in spans:
-        if span.text == '文件名升序':
-            element_click(span)
-            break
-    path_list = path.split('/')
-    parent_li = navbar_root
-    for token in path_list:
-        child_li = None
-        for child in parent_li.find_elements(By.XPATH, 'ul/li'):
-            name_span = child.find_element(By.XPATH, 'div/div/div/div/span')
-            if name_span.get_attribute('title') == token:
-                child_li = child
-                break
-        assert (child_li is not None)
-        token_div = child_li.find_element(By.XPATH, 'div')
-        element_click(token_div)
-        parent_li = child_li
-    image_divs = Driver.find_element(By.XPATH, '//*[@id="sucai_tu_selector_scrollMain"]').find_elements(By.XPATH, 'div')
-    [element_click(image_div) for image_div in image_divs]
-    if confirm:
-        confirm_btn = Driver.find_element(By.XPATH, '//*[@id="sucai-tu-selector-container"]/div[4]/div[3]/button')
-        element_click(confirm_btn)
-
-
-def handle_rednote_on_shelf(product_id, shop_name, update_id):
-    pass
-
-
-def product_manage_on_shelf(product_id, shop_name, platform, update_id):
-    if platform & PRODUCT_MANAGE_PLATFORM_TAOBAO:
-        handle_taobao_on_shelf(product_id, shop_name, update_id)
-        # 获取上架后的product_id
-        shadow_id = parse_product_id_from_post_onshelf_link(Driver.current_url)
-        assert (shadow_id is not None)
-        update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
-                                   product_manage_on_shelf.__name__, shadow_id=shadow_id)
-    if platform & PRODUCT_MANAGE_PLATFORM_REDNOTE:
-        handle_rednote_on_shelf(product_id, shop_name, update_id)
-        update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
-                                   product_manage_on_shelf.__name__)
-    return True
-
-
-def product_manage_online(shadow_id, shop_name, platform, update_id):
-    pass
-
-
-def product_manage_offline(shadow_id, shop_name, platform, update_id):
-    pass
-
-
-def product_manage_off_shelf(shadow_id, shop_name, platform, update_id):
-    pass
-
-
-Driver = init_webdriver(WebDriverType.ChromDriver)
+    def product_manage_off_shelf(self, shadow_id, shop_name, platform, update_id):
+        pass

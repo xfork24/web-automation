@@ -13,15 +13,16 @@ LOG_FILE_NAME = './logs/tb_search_crawler.log'
 def main():
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
-    login_taobao()
+    tb_crawler = Crawler()
+    tb_crawler.login_taobao()
     for key in SEARCH_KEYS:
         try:
-            crawl_taobao_search_results(key, NUM_OF_PAGES_TO_PARSE, SEARCH_SALE_ORDER, UPDATE_ID)
+            tb_crawler.crawl_taobao_search_results(key, NUM_OF_PAGES_TO_PARSE, SEARCH_CRAWL_IN_SALE_ORDER, UPDATE_ID)
         except Exception as e:
             logger.error(f'get unhandled exception {e}, just continue')
             traceback.print_exc()
             continue
-    cleanup()
+    close_db()
 
 
 if __name__ == '__main__':

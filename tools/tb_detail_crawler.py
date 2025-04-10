@@ -13,19 +13,20 @@ UPDATE_ID = 'tb_detail_crawler'
 def main():
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
-    login_taobao()
+    tb_crawler = Crawler()
+    tb_crawler.login_taobao()
     for product_id in PRODUCT_IDS:
         try:
             product = ProductInfo.get(ProductInfo.product_id == product_id)
-            craw_taobao_detail_page(product.product_id, product.product_link, UPDATE_ID)
-            download_product_resources(product_id, UPDATE_ID)
+            tb_crawler.craw_taobao_detail_page(product.product_id, product.product_link, UPDATE_ID)
+            tb_crawler.download_product_resources(product_id, UPDATE_ID)
         except DoesNotExist:
             logger.error(f'can not find product [{product_id}] in database')
         except Exception as e:
             logger.error(f'get unhandled exception {e}, just continue')
             traceback.print_exc()
             continue
-    cleanup()
+    close_db()
 
 
 if __name__ == '__main__':

@@ -5,12 +5,7 @@
 from flask import Flask, request
 from core.crawler import *
 from core.analysis import (
-    TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS,
-    TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS,
-    TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS,
-    TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS,
-    TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS,
-    TB_PRODUCT_MANAGE_TASK_PERIOD_IN_SECONDS
+    TASK_CHECK_PERIOD_IN_SECONDS
 )
 
 TASK_STATUS_QUERY_PERIOD = 604800
@@ -145,16 +140,9 @@ def get_product_history_by_id(product_id):
                     found = True
                 except DoesNotExist:
                     pass
-            # 有可能历史任务被我们删掉了，通过update_role字段来修复他们
+            # 有可能历史任务被我们删掉了，直接置为Unknown
             if not found:
-                if history.update_role == save_taobao_search_result.__name__:
-                    updater['updater'] = 'search_crawl_task'
-                elif history.update_role == save_taobao_shop_sku_result.__name__:
-                    updater['updater'] = 'shop_crawl_task'
-                elif history.update_role == save_taobao_detail_result.__name__:
-                    updater['updater'] = 'detail_crawl_task'
-                else:
-                    updater['updater'] = 'Unknown'
+                updater['updater'] = 'Unknown'
                 updater['detail'] = 'Unknown'
                 found = True
             h = history.to_json()
@@ -910,7 +898,7 @@ def get_detail_crawl_task_by_id(task_id):
 def create_detail_crawl_task():
     logger = get_logger()
     try:
-        start_ts = int(time.time()) - TB_DETAIL_CRAWL_TASK_PERIOD_IN_SECONDS
+        start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == payload.get('product_id'),
                                                DetailCrawlTask.status != TASK_STATUS_DONE,
@@ -1037,7 +1025,7 @@ def get_shop_crawl_task_by_id(task_id):
 def create_shop_crawl_task():
     logger = get_logger()
     try:
-        start_ts = int(time.time()) - TB_SHOP_CRAWL_TASK_PERIOD_IN_SECONDS
+        start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == payload.get('shop_name'),
                                              ShopCrawlTask.status != TASK_STATUS_DONE,
@@ -1168,7 +1156,7 @@ def get_search_crawl_task_by_id(task_id):
 def create_search_crawl_task():
     logger = get_logger()
     try:
-        start_ts = int(time.time()) - TB_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+        start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == payload.get('search_key'),
                                                SearchCrawlTask.status != TASK_STATUS_DONE,
@@ -1301,7 +1289,7 @@ def get_shop_search_crawl_task_by_id(task_id):
 def create_shop_search_task():
     logger = get_logger()
     try:
-        start_ts = int(time.time()) - TB_SHOP_SEARCH_CRAWL_TASK_PERIOD_IN_SECONDS
+        start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == payload.get('shop_name'),
                                                    ShopSearchCrawlTask.status != TASK_STATUS_DONE,
@@ -1427,7 +1415,7 @@ def get_llm_analyze_task_by_id(task_id):
 def create_llm_analyze_task():
     logger = get_logger()
     try:
-        start_ts = int(time.time()) - TB_LLM_ANALYZE_TASK_PERIOD_IN_SECONDS
+        start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == payload.get('product_id'),
                                               LLMAnalyzeTask.status != TASK_STATUS_DONE,
@@ -1554,7 +1542,7 @@ def get_product_manage_task_by_id(task_id):
 def create_product_manage_task():
     logger = get_logger()
     try:
-        start_ts = int(time.time()) - TB_PRODUCT_MANAGE_TASK_PERIOD_IN_SECONDS
+        start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = ProductManageTask.select().where(ProductManageTask.product_id == payload.get('product_id'),
                                                  ProductManageTask.operation == payload.get('operation'),

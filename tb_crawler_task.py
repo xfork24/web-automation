@@ -12,7 +12,7 @@ UPDATE_ID = 'tb_crawler_task'
 def signal_handler(sig, frame):
     logger = get_logger()
     logger.info(f'signal={sig} captured with frame={frame}, will clean up resources and quit.')
-    cleanup()
+    close_db()
     sys.exit(0)
 
 
@@ -20,11 +20,12 @@ if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
     signal.signal(signal.SIGINT, signal_handler)
-    login_taobao()
+    ctr = CrawlTaskRunner()
+    ctr.login()
     while True:
         # scan search_crawl_task and get all unfinished tasks
         try:
-            run_taobao_crawler_tasks(UPDATE_ID)
+            ctr.run_taobao_crawler_tasks(UPDATE_ID)
         except Exception as e:
             logger.error(f'get unhandled exception while execute run_all_in_one_crawler_task, {e}')
             traceback.print_exc()

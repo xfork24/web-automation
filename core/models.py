@@ -17,7 +17,6 @@ from core.utils import get_logger
 from json import JSONDecodeError
 from playhouse.shortcuts import model_to_dict
 
-SHOP_COVER_DEFAULT_LINK = 'https://img.alicdn.com/imgextra/i1/O1CN01pz5irY1bhDKceJor2_!!6000000003496-2-tps-144-144.png_320x320q75.jpg_.webp'
 LLM_ANALYSIS_KEY = 'llm_analysis'
 ERRORS_KEY = 'errors'
 RESOURCE_ROOT_KEY = 'resource_root'
@@ -59,7 +58,7 @@ SHADOW_PRODUCT_STATUS_OFFLINE = 4
 SHADOW_PRODUCT_STATUS_OFFSHELF = 5
 
 SHADOW_PRODUCT_DEFAULT_INVENTORY_SIZE = 9999
-
+SHOP_COVER_DEFAULT_LINK = 'https://img.alicdn.com/imgextra/i1/O1CN01pz5irY1bhDKceJor2_!!6000000003496-2-tps-144-144.png_320x320q75.jpg_.webp'
 SHOP_LINK_KNOWN_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
                                re.compile('^https://shop\\w+.taobao.com/')]
 
@@ -473,7 +472,7 @@ def update_shop_info(shop_name, update_id, update_role, shop_link='', shop_cover
         new_si = ShopInfo()
         new_si.shop_name = shop_name
         new_si.shop_link = shop_link
-        new_si.shop_cover = SHOP_COVER_DEFAULT_LINK if shop_cover == '' else shop_cover
+        new_si.shop_cover = shop_cover
         if additional_properties is not None:
             new_si.additional_properties = json_dumps(additional_properties)
         else:

@@ -12,7 +12,10 @@ DEFAULT_SEARCH_KEYS = [('教程', 5),
                        ('素材', 5),
                        ('电视剧', 5),
                        ('电影', 5),
-                       ('自动发货', 5), ]
+                       ('自动发货', 5),
+                       ('美剧', 5),
+                       ('英剧', 5),
+                       ('日剧', 5), ]
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
@@ -32,4 +35,4 @@ if __name__ == '__main__':
     # 下载商品素材，应该放到所有任务都执行完毕的最后再执行
     # download_hot_product_resources()
 
-    cleanup()
+    close_db()

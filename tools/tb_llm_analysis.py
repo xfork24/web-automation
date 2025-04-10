@@ -18,6 +18,7 @@ def main():
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
     start_ts = int(time.time()) - UPDATE_TIME_PERIOD_IN_SECONDS
+    client = LLMClient()
     products = ProductInfo.select().where(ProductInfo.update_ts > start_ts).order_by(ProductInfo.update_ts)
     logger.info(f'get {len(products)} products to be updated by applying update_ts > {start_ts}')
     product_batch = []
@@ -27,15 +28,15 @@ def main():
             logger.info(f'product [{product.product_id}] llm analysis already updated, just ignore')
             continue
         if len(product_batch) == LLM_QUERY_BATCH_SIZE:
-            update_product_llm_analysis_batch(product_batch)
+            client.update_product_llm_analysis_batch(product_batch)
             product_batch = []
             logger.info('wait LLM tokens ready for seconds')
             time.sleep(LLM_BATCH_WAIT_IN_SECONDS)
         product_batch.append(Product(id=product.product_id, task_id='no_task_id', title=product.product_title))
     # the last batch
     if len(product_batch) > 0:
-        update_product_llm_analysis_batch(product_batch)
-    cleanup()
+        client.update_product_llm_analysis_batch(product_batch)
+    close_db()
 
 
 if __name__ == '__main__':

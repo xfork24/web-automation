@@ -15,15 +15,16 @@ def main():
     # only products with empty llm_analysis be updated
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
-    login_taobao()
+    tb_crawler = Crawler()
+    tb_crawler.login_taobao()
     for shop_name in SHOP_NAMES:
         try:
-            crawl_taobao_shop_link_by_search(shop_name, UPDATE_ID)
+            tb_crawler.crawl_taobao_shop_link_by_search(shop_name, UPDATE_ID)
         except Exception as e:
             logger.error(f'get unhandled exception {e}, just continue')
             traceback.print_exc()
             continue
-    cleanup()
+    close_db()
 
 
 if __name__ == '__main__':

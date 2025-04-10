@@ -13,7 +13,7 @@ LOG_FILE_NAME = './logs/api_server.log'
 def signal_handler(sig, frame):
     logger = get_logger()
     logger.info(f'signal={sig} captured with frame={frame}, will clean up resources and quit.')
-    cleanup()
+    close_db()
     sys.exit(0)
 
 

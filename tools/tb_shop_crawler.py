@@ -14,13 +14,14 @@ UPDATE_ID = 'tb_shop_crawler'
 def main():
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
-    login_taobao()
+    tb_crawler = Crawler()
+    tb_crawler.login_taobao()
     try:
-        craw_taobao_shop_page(SHOP_LINK, SHOP_SALE_ORDER, UPDATE_ID, PRODUCT_IDS)
+        tb_crawler.craw_taobao_shop_page(SHOP_LINK, SHOP_CRAWL_IN_SALE_ORDER, UPDATE_ID, PRODUCT_IDS)
     except Exception as e:
         logger.error(f'get unhandled exception {e}, just continue')
         traceback.print_exc()
-    cleanup()
+    close_db()
 
 
 if __name__ == '__main__':
