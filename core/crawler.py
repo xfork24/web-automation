@@ -113,7 +113,7 @@ class Crawler:
             options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
             options.add_argument('--disable-blink-features=AutomationControlled')
             if headless:
-                options.add_argument('--headless')
+                options.add_argument('--headless=new')
             options.add_argument('--disable-gpu')
             driver = webdriver.Chrome(options=options, service=driver_service)
         elif webdriver_type == WebDriverType.SafariDriver:
@@ -1060,7 +1060,7 @@ class Crawler:
                 break
         assert (navbar_root is not None)
         sort_span = self.driver.find_element(By.XPATH,
-                                             '//*[@id="sucai-tu-selector-container"]/div[3]/div[2]/div[3]/div/div[1]/span[3]/span[1]/span[1]/span/input')
+                                             '//*[@id="sucai-tu-selector-container"]/div[3]/div[2]/div[3]/div/div[1]/span[3]/span[1]/span[1]/span')
         self.element_click(sort_span)
         spans = self.driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
         for span in spans:

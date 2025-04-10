@@ -1,7 +1,7 @@
 import {
   parseTaskReason,
   type ProductManageTask,
-  shadowOperationToString,
+  shadowOperationToString, shadowPlatformToString,
   statusToString
 } from '../../(components)/model';
 
@@ -15,6 +15,7 @@ export const load = async () => {
     });
     let body = await response.json();
     body.data.forEach((item: ProductManageTask) => {
+      item.platform_str = shadowPlatformToString(item.platform);
       item.operation_str = shadowOperationToString(item.operation);
       item.status_str = statusToString(item.status);
       item.reason = parseTaskReason(item);

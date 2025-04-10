@@ -75,6 +75,7 @@
           body: JSON.stringify({
             'product_id': row.original.product_id,
             'shop_name': row.original.shop_name,
+            'platform': row.original.platform,
             'operation': row.original.operation,
             'update_id': data.user.name
           })
@@ -200,6 +201,20 @@
           };
         });
         return renderSnippet(statusSnippet, row.getValue('Shop Name'));
+      }
+    },
+    {
+      id: 'Platform',
+      accessorKey: 'platform_str',
+      header: 'Platform',
+      cell: ({row}) => {
+        const statusSnippet = createRawSnippet<[number]>((getData) => {
+          const platform = getData();
+          return {
+            render: () => `<div>${platform}</div>`
+          };
+        });
+        return renderSnippet(statusSnippet, row.getValue('Platform'));
       }
     },
     {

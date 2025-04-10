@@ -204,6 +204,8 @@ export type ProductManageTask = {
   id: string;
   product_id: string;
   shop_name: string;
+  platform: number;
+  platform_str: string;
   operation: number;
   operation_str: string;
   status: number;
@@ -292,6 +294,18 @@ export function shadowStatusToString(status: number) {
     shadow_status = 'OFF_SHELF';
   }
   return shadow_status;
+}
+
+export function shadowPlatformToString(platform: number) {
+  let shadow_platform = '';
+  if (platform === 0) {
+    shadow_platform = 'NONE';
+  } else if (platform === 1) {
+    shadow_platform = 'TAOBAO';
+  } else if (platform === 2) {
+    shadow_platform = 'REDNOTE';
+  }
+  return shadow_platform;
 }
 
 export function shadowOperationToString(status: number) {

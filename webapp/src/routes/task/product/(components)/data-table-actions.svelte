@@ -41,6 +41,7 @@
         body: JSON.stringify({
           'product_id': row.product_id,
           'shop_name': row.shop_name,
+          'platform': row.platform,
           'operation': row.operation,
           'update_id': user.name
         })
