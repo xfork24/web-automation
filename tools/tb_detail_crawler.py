@@ -6,14 +6,14 @@
 from core import *
 
 LOG_FILE_NAME = './logs/tb_detail_crawler.log'
-PRODUCT_IDS = ['750941706597']
+PRODUCT_IDS = ['906338521401']
 UPDATE_ID = 'tb_detail_crawler'
 
 
 def main():
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
-    tb_crawler = Crawler()
+    tb_crawler = Crawler(headless=False)
     tb_crawler.login_taobao()
     for product_id in PRODUCT_IDS:
         try:

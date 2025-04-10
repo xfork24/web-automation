@@ -13,7 +13,7 @@ LOG_FILE_NAME = './logs/tb_search_crawler.log'
 def main():
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
-    tb_crawler = Crawler()
+    tb_crawler = Crawler(headless=False)
     tb_crawler.login_taobao()
     for key in SEARCH_KEYS:
         try:

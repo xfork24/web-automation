@@ -28,9 +28,9 @@ LLM_TASK_BATCH_SIZE = 10
 
 # 几个统计任务的统计标准
 TB_SHOP_REVENUE_TOPN = 10
-TB_SHOP_REVENUE_THRESHOLD = 50000
+TB_SHOP_REVENUE_THRESHOLD = 1000000
 TB_SKU_REVENUE_TOPN = 50
-TB_SKU_REVENUE_THRESHOLD = 10000
+TB_SKU_REVENUE_THRESHOLD = 500000
 
 
 # 对于预定义搜索词，如果一段时间内没有存在的任务，则添加搜索任务
@@ -60,7 +60,7 @@ def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
         ProductInfo.shop_name).order_by(fn.SUM(ProductInfo.estimated_revenue).desc())
     idx = 0
     for pi in pi_query:
-        if idx > top_n and pi.total_revenue < revenue_threshold * 100:
+        if idx > top_n or pi.total_revenue < revenue_threshold * 100:
             break
         idx += 1
         query = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
@@ -88,7 +88,7 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
     pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
     idx = 0
     for pi in pi_query:
-        if idx > top_n and pi.estimated_revenue < revenue_threshold * 100:
+        if idx > top_n or pi.estimated_revenue < revenue_threshold * 100:
             # 我们暂时不分析商品销量历史数据，因为这逻辑上相当于年度均线，且淘宝给出的信息很含糊
             break
         idx += 1
@@ -117,19 +117,21 @@ def handle_error_task(task, update_id):
 
 
 class CrawlTaskRunner:
-    def __init__(self):
+    def __init__(self, headless=True):
         self.logger = get_logger()
-        self.crawler = Crawler()
+        self.crawler = Crawler(headless=headless)
 
-    def login(self):
-        self.crawler.login_taobao()
+    def login(self, user=TB_CRAWL_USER):
+        self.crawler.login_taobao(user)
 
     def run_taobao_crawler_tasks(self, update_id):
         self.run_search_crawler_task(update_id)
         self.generate_crawl_fix_tasks(update_id)
         self.run_shop_search_crawler_task(update_id)
-        self.run_shop_crawler_tasks(update_id)
-        self.analyze_and_add_hot_products(update_id)
+        # 暂时不执行，等待找到好策略
+        # self.run_shop_crawler_tasks(update_id)
+        # 暂时不执行这个，因为选出来的都是VIP充值，旗舰店内容等
+        # self.analyze_and_add_hot_products(update_id)
         self.run_detail_crawler_tasks(update_id)
 
     def run_search_crawler_task(self, update_id):
@@ -190,7 +192,8 @@ class CrawlTaskRunner:
                         shop_link_match = True
                         break
                 if not shop_link_match:
-                    self.logger.info(f'handle shop link issue for shop_name={si.shop_name} with shop_link={si.shop_link}')
+                    self.logger.info(
+                        f'handle shop link issue for shop_name={si.shop_name} with shop_link={si.shop_link}')
                     tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == si.shop_name,
                                                                ShopSearchCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
                         ShopSearchCrawlTask.update_ts.desc())
@@ -238,7 +241,8 @@ class CrawlTaskRunner:
                     tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == pi.product_id,
                                                           LLMAnalyzeTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
                         LLMAnalyzeTask.update_ts.desc())
-                    self.logger.info(f'handle LLM analysis for product_id={pi.product_id}, product_title={pi.product_title}')
+                    self.logger.info(
+                        f'handle LLM analysis for product_id={pi.product_id}, product_title={pi.product_title}')
                     if tasks.count() == 0:
                         add_llm_analyze_task(pi.product_id, pi.product_title, None, update_id, update_role)
 
@@ -333,7 +337,7 @@ class CrawlTaskRunner:
         idx = 0
         for pi in pi_query:
             # 我们暂时不分析商品销量历史数据，因为这逻辑上相当于年度均线，且淘宝给出的信息很含糊
-            if idx > top_n and pi.estimated_revenue < revenue_threshold * 100:
+            if idx > top_n or pi.estimated_revenue < revenue_threshold * 100:
                 break
             # 我们暂时也不处理未经LLM分析，或LLM认为的非虚拟商品，虽然这不一定准确
             additional_properties = json_loads(pi.additional_properties)
@@ -378,7 +382,7 @@ class CrawlTaskRunner:
             update_task_info(task, update_id, TASK_STATUS_RUNNING)
             try:
                 self.logger.info(
-                    f'handling search crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
+                    f'handling detail crawl task id={task.id} with product_id={task.product_id}, product_link={task.product_link}')
                 self.crawler.craw_taobao_detail_page(task.product_id, task.product_link, task.id)
                 self.crawler.download_product_resources(task.product_id, task.id)
             except Exception:
@@ -395,13 +399,13 @@ class CrawlTaskRunner:
 
 
 class ProductManageTaskRunner:
-    def __init__(self):
+    def __init__(self, headless=True):
         self.logger = get_logger()
-        self.crawler = Crawler()
+        self.crawler = Crawler(headless=headless)
 
-    def login(self):
-        self.crawler.login_taobao()
-        self.crawler.login_rednote()
+    def login(self, tb_user=TB_SHOP_USER, rn_user=REDNOTE_SHOP_USER):
+        self.crawler.login_taobao(tb_user)
+        self.crawler.login_rednote(rn_user)
 
     def run_shadow_product_tasks(self, update_id):
         self.analyze_and_add_shadow_products(update_id)

@@ -14,7 +14,7 @@ UPDATE_ID = 'tb_shop_crawler'
 def main():
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
-    tb_crawler = Crawler()
+    tb_crawler = Crawler(headless=False)
     tb_crawler.login_taobao()
     try:
         tb_crawler.craw_taobao_shop_page(SHOP_LINK, SHOP_CRAWL_IN_SALE_ORDER, UPDATE_ID, PRODUCT_IDS)

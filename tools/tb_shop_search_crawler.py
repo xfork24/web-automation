@@ -15,7 +15,7 @@ def main():
     # only products with empty llm_analysis be updated
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
     logger = get_logger()
-    tb_crawler = Crawler()
+    tb_crawler = Crawler(headless=False)
     tb_crawler.login_taobao()
     for shop_name in SHOP_NAMES:
         try:

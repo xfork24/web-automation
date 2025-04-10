@@ -102,7 +102,7 @@ class Crawler:
     def __del__(self):
         self.close_driver()
 
-    def init_webdriver(self, webdriver_type: WebDriverType, headless):
+    def init_webdriver(self, webdriver_type, headless):
         if DEBUG:
             os.chdir(DEBUG_ROOT_DIR)
         driver = None
@@ -211,7 +211,7 @@ class Crawler:
                         self.driver.find_element(By.XPATH, '//*[@id="baxia-dialog-content"]')
                         self.logger.info('slide check needed, just try to bypass it by reinitialize webdriver')
                         self.close_driver()
-                        self.driver = self.init_webdriver(WebDriverType.ChromDriver)
+                        self.driver = self.init_webdriver(WebDriverType.ChromDriver, self.headless)
                         continue
                 except NoSuchElementException:
                     self.logger.info('do not need slide check this time, just continue')
