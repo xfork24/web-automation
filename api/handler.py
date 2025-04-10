@@ -8,11 +8,10 @@ from core.analysis import (
     TASK_CHECK_PERIOD_IN_SECONDS
 )
 
-TASK_STATUS_QUERY_PERIOD = 604800
 DB_QUERY_DEFAULT_LIMIT = 100
-ERROR_CODE_SERVER_ERROR = -1
 ERROR_CODE_CLIENT_ERROR = -1
-ERROR_CODE_NOT_FOUND = -11
+ERROR_CODE_SERVER_ERROR = -2
+ERROR_CODE_NOT_FOUND = -3
 
 api = Flask(__name__)
 
@@ -498,6 +497,9 @@ def create_shadow_product_by_id():
     logger = get_logger()
     payload = request.json
     try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get create_shadow_product_by_id request for without update_id set')
+            return build_client_error_response(f'update_id not set for create_shadow_product_by_id')
         # 这里是创建新的，不是修改，所以只有在不存在的情况下才调用
         product_id = payload.get('product_id')
         ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
@@ -538,6 +540,9 @@ def update_shadow_product(product_id):
     logger = get_logger()
     payload = request.json
     try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get update_shadow_product request for without update_id set')
+            return build_client_error_response(f'update_id not set for update_shadow_product')
         update_shadow_product_info(product_id, payload.get('status'), payload.get('update_id'),
                                    update_shadow_product.__name__,
                                    product_title=payload.get('product_title'), shop_name=payload.get('shop_name'),
@@ -562,7 +567,7 @@ def get_shadow_product_history_by_id(product_id):
             OperationHistory.operation_ts.desc())
         # 可能更改shadow_product_info的方式有：
         # 两个handler函数: create_shadow_product_by_id, update_shadow_product
-        # 分析函数: analyze_and_fix_shadow_products
+        # shadow product状态转换: Crawler.product_manage_ready, Crawler.product_manage_on_shelf
         data = [h.to_json() for h in histories]
         return build_success_response({'data': data})
     except Exception as e:
@@ -673,6 +678,9 @@ def get_hot_product_by_id_and_ts(product_id, create_ts):
 def create_hot_product():
     logger = get_logger()
     try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get create_hot_product request for without update_id set')
+            return build_client_error_response(f'update_id not set for create_hot_product')
         payload = request.json
         add_hot_product(payload.get('product_id'),
                         payload.get('shop_name'),
@@ -836,7 +844,7 @@ def get_all_tasks():
     try:
         data = {}
         now = int(time.time())
-        start_ts = now - TASK_STATUS_QUERY_PERIOD
+        start_ts = now - TASK_CHECK_PERIOD_IN_SECONDS
         if 'update_ts' in request.args.keys():
             param = json_loads(request.args['update_ts'])
             start_ts = int(param['gt']) if 'gt' in param else start_ts
@@ -898,6 +906,9 @@ def get_detail_crawl_task_by_id(task_id):
 def create_detail_crawl_task():
     logger = get_logger()
     try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get create_detail_crawl_task request for without update_id set')
+            return build_client_error_response(f'update_id not set for create_detail_crawl_task')
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == payload.get('product_id'),
@@ -1025,6 +1036,9 @@ def get_shop_crawl_task_by_id(task_id):
 def create_shop_crawl_task():
     logger = get_logger()
     try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get create_shop_crawl_task request for without update_id set')
+            return build_client_error_response(f'update_id not set for create_shop_crawl_task')
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == payload.get('shop_name'),
@@ -1156,6 +1170,9 @@ def get_search_crawl_task_by_id(task_id):
 def create_search_crawl_task():
     logger = get_logger()
     try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get create_search_crawl_task request for without update_id set')
+            return build_client_error_response(f'update_id not set for create_search_crawl_task')
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == payload.get('search_key'),
@@ -1289,6 +1306,9 @@ def get_shop_search_crawl_task_by_id(task_id):
 def create_shop_search_task():
     logger = get_logger()
     try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get create_shop_search_task request for without update_id set')
+            return build_client_error_response(f'update_id not set for create_shop_search_task')
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == payload.get('shop_name'),
@@ -1415,6 +1435,9 @@ def get_llm_analyze_task_by_id(task_id):
 def create_llm_analyze_task():
     logger = get_logger()
     try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get create_llm_analyze_task request for without update_id set')
+            return build_client_error_response(f'update_id not set for create_llm_analyze_task')
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == payload.get('product_id'),
@@ -1542,6 +1565,9 @@ def get_product_manage_task_by_id(task_id):
 def create_product_manage_task():
     logger = get_logger()
     try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get create_product_manage_task request for without update_id set')
+            return build_client_error_response(f'update_id not set for create_product_manage_task')
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         payload = request.json
         tasks = ProductManageTask.select().where(ProductManageTask.product_id == payload.get('product_id'),

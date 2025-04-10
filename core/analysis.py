@@ -14,8 +14,8 @@ TASK_CHECK_PERIOD_IN_SECONDS = 315360000
 # 自动任务的添加去重周期：7天
 TASK_DEDUP_IN_SECONDS = 604800
 
-# hot product 生成去重检查，日更（1天减去5分钟）
-HOT_PRODUCT_DEDUP_IN_SECONDS = 86100
+# hot product 生成去重检查，日更
+HOT_PRODUCT_DEDUP_IN_SECONDS = 86400
 
 # 各任务的等待配置
 SEARCH_CRAWL_IN_SALE_ORDER = False
@@ -103,35 +103,6 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
                                   analyze_and_add_detail_crawl_tasks.__name__)
 
 
-# 这里假设商品相关信息已经抓取并更新到product_info表中了，否则不继续进行
-def analyze_and_add_hot_products(update_id, top_n=TB_SKU_REVENUE_TOPN,
-                                 revenue_threshold=TB_SKU_REVENUE_THRESHOLD):
-    logger = get_logger()
-    ts = int(time.time())
-    pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
-    idx = 0
-    for pi in pi_query:
-        # 我们暂时不分析商品销量历史数据，因为这逻辑上相当于年度均线，且淘宝给出的信息很含糊
-        if idx > top_n and pi.estimated_revenue < revenue_threshold * 100:
-            break
-        # 我们暂时也不处理未经LLM分析，或LLM认为的非虚拟商品，虽然这不一定准确
-        additional_properties = json_loads(pi.additional_properties)
-        if LLM_ANALYSIS_KEY not in additional_properties:
-            continue
-        if not additional_properties[LLM_ANALYSIS_KEY]['digital']:
-            continue
-        idx += 1
-        query = HotProduct.select().where(HotProduct.product_id == pi.product_id,
-                                          HotProduct.create_ts > ts - HOT_PRODUCT_DEDUP_IN_SECONDS).order_by(
-            HotProduct.create_ts).limit(1)
-        if query.count() > 0:
-            logger.info(
-                f'hot product product_id={pi.product_id} already added, just ignore')
-            continue
-        add_hot_product(pi.product_id, pi.shop_name, None, update_id,
-                        analyze_and_add_hot_products.__name__)
-
-
 # 返回是否继续执行这个task
 def handle_error_task(task, update_id):
     ts = int(time.time())
@@ -158,6 +129,7 @@ class CrawlTaskRunner:
         self.generate_crawl_fix_tasks(update_id)
         self.run_shop_search_crawler_task(update_id)
         self.run_shop_crawler_tasks(update_id)
+        self.analyze_and_add_hot_products(update_id)
         self.run_detail_crawler_tasks(update_id)
 
     def run_search_crawler_task(self, update_id):
@@ -204,12 +176,11 @@ class CrawlTaskRunner:
                                  fix_product_sale_by_search=False,
                                  fix_product_sale_by_shop=True,
                                  fix_llm_analysis=True):
-        logger = get_logger()
         update_role = self.generate_crawl_fix_tasks.__name__
         ts = int(time.time())
         # 处理可能的店铺问题
         if fix_shop_title:
-            logger.info('handling shop issues with invalid link ...')
+            self.logger.info('handling shop issues with invalid link ...')
             si_query = ShopInfo.select().where(ShopInfo.update_ts > ts - TASK_CHECK_PERIOD_IN_SECONDS).order_by(
                 ShopInfo.update_ts)
             for si in si_query:
@@ -219,13 +190,13 @@ class CrawlTaskRunner:
                         shop_link_match = True
                         break
                 if not shop_link_match:
-                    logger.info(f'handle shop link issue for shop_name={si.shop_name} with shop_link={si.shop_link}')
+                    self.logger.info(f'handle shop link issue for shop_name={si.shop_name} with shop_link={si.shop_link}')
                     tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == si.shop_name,
                                                                ShopSearchCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
                         ShopSearchCrawlTask.update_ts.desc())
                     if tasks.count() == 0:
                         add_shop_search_crawl_task(si.shop_name, None, update_id, update_role)
-        logger.info('handling product issues with display_sale==-1 or estimated_revenue==-1 ...')
+        self.logger.info('handling product issues with display_sale==-1 or estimated_revenue==-1 ...')
         pi_query = ProductInfo.select().where(ProductInfo.update_ts > ts - TASK_CHECK_PERIOD_IN_SECONDS).order_by(
             ProductInfo.update_ts)
         for pi in pi_query:
@@ -233,7 +204,7 @@ class CrawlTaskRunner:
             if pi.display_sale == -1 or pi.estimated_revenue == -1:
                 # 添加搜索任务
                 if fix_product_sale and fix_product_sale_by_search:
-                    logger.info(f'handle display_sale issue by search for product_id={pi.product_id}')
+                    self.logger.info(f'handle display_sale issue by search for product_id={pi.product_id}')
                     # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
                     tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == pi.product_title,
                                                            SearchCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
@@ -248,7 +219,7 @@ class CrawlTaskRunner:
                         add_search_crawl_task(pi.product_title, 1, [pi.product_id], None, update_id, update_role)
                 # 同时也添加店铺搜索任务
                 if fix_product_sale and fix_product_sale_by_shop:
-                    logger.info(f'handle display_sale issue by shop for product_id={pi.product_id}')
+                    self.logger.info(f'handle display_sale issue by shop for product_id={pi.product_id}')
                     # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
                     tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
                                                          ShopCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
@@ -267,7 +238,7 @@ class CrawlTaskRunner:
                     tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == pi.product_id,
                                                           LLMAnalyzeTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
                         LLMAnalyzeTask.update_ts.desc())
-                    logger.info(f'handle LLM analysis for product_id={pi.product_id}, product_title={pi.product_title}')
+                    self.logger.info(f'handle LLM analysis for product_id={pi.product_id}, product_title={pi.product_title}')
                     if tasks.count() == 0:
                         add_llm_analyze_task(pi.product_id, pi.product_title, None, update_id, update_role)
 
@@ -354,6 +325,45 @@ class CrawlTaskRunner:
             time.sleep(TASK_EXECUTE_GAP_IN_SECONDS)
         return
 
+    # 这里假设商品相关信息已经抓取并更新到product_info表中了，否则不继续进行
+    def analyze_and_add_hot_products(self, update_id, top_n=TB_SKU_REVENUE_TOPN,
+                                     revenue_threshold=TB_SKU_REVENUE_THRESHOLD):
+        ts = int(time.time())
+        pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
+        idx = 0
+        for pi in pi_query:
+            # 我们暂时不分析商品销量历史数据，因为这逻辑上相当于年度均线，且淘宝给出的信息很含糊
+            if idx > top_n and pi.estimated_revenue < revenue_threshold * 100:
+                break
+            # 我们暂时也不处理未经LLM分析，或LLM认为的非虚拟商品，虽然这不一定准确
+            additional_properties = json_loads(pi.additional_properties)
+            if LLM_ANALYSIS_KEY not in additional_properties:
+                continue
+            if not additional_properties[LLM_ANALYSIS_KEY]['digital']:
+                continue
+            idx += 1
+            hp_query = HotProduct.select().where(HotProduct.product_id == pi.product_id,
+                                                 HotProduct.create_ts > ts - HOT_PRODUCT_DEDUP_IN_SECONDS).order_by(
+                HotProduct.create_ts)
+            if hp_query.count() > 0:
+                self.logger.info(
+                    f'hot product product_id={pi.product_id} already added, just ignore')
+                continue
+            else:
+                add_hot_product(pi.product_id, pi.shop_name, None, update_id,
+                                self.analyze_and_add_hot_products.__name__)
+            dct_query = DetailCrawlTask.select().where(DetailCrawlTask.product_id == pi.product_id,
+                                                       DetailCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
+                DetailCrawlTask.update_ts)
+            if dct_query.count() > 0:
+                self.logger.info(
+                    f'detail crawl task for product_id={pi.product_id} already added, just ignore')
+                continue
+            else:
+                # 同时添加detail_crawl_task
+                add_detail_crawl_task(pi.product_id, pi.product_link, None, update_id,
+                                      self.analyze_and_add_hot_products.__name__)
+
     def run_detail_crawler_tasks(self, update_id):
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         self.logger.info(f'run detail crawler tasks with start_ts={start_ts}')
@@ -400,7 +410,37 @@ class ProductManageTaskRunner:
 
     def analyze_and_add_shadow_products(self, update_id):
         # 按一定标准自动生成shadow_products
-        pass
+        # 目前我们直接照搬最近7天中HotProduct所有上榜的商品
+        ts = int(time.time())
+        product_id_set = set()
+        hp_query = HotProduct.select().where(HotProduct.create_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
+            HotProduct.create_ts)
+        for hp in hp_query:
+            if hp.product_id in product_id_set:
+                continue
+            product_id_set.add(hp.product_id)
+            spi = ShadowProductInfo.select().where(ShadowProductInfo.product_id == hp.product_id)
+            if spi.count() > 0:
+                self.logger.info(f'product_id={hp.product_id} already added to shadow_product_info, just continue')
+                continue
+            else:
+                p = ProductInfo.get(ProductInfo.product_id == hp.product_id)
+                additional_properties = json_loads(p.additional_properties)
+                if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
+                    title_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(p.title_imgs)))]
+                    page_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(p.page_imgs)))]
+                    offer_details = json_loads(p.offer_details)
+                    status = SHADOW_PRODUCT_STATUS_READY
+                else:
+                    title_imgs = []
+                    page_imgs = []
+                    offer_details = {}
+                    status = SHADOW_PRODUCT_STATUS_NEW
+                update_shadow_product_info(p.product_id, status, update_id,
+                                           self.analyze_and_add_shadow_products.__name__, SHADOW_PRODUCT_DEFAULT_ID,
+                                           p.product_title, p.shop_name, p.price_unit, p.display_price,
+                                           SHADOW_PRODUCT_DEFAULT_INVENTORY_SIZE,
+                                           title_imgs, page_imgs, offer_details, additional_properties)
 
     # 分析并自动添加shadow products, 同时生成detail_crawl_task和llm_analyze_task
     # 然后检查并更新所有状态为NEW的shadow_product
@@ -448,9 +488,8 @@ class ProductManageTaskRunner:
                 continue
 
     def run_product_manage_tasks(self, update_id):
-        logger = get_logger()
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
-        logger.info(f'run product manage tasks with start_ts={start_ts}')
+        self.logger.info(f'run product manage tasks with start_ts={start_ts}')
         tasks = ProductManageTask.select().where(ProductManageTask.status != TASK_STATUS_DONE,
                                                  ProductManageTask.status != TASK_STATUS_ARCHIVED,
                                                  ProductManageTask.update_ts > start_ts).order_by(
@@ -460,7 +499,7 @@ class ProductManageTaskRunner:
             task.try_count = task.try_count + 1
             update_task_info(task, update_id, TASK_STATUS_RUNNING)
             try:
-                logger.info(
+                self.logger.info(
                     f'handling product manage task id={task.id} with product_id={task.product_id}, shop_name={task.shop_name}, operation={task.operation}')
                 success = False
                 if task.operation == PRODUCT_MANAGE_OPERATION_READY:
@@ -478,7 +517,7 @@ class ProductManageTaskRunner:
                     success = self.crawler.product_manage_off_shelf(task.product_id, task.shop_name, task.platform,
                                                                     task.id)
             except Exception:
-                logger.error(
+                self.logger.error(
                     f'get unhandled exception while handling product manage task id={task.id} with product_id={task.product_id}, shop_name={task.shop_name}, operation={task.operation}, just continue')
                 traceback.print_exc()
                 update_task_info(task, update_id, TASK_STATUS_ERROR,

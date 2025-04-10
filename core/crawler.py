@@ -89,92 +89,6 @@ class WebDriverType(Enum):
     SafariDriver = 2
 
 
-def parse_product_id_from_post_onshelf_link(link):
-    result = urlparse(link)
-    qs = parse_qs(result.query)
-    if 'primaryId' in qs and len(qs['primaryId']) == 1:
-        return qs['primaryId'][0]
-    else:
-        return None
-
-
-def parse_product_id_from_product_link(link):
-    result = urlparse(link)
-    qs = parse_qs(result.query)
-    if 'id' in qs and len(qs['id']) == 1:
-        return qs['id'][0]
-    else:
-        return None
-
-
-def parse_product_id_from_item(item_id):
-    assert (item_id is not None and item_id.rfind('_') != -1)
-    product_id = item_id[item_id.rfind('_') + 1:]
-    assert (len(product_id) > 0)
-    return product_id
-
-
-def parse_sku_id_from_product_link(link):
-    result = urlparse(link)
-    qs = parse_qs(result.query)
-    if 'skuId' in qs and len(qs['skuId']) == 1:
-        return qs['skuId'][0]
-    else:
-        return None
-
-
-def parse_product_title(title):
-    return title.replace('̷', '')
-
-
-def parse_sale_in_search(sale):
-    logger = get_logger()
-    assert (len(sale) > 3)
-    desc = sale[-3:]
-    if desc != '人付款' and desc != '人收货':
-        logger.info(f'parse_sale_in_search get unexpected description, sale={sale}, desc={desc}, just return -1')
-        return -1
-    sale_num = sale[:-3]
-    if sale_num[-1] == '+':
-        sale_num = sale_num[:-1]
-    if sale_num[-1] == '万':
-        sale_num = sale_num[:-1] + '0000'
-    return int(sale_num)
-
-
-def parse_sale_in_detail(sale):
-    logger = get_logger()
-    idx = sale.rfind('已售')
-    if idx == -1:
-        logger.info(f'parse_sale_in_detail get unexpected sale={sale}, return -1')
-        return -1
-    sale = sale[idx:]
-    assert (len(sale) > 2)
-    sale_num = sale[2:].strip()
-    if sale_num[-1] == '+':
-        sale_num = sale_num[:-1]
-    if sale_num[-1] == '万':
-        sale_num = sale_num[:-1] + '0000'
-    return int(sale_num)
-
-
-def is_valid_image_link(link):
-    if link[link.rfind('/') + 1:] == 's.gif':
-        return False
-    elif re.match(DETAIL_IMG_LINK_VALIDATE_RE_EXP, link):
-        return True
-
-
-def parse_price_unit(unit):
-    if unit == '¥':
-        return 'CNY'
-    return unit
-
-
-def parse_price(price):
-    return int(float(price) * 100)
-
-
 class Crawler:
     def __init__(self, webdriver_type=WebDriverType.ChromDriver, headless=True, debug=True):
         self.logger = get_logger()
@@ -392,7 +306,7 @@ class Crawler:
     def parse_taobao_search_result(self, search_result, ids_set, update_id, target_product_ids=None):
         try:
             self.logger.info(f'parsing search result: {search_result.accessible_name}')
-            product_id = parse_product_id_from_item(search_result.get_attribute('id'))
+            product_id = self.parse_product_id_from_item(search_result.get_attribute('id'))
             target_product_ids = target_product_ids or []  # None表示不限制target product id
             if len(target_product_ids) == 0 or product_id in target_product_ids:
                 self.logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
@@ -400,7 +314,7 @@ class Crawler:
                 self.logger.info(
                     f'parsed product_id={product_id} not in target_product_ids={target_product_ids}, crawl it too')
             product_link = search_result.get_attribute('href')
-            sku_id = parse_sku_id_from_product_link(product_link) or '0'
+            sku_id = self.parse_sku_id_from_product_link(product_link) or '0'
             product_items = search_result.find_elements(By.XPATH, 'div/div')
             sku_summary, shop_summary = None, None
             for item in product_items:
@@ -425,12 +339,12 @@ class Crawler:
                 elif re.match(SEARCH_IMAGE_WRAPPER_RE_EXP, cls_name):
                     image_wrapper = item
             assert (sku_title_wrapper is not None and price_wrapper is not None and image_wrapper is not None)
-            product_title = parse_product_title(sku_title_wrapper.find_element(By.XPATH, 'div/span').text)
+            product_title = self.parse_product_title(sku_title_wrapper.find_element(By.XPATH, 'div/span').text)
             if len(product_title) == 0:
                 title_spans = sku_title_wrapper.find_elements(By.XPATH, 'div/span/span')
                 if len(title_spans) > 0:
                     for title_span in title_spans:
-                        product_title += parse_product_title(title_span.text)
+                        product_title += self.parse_product_title(title_span.text)
             product_cover = image_wrapper.find_element(By.XPATH, 'img').get_attribute('src')
             price_unit_span, display_sale_span = None, None
             for span in price_wrapper.find_elements(By.XPATH, 'div/span'):
@@ -442,11 +356,11 @@ class Crawler:
                 elif re.match(SEARCH_SKU_SALE_RE_EXP, cls_name):
                     display_sale_span = span
             assert (price_unit_span is not None and display_sale_span is not None)
-            price_unit = parse_price_unit(price_unit_span.text)
-            display_sale = parse_sale_in_search(display_sale_span.text)
+            price_unit = self.parse_price_unit(price_unit_span.text)
+            display_sale = self.parse_sale_in_search(display_sale_span.text)
             price_divs = price_wrapper.find_elements(By.XPATH, 'div/div/div')
             assert (len(price_divs) == 2)
-            display_price = parse_price('%s%s' % (price_divs[0].text, price_divs[1].text))
+            display_price = self.parse_price('%s%s' % (price_divs[0].text, price_divs[1].text))
             shop_link = shop_summary.find_element(By.XPATH, 'div/a').get_attribute('href') or ''
             shop_name = shop_summary.find_elements(By.XPATH, 'div/a/div/span')[-1].text
             if product_id not in ids_set:
@@ -600,7 +514,7 @@ class Crawler:
     def craw_taobao_shop_sku(self, shop_sku_div, shop_name, shop_link, update_id, target_product_ids=None):
         target_product_ids = target_product_ids or []
         product_link = shop_sku_div.find_element(By.XPATH, 'a').get_attribute('href')
-        product_id = parse_product_id_from_product_link(product_link)
+        product_id = self.parse_product_id_from_product_link(product_link)
         if len(target_product_ids) == 0 or product_id in target_product_ids:
             self.logger.info(f'parsed product_id={product_id} in target_product_ids={target_product_ids}')
         else:
@@ -612,7 +526,7 @@ class Crawler:
             product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
             if product_cover != SHOP_PRODUCT_COVER_PLACEHOLDER_LINK:
                 break
-        sku_id = parse_sku_id_from_product_link(product_link) or ''
+        sku_id = self.parse_sku_id_from_product_link(product_link) or ''
         divs = shop_sku_div.find_elements(By.XPATH, './/div')
         title_div, price_div, sale_div = None, None, None
         for div in divs:
@@ -626,12 +540,12 @@ class Crawler:
             elif re.match(SHOP_SKU_CARD_SALE_RE_EXP, cls_name):
                 sale_div = div
         assert (title_div is not None and price_div is not None and sale_div is not None)
-        product_title = parse_product_title(title_div.text)
+        product_title = self.parse_product_title(title_div.text)
         price_spans = price_div.find_elements(By.XPATH, 'span')
         assert (len(price_spans) == 2)
-        price_unit = parse_price_unit(price_spans[0].text)
+        price_unit = self.parse_price_unit(price_spans[0].text)
         display_price = self.parse_price_span(price_spans[1], product_id)
-        product_sale = parse_sale_in_search(sale_div.text)
+        product_sale = self.parse_sale_in_search(sale_div.text)
         # update product_info and product_sales table
         self.save_taobao_shop_sku_result(product_id, sku_id, product_title, product_link, product_cover,
                                          shop_name, shop_link,
@@ -640,19 +554,18 @@ class Crawler:
     def save_taobao_shop_sku_result(self, product_id, sku_id, product_title, product_link, product_cover,
                                     shop_name, shop_link,
                                     price_unit, display_price, display_sale, update_id):
-        logger = get_logger()
-        logger.info(f'save_taobao_shop_sku_result parsed record:\n'
-                    f'\t\tproduct_id={product_id}\n'
-                    f'\t\tsku_id={sku_id}\n'
-                    f'\t\tproduct_title={product_title}\n'
-                    f'\t\tproduct_link={product_link}\n'
-                    f'\t\tproduct_cover={product_cover}\n'
-                    f'\t\tshop_name={shop_name}\n'
-                    f'\t\tshop_link={shop_link}\n'
-                    f'\t\tprice_unit={price_unit}\n'
-                    f'\t\tdisplay_price={display_price}\n'
-                    f'\t\tdisplay_sale={display_sale}\n'
-                    f'\t\tupdate_id={update_id}\n')
+        self.logger.info(f'save_taobao_shop_sku_result parsed record:\n'
+                         f'\t\tproduct_id={product_id}\n'
+                         f'\t\tsku_id={sku_id}\n'
+                         f'\t\tproduct_title={product_title}\n'
+                         f'\t\tproduct_link={product_link}\n'
+                         f'\t\tproduct_cover={product_cover}\n'
+                         f'\t\tshop_name={shop_name}\n'
+                         f'\t\tshop_link={shop_link}\n'
+                         f'\t\tprice_unit={price_unit}\n'
+                         f'\t\tdisplay_price={display_price}\n'
+                         f'\t\tdisplay_sale={display_sale}\n'
+                         f'\t\tupdate_id={update_id}\n')
         update_role = self.save_taobao_shop_sku_result.__name__
         update_product_info(product_id, update_id, update_role,
                             sku_id, product_title, product_link, product_cover,
@@ -756,13 +669,13 @@ class Crawler:
         assert (title_image_div is not None)
         assert (page_image_v8_div is not None or page_image_v6_div is not None)
         # parse product title and shop info
-        sku_id = parse_sku_id_from_product_link(product_link) or '0'
-        product_title = parse_product_title(title_div.find_element(By.XPATH, 'h1').text)
+        sku_id = self.parse_sku_id_from_product_link(product_link) or '0'
+        product_title = self.parse_product_title(title_div.find_element(By.XPATH, 'h1').text)
         shop_info_inner = shop_info_div.find_element(By.XPATH, 'a')
         shop_name = shop_info_inner.find_element(By.XPATH, 'div/div/span').text
         shop_link = shop_info_inner.get_attribute('href')
         # parse product sale
-        display_sale = parse_sale_in_detail(display_sale_div.text) if display_sale_div is not None else -1
+        display_sale = self.parse_sale_in_detail(display_sale_div.text) if display_sale_div is not None else -1
         # parse product offer items
         offer_details, price_unit, lowest_price = self.craw_taobao_detail_offer_details(offer_items_divs_wrapper,
                                                                                         price_div)
@@ -829,11 +742,11 @@ class Crawler:
                 # we only get pic links and ignore other format
                 try:
                     data_src = main_img.find_element(By.XPATH, 'img').get_attribute('data-src')
-                    if data_src is not None and is_valid_image_link(data_src):
+                    if data_src is not None and self.is_valid_image_link(data_src):
                         main_images.append(data_src)
                     else:
                         src = main_img.find_element(By.XPATH, 'img').get_attribute('src')
-                        if is_valid_image_link(src):
+                        if self.is_valid_image_link(src):
                             main_images.append(src)
                 except NoSuchElementException:
                     self.logger.info('detail page material is not an image, ignore')
@@ -845,7 +758,7 @@ class Crawler:
                     img_elements = main_img.find_elements(By.XPATH, 'p/img')
                     for img_element in img_elements:
                         src = img_element.get_attribute('src')
-                        if is_valid_image_link(src):
+                        if self.is_valid_image_link(src):
                             main_images.append(src)
                 except NoSuchElementException:
                     self.logger.info('detail page material is not an image, ignore')
@@ -858,7 +771,7 @@ class Crawler:
             self.scroll_window_to_element(img_element)  # the resource is lazy loaded
         for img_element in page_image_v6_div.find_elements(By.XPATH, 'div/div/img'):
             src = img_element.get_attribute('src')
-            if is_valid_image_link(src):
+            if self.is_valid_image_link(src):
                 main_images.append(src)
         self.logger.info(f'get main image list: {main_images}')
         return main_images
@@ -898,9 +811,9 @@ class Crawler:
                 elif re.match(DETAIL_PRICE_VAL_RE_EXP, cls_name):
                     price_val_span = price_span
             assert (price_unit_span is not None and price_val_span is not None)
-            price_unit = parse_price_unit(price_unit_span.text)
+            price_unit = self.parse_price_unit(price_unit_span.text)
             offer.append(price_unit)
-            price_val = parse_price(price_val_span.text)
+            price_val = self.parse_price(price_val_span.text)
             if price_val < lowest_price:
                 lowest_price = price_val
             offer.append(price_val)
@@ -1182,7 +1095,7 @@ class Crawler:
         if platform & PRODUCT_MANAGE_PLATFORM_TAOBAO:
             self.handle_taobao_on_shelf(product_id, shop_name, update_id)
             # 获取上架后的product_id
-            shadow_id = parse_product_id_from_post_onshelf_link(self.driver.current_url)
+            shadow_id = self.parse_product_id_from_post_onshelf_link(self.driver.current_url)
             assert (shadow_id is not None)
             update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
                                        self.product_manage_on_shelf.__name__, shadow_id=shadow_id)
@@ -1200,3 +1113,78 @@ class Crawler:
 
     def product_manage_off_shelf(self, shadow_id, shop_name, platform, update_id):
         pass
+
+    def parse_product_id_from_post_onshelf_link(self, link):
+        result = urlparse(link)
+        qs = parse_qs(result.query)
+        if 'primaryId' in qs and len(qs['primaryId']) == 1:
+            return qs['primaryId'][0]
+        else:
+            return None
+
+    def parse_product_id_from_product_link(self, link):
+        result = urlparse(link)
+        qs = parse_qs(result.query)
+        if 'id' in qs and len(qs['id']) == 1:
+            return qs['id'][0]
+        else:
+            return None
+
+    def parse_product_id_from_item(self, item_id):
+        assert (item_id is not None and item_id.rfind('_') != -1)
+        product_id = item_id[item_id.rfind('_') + 1:]
+        assert (len(product_id) > 0)
+        return product_id
+
+    def parse_sku_id_from_product_link(self, link):
+        result = urlparse(link)
+        qs = parse_qs(result.query)
+        if 'skuId' in qs and len(qs['skuId']) == 1:
+            return qs['skuId'][0]
+        else:
+            return None
+
+    def parse_product_title(self, title):
+        return title.replace('̷', '')
+
+    def parse_sale_in_search(self, sale):
+        assert (len(sale) > 3)
+        desc = sale[-3:]
+        if desc != '人付款' and desc != '人收货':
+            self.logger.info(
+                f'parse_sale_in_search get unexpected description, sale={sale}, desc={desc}, just return -1')
+            return -1
+        sale_num = sale[:-3]
+        if sale_num[-1] == '+':
+            sale_num = sale_num[:-1]
+        if sale_num[-1] == '万':
+            sale_num = sale_num[:-1] + '0000'
+        return int(sale_num)
+
+    def parse_sale_in_detail(self, sale):
+        idx = sale.rfind('已售')
+        if idx == -1:
+            self.logger.info(f'parse_sale_in_detail get unexpected sale={sale}, return -1')
+            return -1
+        sale = sale[idx:]
+        assert (len(sale) > 2)
+        sale_num = sale[2:].strip()
+        if sale_num[-1] == '+':
+            sale_num = sale_num[:-1]
+        if sale_num[-1] == '万':
+            sale_num = sale_num[:-1] + '0000'
+        return int(sale_num)
+
+    def is_valid_image_link(self, link):
+        if link[link.rfind('/') + 1:] == 's.gif':
+            return False
+        elif re.match(DETAIL_IMG_LINK_VALIDATE_RE_EXP, link):
+            return True
+
+    def parse_price_unit(self, unit):
+        if unit == '¥':
+            return 'CNY'
+        return unit
+
+    def parse_price(self, price):
+        return int(float(price) * 100)
