@@ -1,6 +1,7 @@
 # coding: utf-8
 # !./bin/python
 
+import math
 import sys
 import logging
 import easyocr
@@ -38,6 +39,12 @@ def json_loads(content):
 
 def json_diff(a, b):
     return diff(a, b, marshal=True)
+
+
+def resize_image(file_path):
+    img = Image.open(file_path)
+    ratio = max(1, math.ceil(800 / img.size[0]), math.ceil(800 / img.size[1]))
+    img.resize((img.size[0] * ratio, img.size[1] * ratio)).save(file_path)
 
 
 class OcrParser:

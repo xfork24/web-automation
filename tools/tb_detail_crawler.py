@@ -6,7 +6,7 @@
 from core import *
 
 LOG_FILE_NAME = './logs/tb_detail_crawler.log'
-PRODUCT_IDS = ['906338521401']
+PRODUCT_IDS = ['903917027005']
 UPDATE_ID = 'tb_detail_crawler'
 
 

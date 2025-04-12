@@ -252,7 +252,23 @@ class Crawler:
         self.set_window_size()
 
     def login_rednote(self, user=REDNOTE_SHOP_USER):
-        pass
+        self.driver.get(REDNOTE_LOGIN_PAGE)
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        tab_div = self.driver.find_element(By.CLASS_NAME, 'beer-login-container')
+        account_div = tab_div.find_element(By.XPATH, 'div/div/div[1]/div[2]/div[1]')
+        self.element_click(account_div)
+        login_form = self.driver.find_element(By.ID, 'login-form')
+        login_inputs = login_form.find_elements(By.XPATH, 'div/div/input')
+        assert (len(login_inputs) == 2)
+        email_input, password_input = login_inputs
+        email_input.clear()
+        email_input.send_keys(user)
+        password_input.clear()
+        password_input.send_keys(REDNOTE_USERS[user])
+        btns = self.driver.find_elements(By.XPATH, '//button')
+        assert (len(btns) == 1)
+        btns[0].click()
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
 
     def crawl_taobao_search_results(self, search_key, num_of_pages, sale_order, update_id, target_product_ids=None):
         self.logger.info(
@@ -910,7 +926,9 @@ class Crawler:
         for title_img in title_imgs:
             try:
                 idx += 1
-                self.download_product_image(title_img, f'{product_root_dir}/title_images/{idx}.png')
+                file_path = f'{product_root_dir}/title_images/{idx}.png'
+                self.download_product_image(title_img, file_path)
+                resize_image(file_path)
             except Exception:
                 self.logger.error(f'get unhandled exception while get page image link={title_img}, arise the exception')
                 traceback.print_exc()
@@ -925,7 +943,9 @@ class Crawler:
         for page_img in page_imgs:
             try:
                 idx += 1
-                self.download_product_image(page_img, f'{product_root_dir}/page_images/{idx}.png')
+                file_path = f'{product_root_dir}/page_images/{idx}.png'
+                self.download_product_image(page_img, file_path)
+                resize_image(file_path)
             except Exception:
                 self.logger.error(f'get unhandled exception while get page image link={page_img}, arise the exception')
                 traceback.print_exc()
@@ -969,8 +989,7 @@ class Crawler:
             self.logger.info(f'shadow product_id={product_id}, shop_name={shop_name} is not in NEW status, just ignore')
             return True
 
-    def handle_taobao_on_shelf(self, product_id, shop_name, update_id):
-        product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+    def handle_taobao_on_shelf(self, product, shop_name, update_id):
         self.driver.get(TB_ONSHELF_PAGE)
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
         # product title
@@ -1026,7 +1045,7 @@ class Crawler:
         self.element_click(title_img_upload_div, CRAWL_PAGE_WAIT_IN_SECONDS)
         ti_iframe = self.driver.find_element(By.XPATH, '//*[@id="mainImagesGroup"]')
         self.switch_to_frame(ti_iframe)
-        self.handle_iframe_select_images(f'{resource_root}/title_images')
+        self.handle_taobao_select_images(f'{resource_root}/title_images')
         self.switch_to_default()
         # page images
         self.scroll_window_to_element(self.driver.find_element(By.ID, 'struct-guideMaterial'))
@@ -1035,7 +1054,7 @@ class Crawler:
         frame_div = self.driver.find_element(By.CLASS_NAME, 'media-img-plug')
         pi_iframe = frame_div.find_element(By.XPATH, 'iframe')
         self.switch_to_frame(pi_iframe)
-        self.handle_iframe_select_images(f'{resource_root}/page_images', True)
+        self.handle_taobao_select_images(f'{resource_root}/page_images', True)
         self.switch_to_default()
         # onshelf time
         self.scroll_window_to_element(self.driver.find_element(By.ID, 'post-sale-service-card'))
@@ -1045,10 +1064,10 @@ class Crawler:
         # submit onshelf
         submit_btn = self.driver.find_element(By.XPATH, '//*[@id="struct-buttons"]/button')
         self.element_click(submit_btn)
-        self.logger.info(f'onshelf product_id={product_id} to taobao successfully')
+        self.logger.info(f'onshelf product_id={product.product_id} to taobao successfully')
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
 
-    def handle_iframe_select_images(self, path, confirm=False):
+    def handle_taobao_select_images(self, path, confirm=False):
         navbar_root = None
         divs = self.driver.find_elements(By.XPATH, '//div')
         for div in divs:
@@ -1088,19 +1107,125 @@ class Crawler:
                                                    '//*[@id="sucai-tu-selector-container"]/div[4]/div[3]/button')
             self.element_click(confirm_btn)
 
-    def handle_rednote_on_shelf(self, product_id, shop_name, update_id):
-        pass
+    def handle_rednote_on_shelf(self, product, shop_name, update_id):
+        self.driver.get(REDNOTE_ONSHELF_PAGE)
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        # product title
+        title_input = self.driver.find_element(By.XPATH, '//*[@id="anchor-cell-itemName"]/div[2]/div[1]/div/div/input')
+        title_input.clear()
+        title_input.send_keys(product.product_title)
+        # title images
+        additional_properties = json_loads(product.additional_properties)
+        resource_root = additional_properties[RESOURCE_ROOT_KEY][1:]
+        title_img_div = self.driver.find_element(By.CLASS_NAME, 'upload-list')
+        self.element_click(title_img_div)
+        self.handle_rednote_select_images(f'{resource_root}/title_images')
+        # category
+        recent_cat = self.driver.find_element(By.CLASS_NAME, 'recent')
+        cat_spans = recent_cat.find_elements(By.XPATH, 'span')
+        assert (len(cat_spans) == 2)
+        cat_spans[1].click()
+        # next page
+        action_div = self.driver.find_element(By.CLASS_NAME, 'action-bar')
+        action_divs = action_div.find_elements(By.XPATH, 'div')
+        assert (len(action_divs) == 2)
+        next_btn = action_divs[1].find_element(By.XPATH, 'span/button')
+        self.element_click(next_btn, sleep=CRAWL_PAGE_WAIT_IN_SECONDS)
+        # main images
+        main_img_div = self.driver.find_element(By.XPATH,
+                                                '//*[@id="anchor-图文信息"]/div[2]/div[3]/div[1]/div[2]/div/div/div')
+        self.element_click(main_img_div)
+        self.handle_rednote_select_images(f'{resource_root}/page_images')
+        # transport option
+        transport_template_div = self.driver.find_element(By.XPATH,
+                                                          '//*[@id="anchor-cell-物流模板"]/div[2]/div/div[2]/div[1]/div/div/div[1]/div[1]')
+        assert (transport_template_div.text.find('虚拟商品无需发货') != -1)
+        # delivery
+        delivery_mode = self.driver.find_element(By.XPATH, '//*[@id="anchor-cell-发货时间"]/div[2]/div[1]/span/div[1]')
+        self.element_click(delivery_mode)
+        delivery_option = self.driver.find_element(By.XPATH,
+                                                   '//*[@id="anchor-cell-发货时间"]/div[2]/div[2]/div[2]/span/div[2]/div')
+        self.element_click(delivery_option)
+        # price & inventory
+        dtable_body = self.driver.find_elements(By.CLASS_NAME, 'd-table__body')
+        assert (len(dtable_body) == 1)
+        tds = dtable_body[0].find_elements(By.XPATH, 'tr/td')
+        assert (len(tds) == 7)
+        price_input = tds[2].find_element(By.XPATH, 'div/div/div/div[1]/input')
+        price_input.clear()
+        price_input.send_keys(product.price / 100)
+        inventory_input = tds[4].find_element(By.XPATH, 'div/div/div/div[1]/input')
+        inventory_input.clear()
+        inventory_input.send_keys(product.inventory)
+        # logistic template
+        logistic_template = self.driver.find_element(By.XPATH,
+                                                     '//*[@id="anchor-cell-shippingTemplateId"]/div[2]/div/div/div/div/div[1]/div[1]')
+        assert (logistic_template.text.find('系统默认-非偏远地区包邮模版') != -1)
+        # submit product
+        submit_btn = self.driver.find_element(By.XPATH,
+                                              '//*[@id="ark-app-itemark-mount-container"]/div[2]/div[2]/div/button[2]')
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)  # 不等待下面一行有概率执行不成功
+        self.element_click(submit_btn)
+        self.logger.info(f'onshelf product_id={product.product_id} to rednote successfully')
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+
+    def handle_rednote_select_images(self, path):
+        navbar_roots = self.driver.find_elements(By.CLASS_NAME, 'd-tree')
+        assert (len(navbar_roots) == 1)
+        divs = navbar_roots[0].find_elements(By.XPATH, 'div/div/div')
+        assert (len(divs) == 2)
+        navbar_root = divs[1]
+        # sort by file name asc
+        drawer_main_right_div = self.driver.find_element(By.CLASS_NAME, 'drawer-main-right')
+        sort_div = drawer_main_right_div.find_element(By.XPATH, 'div[1]/div[1]/div[2]/div')
+        self.element_click(sort_div)
+        sort_options = self.driver.find_elements(By.CLASS_NAME, 'd-option-name')
+        for sort_option in sort_options:
+            span = sort_option.find_element(By.XPATH, 'span')
+            if span.text.find('按文件名称升序') != -1:
+                self.element_click(span)
+        # locate image folder and find images
+        path_list = path.split('/')
+        parent_div = navbar_root
+        for token in path_list:
+            child_div = None
+            for child in parent_div.find_elements(By.XPATH, 'div'):
+                child_divs = child.find_elements(By.XPATH, 'div')
+                assert (len(child_divs) == 2)
+                spans = child_divs[0].find_elements(By.XPATH, 'span')
+                assert (len(spans) == 2 or len(spans) == 3)
+                name_span = spans[len(spans) - 1].find_element(By.XPATH, 'span/span')
+                if name_span.text.find(token) != -1:
+                    node = child_divs[1]
+                    style = node.get_attribute('style')
+                    if style.find('display: none;') != -1:
+                        self.element_click(name_span)
+                    child_div = node
+                    break
+            assert (child_div is not None)
+            parent_div = child_div
+        image_divs = self.driver.find_elements(By.CLASS_NAME, 'material-image-card')
+        [self.element_click(image_div) for image_div in image_divs]
+        # confirm button
+        drawer_footers = self.driver.find_elements(By.CLASS_NAME, 'd-drawer-footer')
+        assert (len(drawer_footers) == 1)
+        footer_btns = drawer_footers[0].find_elements(By.XPATH, './/button')
+        for btn in footer_btns:
+            if btn.find_element(By.XPATH, 'div/span').text.find('确认') != -1:
+                self.element_click(btn)
+                break
 
     def product_manage_on_shelf(self, product_id, shop_name, platform, update_id):
+        product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         if platform & PRODUCT_MANAGE_PLATFORM_TAOBAO:
-            self.handle_taobao_on_shelf(product_id, shop_name, update_id)
+            self.handle_taobao_on_shelf(product, shop_name, update_id)
             # 获取上架后的product_id
             shadow_id = self.parse_product_id_from_post_onshelf_link(self.driver.current_url)
             assert (shadow_id is not None)
             update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
                                        self.product_manage_on_shelf.__name__, shadow_id=shadow_id)
         if platform & PRODUCT_MANAGE_PLATFORM_REDNOTE:
-            self.handle_rednote_on_shelf(product_id, shop_name, update_id)
+            self.handle_rednote_on_shelf(product, shop_name, update_id)
             update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
                                        self.product_manage_on_shelf.__name__)
         return True

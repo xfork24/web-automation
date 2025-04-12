@@ -403,9 +403,11 @@ class ProductManageTaskRunner:
         self.logger = get_logger()
         self.crawler = Crawler(headless=headless)
 
-    def login(self, tb_user=TB_SHOP_USER, rn_user=REDNOTE_SHOP_USER):
-        self.crawler.login_taobao(tb_user)
-        self.crawler.login_rednote(rn_user)
+    def login(self, tb_user=None, rn_user=None):
+        if tb_user is not None:
+            self.crawler.login_taobao(tb_user)
+        if rn_user is not None:
+            self.crawler.login_rednote(rn_user)
 
     def run_shadow_product_tasks(self, update_id):
         self.analyze_and_add_shadow_products(update_id)
