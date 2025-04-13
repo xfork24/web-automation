@@ -506,6 +506,7 @@ def create_shadow_product_by_id():
         try:
             p = ProductInfo.get(ProductInfo.product_id == payload.get('product_id'))
             additional_properties = json_loads(p.additional_properties)
+            additional_properties[PLATFORM_MASK_KEY] = PRODUCT_MANAGE_PLATFORM_NONE
             if RESOURCE_ROOT_KEY in additional_properties and LLM_ANALYSIS_KEY in additional_properties:
                 title_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(p.title_imgs)))]
                 page_imgs = [f'{idx + 1}.png' for idx in range(0, len(json_loads(p.page_imgs)))]
@@ -517,7 +518,8 @@ def create_shadow_product_by_id():
                 offer_details = {}
                 status = SHADOW_PRODUCT_STATUS_NEW
             update_shadow_product_info(p.product_id, status, payload.get('update_id'),
-                                       create_shadow_product_by_id.__name__, SHADOW_PRODUCT_DEFAULT_ID,
+                                       create_shadow_product_by_id.__name__,
+                                       SHADOW_PRODUCT_DEFAULT_ID, REDNOTE_PRODUCT_DEFAULT_ID,
                                        p.product_title, p.shop_name, p.price_unit, p.display_price,
                                        SHADOW_PRODUCT_DEFAULT_INVENTORY_SIZE,
                                        title_imgs, page_imgs, offer_details, additional_properties)

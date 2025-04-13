@@ -443,7 +443,8 @@ class ProductManageTaskRunner:
                     offer_details = {}
                     status = SHADOW_PRODUCT_STATUS_NEW
                 update_shadow_product_info(p.product_id, status, update_id,
-                                           self.analyze_and_add_shadow_products.__name__, SHADOW_PRODUCT_DEFAULT_ID,
+                                           self.analyze_and_add_shadow_products.__name__,
+                                           SHADOW_PRODUCT_DEFAULT_ID, REDNOTE_PRODUCT_DEFAULT_ID,
                                            p.product_title, p.shop_name, p.price_unit, p.display_price,
                                            SHADOW_PRODUCT_DEFAULT_INVENTORY_SIZE,
                                            title_imgs, page_imgs, offer_details, additional_properties)
@@ -477,13 +478,41 @@ class ProductManageTaskRunner:
                                              self.generate_shadow_fix_tasks.__name__)
                 if sp.status == SHADOW_PRODUCT_STATUS_NEW:
                     tasks = ProductManageTask.select().where(ProductManageTask.product_id == p.product_id,
+                                                             ProductManageTask.operation == PRODUCT_MANAGE_OPERATION_READY,
                                                              ProductManageTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
                         ProductManageTask.update_ts.desc())
                     if len(tasks) == 0:
-                        self.logger.info(f'add product_manage_task to sync shadow product, product_id={sp.product_id}')
+                        self.logger.info(
+                            f'add product_manage_task to sync shadow product with product, product_id={sp.product_id}')
                         add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_PLATFORM_NONE,
                                                 PRODUCT_MANAGE_OPERATION_READY, {}, update_id,
                                                 self.generate_shadow_fix_tasks.__name__)
+                if sp.status == SHADOW_PRODUCT_STATUS_ONSHELF:
+                    platform_mask = additional_properties[PLATFORM_MASK_KEY]
+                    if platform_mask & PRODUCT_MANAGE_PLATFORM_TAOBAO and sp.shadow_id == SHADOW_PRODUCT_DEFAULT_ID:
+                        tasks = ProductManageTask.select().where(ProductManageTask.product_id == p.product_id,
+                                                                 ProductManageTask.platform == PRODUCT_MANAGE_PLATFORM_TAOBAO,
+                                                                 ProductManageTask.operation == PRODUCT_MANAGE_OPERATION_SYNC,
+                                                                 ProductManageTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
+                            ProductManageTask.update_ts.desc())
+                        if len(tasks) == 0:
+                            self.logger.info(
+                                f'add product_manage_task to sync shadow product with taobao, product_id={sp.product_id}')
+                            add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_PLATFORM_TAOBAO,
+                                                    PRODUCT_MANAGE_OPERATION_SYNC, {}, update_id,
+                                                    self.generate_shadow_fix_tasks.__name__)
+                    if platform_mask & PRODUCT_MANAGE_PLATFORM_REDNOTE and sp.rednote_id == REDNOTE_PRODUCT_DEFAULT_ID:
+                        tasks = ProductManageTask.select().where(ProductManageTask.product_id == p.product_id,
+                                                                 ProductManageTask.platform == PRODUCT_MANAGE_PLATFORM_TAOBAO,
+                                                                 ProductManageTask.operation == PRODUCT_MANAGE_OPERATION_SYNC,
+                                                                 ProductManageTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
+                            ProductManageTask.update_ts.desc())
+                        if len(tasks) == 0:
+                            self.logger.info(
+                                f'add product_manage_task to sync shadow product with rednote, product_id={sp.product_id}')
+                            add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_PLATFORM_REDNOTE,
+                                                    PRODUCT_MANAGE_OPERATION_SYNC, {}, update_id,
+                                                    self.generate_shadow_fix_tasks.__name__)
             except DoesNotExist:
                 self.logger.error(
                     f'product_id={sp.product_id} does not exist while updating shadow product, just continue')
@@ -522,6 +551,8 @@ class ProductManageTaskRunner:
                 elif task.operation == PRODUCT_MANAGE_OPERATION_OFFSHELF:
                     success = self.crawler.product_manage_off_shelf(task.product_id, task.shop_name, task.platform,
                                                                     task.id)
+                elif task.operation == PRODUCT_MANAGE_OPERATION_SYNC:
+                    success = self.crawler.product_manage_sync(task.product_id, task.shop_name, task.platform, task.id)
             except Exception:
                 self.logger.error(
                     f'get unhandled exception while handling product manage task id={task.id} with product_id={task.product_id}, shop_name={task.shop_name}, operation={task.operation}, just continue')

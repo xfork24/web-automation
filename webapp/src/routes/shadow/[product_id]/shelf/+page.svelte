@@ -3,7 +3,7 @@
   import * as Dialog from '$lib/components/ui/dialog';
   import * as Sidebar from '$lib/components/ui/sidebar';
   import * as Popover from "$lib/components/ui/popover/index.js";
-  import Tally_1 from '@lucide/svelte/icons/tally-1';
+  import { Tally1 } from "@lucide/svelte/icons";
   import { Label } from "$lib/components/ui/label";
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
@@ -11,6 +11,12 @@
   import { toast } from "svelte-sonner";
   import { invalidateAll } from "$app/navigation";
   import HistoryDataTable from "./(components)/history-data-table.svelte";
+  import {
+    PLATFORM_REDNOTE,
+    PLATFORM_TAOBAO, SHADOW_OPERATION_ONSHELF,
+    SHADOW_STATUS_NEW,
+    SHADOW_STATUS_READY
+  } from "../../../(components)/model";
 
   let {data} = $props();
 
@@ -73,7 +79,7 @@
 
   async function onSaveProduct() {
     try {
-      if (data.shadow_info.status !== 1) {
+      if (data.shadow_info.status !== SHADOW_STATUS_READY) {
         open = false;
         await invalidateAll();
         toast("Operation Failed: Product must be in READY status.");
@@ -85,7 +91,7 @@
           'Content-Type': 'application/json;charset=UTF-8'
         },
         body: JSON.stringify({
-          'status': 1,
+          'status': SHADOW_STATUS_READY,
           'update_id': data.user.name,
           'product_title': product_title,
           'shop_name': shop_name,
@@ -110,19 +116,20 @@
 
   async function onShelfTaobao() {
     try {
-      if (data.shadow_info.status !== 1) {
+      if (data.shadow_info.status !== SHADOW_STATUS_READY) {
         open = false;
         await invalidateAll();
         toast("Operation Failed: Product must be in READY status.");
         return;
       }
+      additional_properties.platform_mask |= PLATFORM_TAOBAO;
       const save_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json;charset=UTF-8'
         },
         body: JSON.stringify({
-          'status': 1,
+          'status': SHADOW_STATUS_READY,
           'update_id': data.user.name,
           'product_title': product_title,
           'shop_name': shop_name,
@@ -144,8 +151,8 @@
           body: JSON.stringify({
             'product_id': product_id,
             'shop_name': '归去来宝藏店',
-            'platform': 1,
-            'operation': 2,
+            'platform': PLATFORM_TAOBAO,
+            'operation': SHADOW_OPERATION_ONSHELF,
             'update_id': data.user.name
           })
         });
@@ -163,19 +170,20 @@
 
   async function onShelfRednote() {
     try {
-      if (data.shadow_info.status !== 1) {
+      if (data.shadow_info.status !== SHADOW_STATUS_READY) {
         open = false;
         await invalidateAll();
         toast("Operation Failed: Product must be in READY status.");
         return;
       }
+      additional_properties.platform_mask |= PLATFORM_REDNOTE;
       const save_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json;charset=UTF-8'
         },
         body: JSON.stringify({
-          'status': 1,
+          'status': SHADOW_STATUS_READY,
           'update_id': data.user.name,
           'product_title': product_title,
           'shop_name': shop_name,
@@ -197,8 +205,8 @@
           body: JSON.stringify({
             'product_id': product_id,
             'shop_name': '归去来兮薯的店',
-            'platform': 2,
-            'operation': 2,
+            'platform': PLATFORM_REDNOTE,
+            'operation': SHADOW_OPERATION_ONSHELF,
             'update_id': data.user.name
           })
         });
@@ -224,7 +232,7 @@
       <Breadcrumb.Root>
         <Breadcrumb.List>
           <Breadcrumb.Separator>
-            <Tally_1/>
+            <Tally1/>
           </Breadcrumb.Separator>
           <Breadcrumb.Item>
             <Breadcrumb.Link href="/static">Home</Breadcrumb.Link>
@@ -242,7 +250,7 @@
     </div>
   </header>
   <main>
-    {#if data.shadow_info !== undefined && data.shadow_info.status === 1}
+    {#if data.shadow_info !== undefined && data.shadow_info.status !== 0}
       <div class="items-center justify-between px-4 text-4xl">Product OnShelf</div>
       <div class="flex flex-col gap-2">
         <div class="flex flex-nowrap px-4 w-full items-center">
@@ -314,6 +322,14 @@
                 </Popover.Content>
               </Popover.Root>
             {/each}
+          </div>
+        </div>
+        <div class="flex flex-nowrap px-4 w-full items-center">
+          <div class="w-1/6">
+            <Label>Resource Root: </Label>
+          </div>
+          <div class="w-5/6">
+            <Label>{additional_properties.resource_root}</Label>
           </div>
         </div>
         <Dialog.Root bind:open>

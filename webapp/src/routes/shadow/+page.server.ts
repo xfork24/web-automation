@@ -19,6 +19,11 @@ export const load = async () => {
         shadow.category = '';
         shadow.digital = false;
       }
+      if (shadow.additional_properties.hasOwnProperty('platform_mask')) {
+        shadow.platform_mask = shadow.additional_properties.platform_mask;
+      } else {
+        shadow.platform_mask = 0;
+      }
       shadow.digital_str = shadow.digital ? 'TRUE' : 'FALSE';
       shadow.status_str = shadowStatusToString(shadow.status);
     })

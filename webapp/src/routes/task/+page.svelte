@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-  import Tally_1 from '@lucide/svelte/icons/tally-1';
+  import { Tally1 } from "@lucide/svelte/icons";
   import TaskCard from './(components)/task-card.svelte';
   import { type TaskStatus, type TaskStatusResult } from '../(components)/model';
   import { getLocalTimeZone, today } from '@internationalized/date';
@@ -82,7 +82,7 @@
       <Breadcrumb.Root>
         <Breadcrumb.List>
           <Breadcrumb.Separator>
-            <Tally_1/>
+            <Tally1/>
           </Breadcrumb.Separator>
           <Breadcrumb.Item>
             <Breadcrumb.Link href="/">Home</Breadcrumb.Link>

@@ -3,6 +3,9 @@
   import { Label } from "$lib/components/ui/label/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import * as Dialog from '$lib/components/ui/dialog/index.js';
+  import * as Tooltip from "$lib/components/ui/tooltip/index.js";
+  import { CirclePlus } from "@lucide/svelte/icons";
+
   import { invalidateAll } from "$app/navigation";
 
   let {user} = $props();
@@ -38,7 +41,20 @@
 
 <Dialog.Root bind:open>
   <Dialog.Trigger class="mr-4">
-    <Button class="max-w-xs" variant="destructive">New Search</Button>
+    <Dialog.Trigger class="mr-4">
+      <Tooltip.Provider>
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            <Button class="max-w-xs" variant="destructive">
+              <CirclePlus/>
+            </Button>
+          </Tooltip.Trigger>
+          <Tooltip.Content>
+            <p>Create new search task</p>
+          </Tooltip.Content>
+        </Tooltip.Root>
+      </Tooltip.Provider>
+    </Dialog.Trigger>
   </Dialog.Trigger>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>

@@ -20,7 +20,9 @@ from playhouse.shortcuts import model_to_dict
 LLM_ANALYSIS_KEY = 'llm_analysis'
 ERRORS_KEY = 'errors'
 RESOURCE_ROOT_KEY = 'resource_root'
+PLATFORM_MASK_KEY = 'platform_mask'
 SHADOW_PRODUCT_DEFAULT_ID = '000000000000'
+REDNOTE_PRODUCT_DEFAULT_ID = '000000000000000000000000'
 
 DB_OPS_CREATE_NEW = 1
 DB_OPS_UPDATE_EXIST = 2
@@ -41,6 +43,7 @@ PRODUCT_MANAGE_OPERATION_ONSHELF = 2
 PRODUCT_MANAGE_OPERATION_ONLINE = 3
 PRODUCT_MANAGE_OPERATION_OFFLINE = 4
 PRODUCT_MANAGE_OPERATION_OFFSHELF = 5
+PRODUCT_MANAGE_OPERATION_SYNC = 6
 
 TASK_FAILED_UNEXPECTED_ERROR = 1
 TASK_FAILED_SHOP_NOT_STANDARD = 2
@@ -180,6 +183,7 @@ class HotProduct(BaseModel):
 class ShadowProductInfo(BaseModel):
     product_id = ForeignKeyField(ProductInfo, backref='product_ids', column_name='product_id', lazy_load=False)
     shadow_id = CharField(max_length=32, index=True)
+    rednote_id = CharField(max_length=32, index=True)
     product_title = CharField(max_length=128)
     shop_name = ForeignKeyField(ShopInfo, backref='shop_names', column_name='shop_name', lazy_load=False)
     price_unit = CharField(max_length=3)
@@ -523,7 +527,7 @@ def add_product_sale(product_id, shop_name,
 
 
 def update_shadow_product_info(product_id, status, update_id, update_role,
-                               shadow_id='', product_title='', shop_name='',
+                               shadow_id='', rednote_id='', product_title='', shop_name='',
                                price_unit='', price=-1, inventory=-1,
                                title_imgs=None, page_imgs=None, offer_details=None,
                                additional_properties=None):
@@ -536,6 +540,8 @@ def update_shadow_product_info(product_id, status, update_id, update_role,
         original_json = exist_spi.to_json()
         if shadow_id != '':
             exist_spi.shadow_id = shadow_id
+        if rednote_id != '':
+            exist_spi.rednote_id = rednote_id
         if product_title != '':
             exist_spi.product_title = product_title
         if shop_name != '':
@@ -569,6 +575,7 @@ def update_shadow_product_info(product_id, status, update_id, update_role,
         new_spi = ShadowProductInfo()
         new_spi.product_id = product_id
         new_spi.shadow_id = shadow_id
+        new_spi.rednote_id = rednote_id
         new_spi.product_title = product_title
         new_spi.shop_name = shop_name
         new_spi.price_unit = price_unit

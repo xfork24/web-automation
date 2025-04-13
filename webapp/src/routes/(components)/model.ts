@@ -13,6 +13,7 @@ export type AdditionalProperties = {
   errors: ErrorEntity[];
   diff: string;
   resource_root: string;
+  platform_mask: number;
 }
 export type OperationHistory = {
   id: number;
@@ -63,8 +64,10 @@ export type ProductInfo = {
 export type ShadowProductInfo = {
   product_id: string;
   shadow_id: string;
+  rednote_id: string;
   product_title: string;
   shop_name: string;
+  platform_mask: number;
   keyword: string;
   category: string;
   digital: boolean;
@@ -245,6 +248,25 @@ export const task_status_badge_class = [
   'inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-red-600/10 ring-inset',
   'inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-500/10 ring-inset',
 ]
+
+export const PLATFORM_NONE = 0;
+export const PLATFORM_TAOBAO = 1;
+export const PLATFORM_REDNOTE = 2;
+
+export const SHADOW_OPERATION_NEW = 0;
+export const SHADOW_OPERATION_READY = 1;
+export const SHADOW_OPERATION_ONSHELF = 2;
+export const SHADOW_OPERATION_ONLINE = 3;
+export const SHADOW_OPERATION_OFFLINE = 4;
+export const SHADOW_OPERATION_OFFSHELF = 5;
+
+export const SHADOW_STATUS_NEW = 0;
+export const SHADOW_STATUS_READY = 1;
+export const SHADOW_STATUS_ONSHELF = 2;
+export const SHADOW_STATUS_ONLINE = 3;
+export const SHADOW_STATUS_OFFLINE = 4;
+export const SHADOW_STATUS_OFFSHELF = 5;
+
 
 export function parseUUID4(value: string) {
   const regexp = /^\w{32}$/g;

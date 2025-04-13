@@ -2,7 +2,7 @@
   import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
   import DataTable from './(components)/data-table.svelte';
-  import Tally_1 from '@lucide/svelte/icons/tally-1';
+  import { Tally1 } from "@lucide/svelte/icons";
 
   let {data} = $props();
 </script>
@@ -14,7 +14,7 @@
       <Breadcrumb.Root>
         <Breadcrumb.List>
           <Breadcrumb.Separator>
-            <Tally_1/>
+            <Tally1/>
           </Breadcrumb.Separator>
           <Breadcrumb.Item>
             <Breadcrumb.Link href="/">Home</Breadcrumb.Link>

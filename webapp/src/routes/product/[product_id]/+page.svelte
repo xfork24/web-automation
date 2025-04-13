@@ -2,12 +2,12 @@
   import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
-  import Tally_1 from '@lucide/svelte/icons/tally-1';
+  import { Tally1 } from "@lucide/svelte/icons";
   import { RangeCalendar } from '$lib/components/ui/range-calendar';
   import { Button } from '$lib/components/ui/button';
   import { Label } from '$lib/components/ui/label/index.js';
   import { getLocalTimeZone, today } from '@internationalized/date';
-  import { type ProductSale, timeConverter } from '../../(components)/model';
+  import { PLATFORM_REDNOTE, PLATFORM_TAOBAO, type ProductSale, timeConverter } from '../../(components)/model';
   import DataTable from './(components)/data-table.svelte';
   import HistoryDataTable from './(components)/history-data-table.svelte';
 
@@ -16,6 +16,7 @@
 
   const product_id = data.product_id;
   const product = data.product_info!;
+  const shadow = data.shadow_info!;
   const histories = data.product_histories;
 
   let formatter = $state(new Intl.NumberFormat('zh-CN', {
@@ -31,6 +32,10 @@
     });
     create_tm = timeConverter(product.create_ts);
     update_tm = timeConverter(product.update_ts);
+  }
+  let platform_mask = $state(0);
+  if (shadow != undefined && shadow.additional_properties.hasOwnProperty('platform_mask')) {
+    platform_mask = shadow.additional_properties.platform_mask;
   }
 
   let end = today(getLocalTimeZone()).add({days: 1});
@@ -76,7 +81,7 @@
       <Breadcrumb.Root>
         <Breadcrumb.List>
           <Breadcrumb.Separator>
-            <Tally_1/>
+            <Tally1/>
           </Breadcrumb.Separator>
           <Breadcrumb.Item>
             <Breadcrumb.Link href="/">Home</Breadcrumb.Link>
@@ -161,6 +166,22 @@
             </div>
           </div>
         </div>
+      </div>
+      <div>
+        {#if platform_mask === 0}
+          <div class="items-center justify-between px-4 text-2xl">Product has not been put on any platforms.</div>
+        {:else}
+          {#if platform_mask & PLATFORM_TAOBAO }
+            <div class="items-center justify-between px-4 text-2xl">Product has been put on sale in
+              <a href="/shadow" class="italic text-yellow-500">Taobao</a>.
+            </div>
+          {/if}
+          {#if platform_mask & PLATFORM_REDNOTE }
+            <div class="items-center justify-between px-4 text-2xl">Product has been put on sale in
+              <a href="/shadow" class="italic text-red-500">Rednote</a>.
+            </div>
+          {/if}
+        {/if}
       </div>
       <div class="items-center justify-between px-4 text-4xl">Product Sale Information</div>
       <div class="flex p-4">

@@ -24,13 +24,14 @@
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Table from '$lib/components/ui/table';
   import * as Select from '$lib/components/ui/select/index.js';
-  import FunnelX from '@lucide/svelte/icons/funnel-x';
+  import * as Tooltip from "$lib/components/ui/tooltip/index.js";
   import {
     FlexRender,
     createSvelteTable,
     renderComponent,
     renderSnippet
   } from '$lib/components/ui/data-table';
+  import { FunnelX, LibraryBig, Search, PackageSearch, Trash2 } from "@lucide/svelte/icons";
   import { assert, parseUUID4, type ShopInfo, timeConverter } from '../../(components)/model';
   import { invalidateAll } from '$app/navigation';
 
@@ -426,26 +427,65 @@
       placeholder="Filter {triggerContent}..."
       value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
     />
-    <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
-      <FunnelX/>
-    </Button>
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
+            <FunnelX/>
+          </Button>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <p>Clear all filters</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
 
     <Dialog.Root bind:open>
       <Dialog.Trigger class="mr-4">
-        <Button class="max-w-xs" onclick={ () => beforeCrawlSelectShopDialog()} variant="destructive">
-          Crawl
-        </Button>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeCrawlSelectShopInSearchDialog()} variant="destructive">
+                <PackageSearch/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Crawl shops</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       </Dialog.Trigger>
+
       <Dialog.Trigger class="mr-4">
-        <Button class="max-w-xs" onclick={ () => beforeCrawlSelectShopInSearchDialog()} variant="destructive">
-          Crawl in Search
-        </Button>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeCrawlSelectShopDialog()} variant="destructive">
+                <Search/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Crawl shops in search page</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       </Dialog.Trigger>
+
       <Dialog.Trigger class="mr-4">
-        <Button class="max-w-xs" onclick={ () => beforeDeleteSelectShopDialog()} variant="destructive">
-          Delete
-        </Button>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeDeleteSelectShopDialog()} variant="destructive">
+                <Trash2/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Delete products</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       </Dialog.Trigger>
+
       <Dialog.Content>
         <Dialog.Header>
           <Dialog.Title>{dialog_title}</Dialog.Title>

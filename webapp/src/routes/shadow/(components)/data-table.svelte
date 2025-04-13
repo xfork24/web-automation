@@ -24,14 +24,27 @@
   import * as Table from '$lib/components/ui/table';
   import * as Select from '$lib/components/ui/select';
   import * as Dialog from '$lib/components/ui/dialog';
+  import * as Tooltip from "$lib/components/ui/tooltip/index.js";
+  import { BookmarkCheck, BookmarkX, FunnelX, Trash2 } from "@lucide/svelte/icons";
   import {
     FlexRender,
     createSvelteTable,
     renderComponent,
     renderSnippet
   } from '$lib/components/ui/data-table';
-  import FunnelX from '@lucide/svelte/icons/funnel-x';
-  import { parseUUID4, type ShadowProductInfo, timeConverter, assert } from '../../(components)/model';
+  import {
+    parseUUID4,
+    type ShadowProductInfo,
+    timeConverter,
+    assert,
+    PLATFORM_TAOBAO,
+    PLATFORM_REDNOTE,
+    SHADOW_STATUS_OFFLINE,
+    SHADOW_OPERATION_ONLINE,
+    SHADOW_STATUS_ONLINE,
+    SHADOW_OPERATION_OFFLINE,
+    SHADOW_STATUS_NEW, SHADOW_STATUS_READY
+  } from '../../(components)/model';
   import { invalidateAll } from '$app/navigation';
 
   let {data} = $props();
@@ -69,7 +82,7 @@
     try {
       // 必须所有的商品都是Offline=4状态才可以操作上线
       for (const row of rows) {
-        if (row.original.status !== 4) {
+        if (row.original.status !== SHADOW_STATUS_OFFLINE) {
           open = false;
           await invalidateAll();
           toast("Operation Failed: Product(s) must be in OFFLINE status.");
@@ -85,7 +98,7 @@
           body: JSON.stringify({
             'product_id': row.original.shadow_id,
             'shop_name': '归去来宝藏店',
-            'operation': 3,
+            'operation': SHADOW_OPERATION_ONLINE,
             'update_id': data.user.name
           })
         });
@@ -103,9 +116,9 @@
 
   async function createSelectOfflineTask(rows: Row<ShadowProductInfo>[]) {
     try {
-      // 必须所有的商品都是Online=3状态才可以操作上线
+      // 必须所有的商品都是Online=3状态才可以操作下线
       for (const row of rows) {
-        if (row.original.status !== 3) {
+        if (row.original.status !== SHADOW_STATUS_ONLINE) {
           open = false;
           await invalidateAll();
           toast("Operation Failed: Product(s) must be in ONLINE status.");
@@ -121,7 +134,7 @@
           body: JSON.stringify({
             'product_id': row.original.shadow_id,
             'shop_name': '归去来宝藏店',
-            'operation': 4,
+            'operation': SHADOW_OPERATION_OFFLINE,
             'update_id': data.user.name
           })
         });
@@ -139,9 +152,9 @@
 
   async function deleteSelectShadowProduct(rows: Row<ShadowProductInfo>[]) {
     try {
-      // 必须所有的商品都是New=0或Ready=1状态才可以操作上线
+      // 必须所有的商品都是New=0或Ready=1状态才可以操作删除
       for (const row of rows) {
-        if (row.original.status !== 0 && row.original.status !== 1) {
+        if (row.original.status !== SHADOW_STATUS_NEW && row.original.status !== SHADOW_STATUS_READY) {
           open = false;
           await invalidateAll();
           toast("Operation Failed: Product(s) must be in NEW or READY status.");
@@ -171,7 +184,13 @@
   let sorting = $state<SortingState>([]);
   let columnFilters = $state<ColumnFiltersState>([]);
   let rowSelection = $state<RowSelectionState>({});
-  let columnVisibility = $state<VisibilityState>({'Inventory': false, 'Operator ID': false, 'Operator Role': false});
+  let columnVisibility = $state<VisibilityState>({
+    'Shadow ID': false,
+    'Rednote ID': false,
+    'Inventory': false,
+    'Operator ID': false,
+    'Operator Role': false
+  });
 
   export const columns: ColumnDef<ShadowProductInfo>[] = [
     {
@@ -230,10 +249,24 @@
         const amountCellSnippet = createRawSnippet<[string]>((getData) => {
           const shadow_id = getData();
           return {
-            render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href='/product/${shadow_id}'>${shadow_id}</a>`
+            render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href="https://item.taobao.com/item.htm?id=${shadow_id}" target="_blank">${shadow_id}</a>`
           };
         });
         return renderSnippet(amountCellSnippet, row.getValue('Shadow ID'));
+      }
+    },
+    {
+      id: 'Rednote ID',
+      accessorKey: 'rednote_id',
+      header: 'Rednote ID',
+      cell: ({row}) => {
+        const amountCellSnippet = createRawSnippet<[string]>((getData) => {
+          const rednote_id = getData();
+          return {
+            render: () => `<a class="font-medium text-blue-600 dark:text-blue-500 hover:underline" href="https://www.xiaohongshu.com/goods-detail/${rednote_id}" target="_blank" >${rednote_id}</a>`
+          };
+        });
+        return renderSnippet(amountCellSnippet, row.getValue('Rednote ID'));
       }
     },
     {
@@ -249,6 +282,28 @@
           };
         });
         return renderSnippet(statusSnippet, row.getValue('Status'));
+      }
+    },
+    {
+      id: 'Platform',
+      accessorKey: 'platform_mask',
+      header: 'Platform',
+      cell: ({row}) => {
+        const statusSnippet = createRawSnippet<[number]>((getData) => {
+          const platform = getData();
+          let body = `<div>`
+          if (platform & PLATFORM_TAOBAO) {
+            body += `<p><a href="https://item.taobao.com/item.htm?id=${row.original.shadow_id}" target="_blank" class="italic text-yellow-500">Taobao</a></p>`
+          }
+          if (platform & PLATFORM_REDNOTE) {
+            body += `<p><a href="https://www.xiaohongshu.com/goods-detail/${row.original.rednote_id}" target="_blank" class="italic text-red-500">Rednote</a></p>`
+          }
+          body += `</div>`
+          return {
+            render: () => body
+          };
+        });
+        return renderSnippet(statusSnippet, row.getValue('Platform'));
       }
     },
     {
@@ -531,26 +586,66 @@
       placeholder="Filter {triggerContent}..."
       value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
     />
-    <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
-      <FunnelX/>
-    </Button>
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
+            <FunnelX/>
+          </Button>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <p>Clear all filters</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
+
 
     <Dialog.Root bind:open>
       <Dialog.Trigger class="mr-4">
-        <Button class="max-w-xs" onclick={ () => beforeOnlineSelectProductDialog()} variant="destructive">
-          Online Products
-        </Button>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeOnlineSelectProductDialog()} variant="destructive">
+                <BookmarkCheck/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Make shadow products online</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       </Dialog.Trigger>
+
       <Dialog.Trigger class="mr-4">
-        <Button class="max-w-xs" onclick={ () => beforeOfflineSelectProductDialog()} variant="destructive">
-          Offline Products
-        </Button>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeOfflineSelectProductDialog()} variant="destructive">
+                <BookmarkX/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Make shadow products offline</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       </Dialog.Trigger>
+
       <Dialog.Trigger class="mr-4">
-        <Button class="max-w-xs" onclick={ () => beforeDeleteSelectProductDialog()} variant="destructive">
-          Delete Products
-        </Button>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeDeleteSelectProductDialog()} variant="destructive">
+                <Trash2/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Delete shadow products</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       </Dialog.Trigger>
+
       <Dialog.Content>
         <Dialog.Header>
           <Dialog.Title>{dialog_title}</Dialog.Title>

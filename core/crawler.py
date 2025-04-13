@@ -3,6 +3,7 @@
 
 import os
 import shutil
+import time
 from pathlib import Path
 import traceback
 import uuid
@@ -23,6 +24,7 @@ TB_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_ONSHELF_PAGE = 'https://item.upload.taobao.com/sell/v2/publish.htm?catId=201160807'
 REDNOTE_LOGIN_PAGE = 'https://customer.xiaohongshu.com/login?service=https://ark.xiaohongshu.com/app-item/good/create'
 REDNOTE_ONSHELF_PAGE = 'https://ark.xiaohongshu.com/app-item/good/create'
+REDNOTE_LIST_SHELF_PAGE = 'https://ark.xiaohongshu.com/app-item/list/shelf'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
 TB_SHOP_BROWSE_TITLE_NAME = '店铺浏览-淘宝网'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
@@ -981,7 +983,8 @@ class Crawler:
             # 我们总是将shadow_product更新到最新，只要它还是NEW状态
             update_shadow_product_info(product.product_id, status, update_id,
                                        self.product_manage_ready.__name__,
-                                       SHADOW_PRODUCT_DEFAULT_ID, product.product_title, product.shop_name,
+                                       SHADOW_PRODUCT_DEFAULT_ID, REDNOTE_PRODUCT_DEFAULT_ID,
+                                       product.product_title, product.shop_name,
                                        product.price_unit, product.display_price, SHADOW_PRODUCT_DEFAULT_INVENTORY_SIZE,
                                        title_imgs, page_imgs, offer_details, additional_properties)
             return True if status == SHADOW_PRODUCT_STATUS_READY else False
@@ -1066,6 +1069,12 @@ class Crawler:
         self.element_click(submit_btn)
         self.logger.info(f'onshelf product_id={product.product_id} to taobao successfully')
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        # 获取上架后的product_id
+        shadow_id = self.parse_product_id_from_post_onshelf_link(self.driver.current_url)
+        assert (shadow_id is not None)
+        update_shadow_product_info(product.product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
+                                   self.handle_taobao_on_shelf.__name__, shadow_id=shadow_id)
+        return True
 
     def handle_taobao_select_images(self, path, confirm=False):
         navbar_root = None
@@ -1168,6 +1177,10 @@ class Crawler:
         self.element_click(submit_btn)
         self.logger.info(f'onshelf product_id={product.product_id} to rednote successfully')
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        # 后续通过任务更新rednote_id
+        update_shadow_product_info(product.product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
+                                   self.handle_rednote_on_shelf.__name__)
+        return True
 
     def handle_rednote_select_images(self, path):
         navbar_roots = self.driver.find_elements(By.CLASS_NAME, 'd-tree')
@@ -1215,29 +1228,53 @@ class Crawler:
                 self.element_click(btn)
                 break
 
-    def product_manage_on_shelf(self, product_id, shop_name, platform, update_id):
-        product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
-        if platform & PRODUCT_MANAGE_PLATFORM_TAOBAO:
-            self.handle_taobao_on_shelf(product, shop_name, update_id)
-            # 获取上架后的product_id
-            shadow_id = self.parse_product_id_from_post_onshelf_link(self.driver.current_url)
-            assert (shadow_id is not None)
-            update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
-                                       self.product_manage_on_shelf.__name__, shadow_id=shadow_id)
-        if platform & PRODUCT_MANAGE_PLATFORM_REDNOTE:
-            self.handle_rednote_on_shelf(product, shop_name, update_id)
-            update_shadow_product_info(product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
-                                       self.product_manage_on_shelf.__name__)
+    def handle_taobao_sync(self, product, shop_name, update_id):
         return True
 
-    def product_manage_online(self, shadow_id, shop_name, platform, update_id):
+    def handle_rednote_sync(self, product, shop_name, update_id):
+        # 我们目前只同步rednote_id到shadow_product
+        self.driver.get(REDNOTE_LIST_SHELF_PAGE)
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        product_title_divs = self.driver.find_elements(By.CLASS_NAME, 'product-main')
+        rednote_id = None
+        for div in product_title_divs:
+            title_span = div.find_element(By.XPATH, 'span')
+            if title_span.text.find(product.product_title) != -1:
+                id_wrapper_div = div.find_element(By.CLASS_NAME, 'ids-wrapper')
+                id_span = id_wrapper_div.find_element(By.XPATH, 'div/span')
+                idx = id_span.text.find('商品ID: ')
+                if idx != -1:
+                    rednote_id = id_span.text[idx + 1:]
+                    break
+        if rednote_id is not None:
+            update_shadow_product_info(product.product_id, product.status, update_id, self.handle_rednote_sync.__name__,
+                                       rednote_id=rednote_id)
+            return True
+        else:
+            return False
+
+    def product_manage_on_shelf(self, product_id, shop_name, platform, update_id):
+        product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+        if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
+            return self.handle_taobao_on_shelf(product, shop_name, update_id)
+        elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
+            return self.handle_rednote_on_shelf(product, shop_name, update_id)
+
+    def product_manage_online(self, ref_id, shop_name, platform, update_id):
         pass
 
-    def product_manage_offline(self, shadow_id, shop_name, platform, update_id):
+    def product_manage_offline(self, ref_id, shop_name, platform, update_id):
         pass
 
-    def product_manage_off_shelf(self, shadow_id, shop_name, platform, update_id):
+    def product_manage_off_shelf(self, ref_id, shop_name, platform, update_id):
         pass
+
+    def product_manage_sync(self, product_id, shop_name, platform, update_id):
+        product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+        if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
+            return self.handle_taobao_sync(product, shop_name, update_id)
+        elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
+            return self.handle_rednote_sync(product, shop_name, update_id)
 
     def parse_product_id_from_post_onshelf_link(self, link):
         result = urlparse(link)

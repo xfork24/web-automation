@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS shadow_product_info
 (
     product_id            varchar(32)  NOT NULL,
     shadow_id             varchar(32)  NOT NULL,
+    rednote_id            varchar(32)  NOT NULL,
     product_title         varchar(128) NOT NULL,
     shop_name             varchar(128) NOT NULL,
     price_unit            varchar(3)   NOT NULL,
@@ -284,6 +285,8 @@ ALTER TABLE hot_product
 
 ALTER TABLE shadow_product_info
     ADD INDEX idx_shadow_id (shadow_id);
+ALTER TABLE shadow_product_info
+    ADD INDEX idx_rednote_id (rednote_id);
 ALTER TABLE shadow_product_info
     ADD INDEX idx_shop_name (shop_name);
 ALTER TABLE shadow_product_info

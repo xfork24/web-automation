@@ -28,6 +28,14 @@ export const load = async ({url}) => {
       product.data.digital_str = product.data.digital ? 'TRUE' : 'FALSE';
     }
 
+    const shadow_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json;charset=UTF-8'
+      }
+    });
+    const shadow = await shadow_response.json();
+
     const end = today(getLocalTimeZone()).add({days: 1});
     const start_ts = end.add({days: -30}).toDate(getLocalTimeZone()).getTime() / 1000;
     const end_ts = end.toDate(getLocalTimeZone()).getTime() / 1000;
@@ -50,6 +58,7 @@ export const load = async ({url}) => {
     return {
       product_id: decodeURI(product_id!),
       product_info: product.data,
+      shadow_info: shadow.code === 0 ? shadow.data : undefined,
       product_sales: sale.data.filter((item: ProductSale) => {
         return item.display_sale != -1 && item.estimated_revenue != -1;
       }),

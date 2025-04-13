@@ -4,7 +4,13 @@
     Button
   } from '$lib/components/ui/button';
   import { goto, invalidateAll } from '$app/navigation';
-  import type { ShadowProductInfo } from '../../(components)/model';
+  import {
+    SHADOW_OPERATION_OFFLINE,
+    SHADOW_OPERATION_ONLINE, SHADOW_OPERATION_READY, SHADOW_STATUS_NEW,
+    SHADOW_STATUS_OFFLINE,
+    SHADOW_STATUS_ONLINE, SHADOW_STATUS_READY,
+    type ShadowProductInfo
+  } from '../../(components)/model';
   import { Toaster } from "$lib/components/ui/sonner";
   import { toast } from "svelte-sonner";
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -35,7 +41,7 @@
 
   async function createOnlineTask(row: ShadowProductInfo) {
     try {
-      if (row.status !== 4) {
+      if (row.status !== SHADOW_STATUS_OFFLINE) {
         open = false;
         await invalidateAll();
         toast("Operation Failed: Product must be in OFFLINE status.");
@@ -49,7 +55,7 @@
         body: JSON.stringify({
           'product_id': row.shadow_id,
           'shop_name': '归去来宝藏店',
-          'operation': 3,
+          'operation': SHADOW_OPERATION_ONLINE,
           'update_id': user.name
         })
       });
@@ -66,7 +72,7 @@
 
   async function createOfflineTask(row: ShadowProductInfo) {
     try {
-      if (row.status !== 3) {
+      if (row.status !== SHADOW_STATUS_ONLINE) {
         open = false;
         await invalidateAll();
         toast("Operation Failed: Product must be in ONLINE status.");
@@ -80,7 +86,7 @@
         body: JSON.stringify({
           'product_id': row.shadow_id,
           'shop_name': '归去来宝藏店',
-          'operation': 4,
+          'operation': SHADOW_OPERATION_OFFLINE,
           'update_id': user.name
         })
       });
@@ -97,7 +103,7 @@
 
   async function deleteShadowProduct(row: ShadowProductInfo) {
     try {
-      if (row.status !== 0 && row.status !== 1) {
+      if (row.status !== SHADOW_STATUS_NEW && row.status !== SHADOW_STATUS_READY) {
         open = false;
         await invalidateAll();
         toast("Operation Failed: Product must be in NEW or READY status.");
@@ -122,9 +128,9 @@
 
   async function onshelfShadowProduct(row: ShadowProductInfo) {
     open = false;
-    if (row.status !== 1) {
+    if (row.status == SHADOW_STATUS_NEW) {
       await invalidateAll();
-      toast("Operation Failed: Product must be in READY status.");
+      toast("Operation Failed: Product must be READY first.");
       return;
     } else {
       toast("Operation Successful");

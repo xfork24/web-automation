@@ -24,7 +24,7 @@
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Table from '$lib/components/ui/table';
   import * as Select from '$lib/components/ui/select/index.js';
-  import FunnelX from '@lucide/svelte/icons/funnel-x';
+  import * as Tooltip from "$lib/components/ui/tooltip/index.js";
   import {
     FlexRender,
     createSvelteTable,
@@ -37,6 +37,7 @@
     type ShopSearchCrawlTask, task_status_badge_class,
     timeConverter
   } from '../../../(components)/model';
+  import { FunnelX, Copy, Archive, Trash2 } from "@lucide/svelte/icons";
   import { invalidateAll } from '$app/navigation';
 
 
@@ -408,26 +409,65 @@
       placeholder="Filter {triggerContent}..."
       value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
     />
-    <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
-      <FunnelX/>
-    </Button>
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
+            <FunnelX/>
+          </Button>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <p>Clear all filters</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
 
     <Dialog.Root bind:open>
       <Dialog.Trigger class="mr-4">
-        <Button class="max-w-xs" onclick={ () => beforeCreateSelectShopSearchDialog()} variant="destructive">
-          Resubmit Tasks
-        </Button>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeCreateSelectShopSearchDialog()} variant="destructive">
+                <Copy/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Resubmit tasks</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       </Dialog.Trigger>
+
       <Dialog.Trigger class="mr-4">
-        <Button class="max-w-xs" onclick={ () => beforeArchiveSelectShopSearchDialog()} variant="destructive">
-          Archive Tasks
-        </Button>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeArchiveSelectShopSearchDialog()} variant="destructive">
+                <Archive/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Archive Tasks</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       </Dialog.Trigger>
+
       <Dialog.Trigger class="mr-4">
-        <Button class="max-w-xs" onclick={ () => beforeDeleteSelectShopSearchDialog()} variant="destructive">
-          Delete Tasks
-        </Button>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeDeleteSelectShopSearchDialog()} variant="destructive">
+                <Trash2/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Delete Tasks</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       </Dialog.Trigger>
+
       <Dialog.Content>
         <Dialog.Header>
           <Dialog.Title>{dialog_title}</Dialog.Title>
