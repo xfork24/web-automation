@@ -165,11 +165,8 @@
         <DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.shadow_id)}>
           Copy Shadow ID
         </DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.shop_name)}>
-          Copy Shop Name
-        </DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.update_id)}>
-          Copy Operator ID
+        <DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.rednote_id)}>
+          Copy Rednote ID
         </DropdownMenu.Item>
       </DropdownMenu.Group>
       <DropdownMenu.Separator/>
@@ -177,9 +174,6 @@
         <DropdownMenu.GroupHeading>Navigate to</DropdownMenu.GroupHeading>
         <DropdownMenu.Item onclick={() => window.open(row.product_link, '_blank')}>
           Taobao Product Page
-        </DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => window.open(row.shop_link, '_blank')}>
-          Taobao Shop Page
         </DropdownMenu.Item>
       </DropdownMenu.Group>
       <DropdownMenu.Separator/>

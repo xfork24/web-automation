@@ -37,6 +37,7 @@
     type ShadowProductInfo,
     timeConverter,
     assert,
+    PLATFORM_NONE,
     PLATFORM_TAOBAO,
     PLATFORM_REDNOTE,
     SHADOW_STATUS_OFFLINE,
@@ -188,6 +189,7 @@
   let columnVisibility = $state<VisibilityState>({
     'Shadow ID': false,
     'Rednote ID': false,
+    'Shop Name': false,
     'Inventory': false,
     'Operator ID': false,
     'Operator Role': false
@@ -293,6 +295,9 @@
         const statusSnippet = createRawSnippet<[number]>((getData) => {
           const platform = getData();
           let body = `<div>`
+          if (platform == PLATFORM_NONE) {
+            body += `<p class="italic">None</p>`
+          }
           if (platform & PLATFORM_TAOBAO) {
             body += `<p><a href="https://item.taobao.com/item.htm?id=${row.original.shadow_id}" target="_blank" class="italic text-yellow-500">Taobao</a></p>`
           }

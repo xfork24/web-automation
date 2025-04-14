@@ -157,7 +157,7 @@
       table.resetRowSelection(false);
       await invalidateAll();
       toast("Operation Successful");
-      goto(`/shadow`);
+      await goto(`/shadow`);
     } catch (error) {
       console.error(`Error in function: ${error}`);
     }

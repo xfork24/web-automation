@@ -122,7 +122,7 @@
         open = false;
         await invalidateAll();
         toast("Operation Successful");
-        goto(`/shadow`);
+        await goto(`/shadow`);
       }
     } catch (error) {
       console.error(`Error in function: ${error}`);
@@ -152,9 +152,6 @@
         <DropdownMenu.GroupHeading>Copy IDs</DropdownMenu.GroupHeading>
         <DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.product_id)}>
           Copy Product ID
-        </DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.sku_id)}>
-          Copy SKU ID
         </DropdownMenu.Item>
         <DropdownMenu.Item onclick={() => navigator.clipboard.writeText(row.shop_name)}>
           Copy Shop Name
