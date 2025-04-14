@@ -513,7 +513,7 @@
 
   export const refreshData = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/products?limit=10000&sort=update_ts&desc=true', {
+      const response = await fetch('http://localhost:8000/api/v1/products?limit=5000&sort=update_ts&desc=true', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json;charset=UTF-8'

@@ -9,9 +9,9 @@ UPDATE_ID = 'tb_shop_crawler_task'
 
 if __name__ == '__main__':
     init_logger(LOGGING_FORMAT, LOG_FILE_NAME, logging.INFO, DEBUG)
-    ctr = CrawlTaskRunner(headless=True)
+    ctr = CrawlTaskRunner(headless=False)
     ctr.login()
     while True:
         # scan search_crawl_task and get all unfinished tasks
-        ctr.run_shop_crawler_tasks()
+        ctr.run_shop_crawler_tasks(UPDATE_ID, force=True)
         time.sleep(TASK_SCAN_WAIT_IN_SECONDS)

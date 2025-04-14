@@ -140,7 +140,12 @@
   let sorting = $state<SortingState>([]);
   let columnFilters = $state<ColumnFiltersState>([]);
   let rowSelection = $state<RowSelectionState>({});
-  let columnVisibility = $state<VisibilityState>({'Operator ID': false, 'Product IDs': false, 'Operator Role': false});
+  let columnVisibility = $state<VisibilityState>({
+    'Operator ID': false,
+    'Product IDs': false,
+    'Operator Role': false,
+    'Target Product IDs': false
+  });
 
   export const columns: ColumnDef<SearchCrawlTask>[] = [
     {

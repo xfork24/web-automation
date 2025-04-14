@@ -134,7 +134,7 @@ class CrawlTaskRunner:
         # self.analyze_and_add_hot_products(update_id)
         self.run_detail_crawler_tasks(update_id)
 
-    def run_search_crawler_task(self, update_id):
+    def run_search_crawler_task(self, update_id, force=False):
         now_ts = int(time.time())
         start_ts = now_ts - TASK_CHECK_PERIOD_IN_SECONDS
         self.logger.info(f'run search crawler tasks with now_ts={now_ts}, start_ts={start_ts}')
@@ -143,7 +143,7 @@ class CrawlTaskRunner:
                                                SearchCrawlTask.update_ts > start_ts).order_by(
             SearchCrawlTask.update_ts)
         for task in tasks:
-            if not handle_error_task(task, update_id):
+            if not force and not handle_error_task(task, update_id):
                 continue
             task.try_count = task.try_count + 1
             update_task_info(task, update_id, TASK_STATUS_RUNNING)
@@ -255,7 +255,7 @@ class CrawlTaskRunner:
                     if tasks.count() == 0:
                         add_llm_analyze_task(pi.product_id, pi.product_title, None, update_id, update_role)
 
-    def run_shop_search_crawler_task(self, update_id):
+    def run_shop_search_crawler_task(self, update_id, force=False):
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         self.logger.info(f'run shop search crawler tasks with start_ts={start_ts}')
         tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.status != TASK_STATUS_DONE,
@@ -263,7 +263,7 @@ class CrawlTaskRunner:
                                                    ShopSearchCrawlTask.update_ts > start_ts).order_by(
             ShopSearchCrawlTask.update_ts)
         for task in tasks:
-            if not handle_error_task(task, update_id):
+            if not force and not handle_error_task(task, update_id):
                 continue
             task.try_count = task.try_count + 1
             update_task_info(task, update_id, TASK_STATUS_RUNNING)
@@ -287,7 +287,7 @@ class CrawlTaskRunner:
             time.sleep(TASK_EXECUTE_GAP_IN_SECONDS)
         return
 
-    def run_shop_crawler_tasks(self, update_id):
+    def run_shop_crawler_tasks(self, update_id, force=False):
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         self.logger.info(f'run shop crawler tasks with start_ts={start_ts}')
         tasks = ShopCrawlTask.select().where(ShopCrawlTask.status != TASK_STATUS_DONE,
@@ -295,7 +295,7 @@ class CrawlTaskRunner:
                                              ShopCrawlTask.update_ts > start_ts).order_by(
             ShopCrawlTask.update_ts)
         for task in tasks:
-            if not handle_error_task(task, update_id):
+            if not force and not handle_error_task(task, update_id):
                 continue
             task.try_count = task.try_count + 1
             update_task_info(task, update_id, TASK_STATUS_RUNNING)
@@ -377,7 +377,7 @@ class CrawlTaskRunner:
                 add_detail_crawl_task(pi.product_id, pi.product_link, None, update_id,
                                       self.analyze_and_add_hot_products.__name__)
 
-    def run_detail_crawler_tasks(self, update_id):
+    def run_detail_crawler_tasks(self, update_id, force=False):
         start_ts = int(time.time()) - TASK_CHECK_PERIOD_IN_SECONDS
         self.logger.info(f'run detail crawler tasks with start_ts={start_ts}')
         tasks = DetailCrawlTask.select().where(DetailCrawlTask.status != TASK_STATUS_DONE,
@@ -385,7 +385,7 @@ class CrawlTaskRunner:
                                                DetailCrawlTask.update_ts > start_ts).order_by(
             DetailCrawlTask.update_ts)
         for task in tasks:
-            if not handle_error_task(task, update_id):
+            if not force and not handle_error_task(task, update_id):
                 continue
             task.try_count = task.try_count + 1
             update_task_info(task, update_id, TASK_STATUS_RUNNING)
