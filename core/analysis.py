@@ -463,29 +463,30 @@ class ProductManageTaskRunner:
     def generate_shadow_fix_tasks(self, update_id):
         ts = int(time.time())
         # check and update shadow product status
-        shadow_products = ShadowProductInfo.select().where(ShadowProductInfo.status == SHADOW_PRODUCT_STATUS_NEW,
-                                                           ShadowProductInfo.update_ts > ts - TASK_CHECK_PERIOD_IN_SECONDS)
+        shadow_products = ShadowProductInfo.select().where(
+            ShadowProductInfo.update_ts > ts - TASK_CHECK_PERIOD_IN_SECONDS)
         for sp in shadow_products:
             try:
-                p = ProductInfo.get(ProductInfo.product_id == sp.product_id)
-                additional_properties = json_loads(p.additional_properties)
-                if RESOURCE_ROOT_KEY not in additional_properties:
-                    tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == p.product_id,
-                                                           DetailCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
-                        DetailCrawlTask.update_ts.desc())
-                    if len(tasks) == 0:
-                        self.logger.info(f'add detail crawl task to fix shadow product, product_id={p.product_id}')
-                        add_detail_crawl_task(p.product_id, p.product_link, {}, update_id,
-                                              self.generate_shadow_fix_tasks.__name__)
-                if LLM_ANALYSIS_KEY not in additional_properties:
-                    tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == p.product_id,
-                                                          LLMAnalyzeTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
-                        LLMAnalyzeTask.update_ts.desc())
-                    if len(tasks) == 0:
-                        self.logger.info(f'add llm analyze task to fix shadow product, product_id={p.product_id}')
-                        add_llm_analyze_task(p.product_id, p.product_title, {}, update_id,
-                                             self.generate_shadow_fix_tasks.__name__)
                 if sp.status == SHADOW_PRODUCT_STATUS_NEW:
+                    p = ProductInfo.get(ProductInfo.product_id == sp.product_id)
+                    additional_properties = json_loads(p.additional_properties)
+                    if RESOURCE_ROOT_KEY not in additional_properties:
+                        tasks = DetailCrawlTask.select().where(DetailCrawlTask.product_id == p.product_id,
+                                                               DetailCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
+                            DetailCrawlTask.update_ts.desc())
+                        if len(tasks) == 0:
+                            self.logger.info(f'add detail crawl task to fix shadow product, product_id={p.product_id}')
+                            add_detail_crawl_task(p.product_id, p.product_link, {}, update_id,
+                                                  self.generate_shadow_fix_tasks.__name__)
+                    if LLM_ANALYSIS_KEY not in additional_properties:
+                        tasks = LLMAnalyzeTask.select().where(LLMAnalyzeTask.product_id == p.product_id,
+                                                              LLMAnalyzeTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
+                            LLMAnalyzeTask.update_ts.desc())
+                        if len(tasks) == 0:
+                            self.logger.info(f'add llm analyze task to fix shadow product, product_id={p.product_id}')
+                            add_llm_analyze_task(p.product_id, p.product_title, {}, update_id,
+                                                 self.generate_shadow_fix_tasks.__name__)
+                    # add ready task if not exist
                     tasks = ProductManageTask.select().where(ProductManageTask.product_id == p.product_id,
                                                              ProductManageTask.operation == PRODUCT_MANAGE_OPERATION_READY,
                                                              ProductManageTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
@@ -496,10 +497,11 @@ class ProductManageTaskRunner:
                         add_product_manage_task(sp.product_id, sp.shop_name, PRODUCT_MANAGE_PLATFORM_NONE,
                                                 PRODUCT_MANAGE_OPERATION_READY, {}, update_id,
                                                 self.generate_shadow_fix_tasks.__name__)
-                if sp.status == SHADOW_PRODUCT_STATUS_ONSHELF:
-                    platform_mask = additional_properties[PLATFORM_MASK_KEY]
+                elif sp.status != SHADOW_PRODUCT_STATUS_READY:
+                    ad = json_loads(sp.additional_properties)
+                    platform_mask = ad[PLATFORM_MASK_KEY]
                     if platform_mask & PRODUCT_MANAGE_PLATFORM_TAOBAO and sp.shadow_id == SHADOW_PRODUCT_DEFAULT_ID:
-                        tasks = ProductManageTask.select().where(ProductManageTask.product_id == p.product_id,
+                        tasks = ProductManageTask.select().where(ProductManageTask.product_id == sp.product_id,
                                                                  ProductManageTask.platform == PRODUCT_MANAGE_PLATFORM_TAOBAO,
                                                                  ProductManageTask.operation == PRODUCT_MANAGE_OPERATION_SYNC,
                                                                  ProductManageTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
@@ -511,7 +513,7 @@ class ProductManageTaskRunner:
                                                     PRODUCT_MANAGE_OPERATION_SYNC, {}, update_id,
                                                     self.generate_shadow_fix_tasks.__name__)
                     if platform_mask & PRODUCT_MANAGE_PLATFORM_REDNOTE and sp.rednote_id == REDNOTE_PRODUCT_DEFAULT_ID:
-                        tasks = ProductManageTask.select().where(ProductManageTask.product_id == p.product_id,
+                        tasks = ProductManageTask.select().where(ProductManageTask.product_id == sp.product_id,
                                                                  ProductManageTask.platform == PRODUCT_MANAGE_PLATFORM_TAOBAO,
                                                                  ProductManageTask.operation == PRODUCT_MANAGE_OPERATION_SYNC,
                                                                  ProductManageTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(

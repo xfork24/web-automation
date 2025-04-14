@@ -342,6 +342,8 @@ export function shadowOperationToString(status: number) {
     shadow_operation = 'OFFLINE';
   } else if (status === 5) {
     shadow_operation = 'OFF_SHELF';
+  } else if (status === 6) {
+    shadow_operation = 'SYNC';
   }
   return shadow_operation;
 }

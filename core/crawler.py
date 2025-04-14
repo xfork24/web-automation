@@ -1199,7 +1199,7 @@ class Crawler:
         # category
         recent_cat = self.driver.find_element(By.CLASS_NAME, 'recent')
         cat_spans = recent_cat.find_elements(By.XPATH, 'span')
-        assert (len(cat_spans) == 2)
+        assert (len(cat_spans) >= 2)
         cat_spans[1].click()
         # next page
         action_div = self.driver.find_element(By.CLASS_NAME, 'action-bar')
@@ -1302,6 +1302,9 @@ class Crawler:
         # 我们目前只同步rednote_id到shadow_product
         self.driver.get(REDNOTE_LIST_SHELF_PAGE)
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        header_wrapper_div = self.driver.find_element(By.CLASS_NAME, 'd-tabs-headers-wrapper')
+        all_cat = header_wrapper_div.find_element(By.XPATH, 'div/div[1]/div/div[1]')
+        self.element_click(all_cat)
         product_title_divs = self.driver.find_elements(By.CLASS_NAME, 'product-main')
         rednote_id = None
         for div in product_title_divs:
@@ -1311,7 +1314,7 @@ class Crawler:
                 id_span = id_wrapper_div.find_element(By.XPATH, 'div/span')
                 idx = id_span.text.find('商品ID: ')
                 if idx != -1:
-                    rednote_id = id_span.text[idx + 1:]
+                    rednote_id = id_span.text[idx + 6:]
                     break
         if rednote_id is not None:
             update_shadow_product_info(product.product_id, product.status, update_id, self.handle_rednote_sync.__name__,
