@@ -1,16 +1,2 @@
-.env
-.idea/
-bin/
-include/
-lib/
-pyvenv.cfg
-.DS_Store
-__pycache__/
-models/__pycache__/
-share/
-images/
-output/
-products/
-logs/
-utils/__pycache__/
-main_test.py
+# Created by venv; see https://docs.python.org/3/library/venv.html
+*
