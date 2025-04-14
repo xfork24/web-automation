@@ -124,15 +124,15 @@ class CrawlTaskRunner:
     def login(self, user=TB_CRAWL_USER):
         self.crawler.login_taobao(user)
 
-    def run_taobao_crawler_tasks(self, update_id):
-        self.run_search_crawler_task(update_id)
+    def run_taobao_crawler_tasks(self, update_id, force=False):
+        self.run_search_crawler_task(update_id, force)
         self.generate_crawl_fix_tasks(update_id)
-        self.run_shop_search_crawler_task(update_id)
+        self.run_shop_search_crawler_task(update_id, force)
         # 使用v2版策略，按照商品名匹配更新，不更新其他商品
-        self.run_shop_crawler_tasks(update_id)
+        self.run_shop_crawler_tasks(update_id, force)
         # 暂时不执行这个，因为选出来的都是VIP充值，旗舰店内容等
         # self.analyze_and_add_hot_products(update_id)
-        self.run_detail_crawler_tasks(update_id)
+        self.run_detail_crawler_tasks(update_id, force)
 
     def run_search_crawler_task(self, update_id, force=False):
         now_ts = int(time.time())
