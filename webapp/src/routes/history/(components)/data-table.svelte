@@ -31,9 +31,10 @@
   import { FunnelX, RotateCcw } from "@lucide/svelte/icons";
   import type { OperationHistory } from '../../(components)/model';
   import { parseUUID4, timeConverter } from '../../(components)/model';
+  import { invalidateAll } from "$app/navigation";
+  import { toast } from "svelte-sonner";
 
   let {data} = $props();
-  let histories = $state(data.content);
 
   let pagination = $state<PaginationState>({pageIndex: 0, pageSize: 10});
   let sorting = $state<SortingState>([]);
@@ -230,7 +231,7 @@
 
   const table = createSvelteTable({
     get data() {
-      return histories;
+      return data.content;
     },
     columns,
     state: {
@@ -310,18 +311,8 @@
   }
 
   export const refreshData = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/api/v1/operation_histories?limit=5000&sort=create_ts&desc=true', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json;charset=UTF-8'
-        }
-      });
-      const body = await response.json();
-      histories = body.data;
-    } catch (error) {
-      console.error(`Error in load function: ${error}`);
-    }
+    await invalidateAll();
+    toast("Operation Successful");
   };
 </script>
 

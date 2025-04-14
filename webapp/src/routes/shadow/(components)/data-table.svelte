@@ -49,7 +49,6 @@
   import { invalidateAll } from '$app/navigation';
 
   let {data} = $props();
-  let shadows = $state(data.shadow_products);
 
   let open = $state(false);
   let dialog_title = $state('Are you sure?');
@@ -478,7 +477,7 @@
 
   const table = createSvelteTable({
     get data() {
-      return shadows;
+      return data.shadow_products;
     },
     columns,
     state: {
@@ -564,36 +563,8 @@
   }
 
   export const refreshData = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/api/v1/shadow_products?limit=1000&sort=update_ts&desc=true', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json;charset=UTF-8'
-        }
-      });
-      const body = await response.json();
-      body.data.forEach((shadow: ShadowProductInfo) => {
-        if (shadow.additional_properties.hasOwnProperty('llm_analysis')) {
-          shadow.keyword = shadow.additional_properties.llm_analysis.keyword;
-          shadow.category = shadow.additional_properties.llm_analysis.category;
-          shadow.digital = shadow.additional_properties.llm_analysis.digital;
-        } else {
-          shadow.keyword = '';
-          shadow.category = '';
-          shadow.digital = false;
-        }
-        if (shadow.additional_properties.hasOwnProperty('platform_mask')) {
-          shadow.platform_mask = shadow.additional_properties.platform_mask;
-        } else {
-          shadow.platform_mask = 0;
-        }
-        shadow.digital_str = shadow.digital ? 'TRUE' : 'FALSE';
-        shadow.status_str = shadowStatusToString(shadow.status);
-      })
-      shadows = body.data;
-    } catch (error) {
-      console.error(`Error in load function: ${error}`);
-    }
+    await invalidateAll();
+    toast("Operation Successful");
   };
 </script>
 

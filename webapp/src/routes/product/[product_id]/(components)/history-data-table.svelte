@@ -29,11 +29,10 @@
   import { FunnelX, RotateCcw } from "@lucide/svelte/icons";
   import type { AdditionalProperties, ProductHistory, ProductSale } from '../../../(components)/model';
   import { parseUUID4, timeConverter } from '../../../(components)/model';
-  import { getLocalTimeZone, today } from "@internationalized/date";
+  import { invalidateAll } from "$app/navigation";
+  import { toast } from "svelte-sonner";
 
-  let {product_id, histories} = $props();
-
-  let product_histories = $state(histories)
+  let {histories} = $props();
 
   let pagination = $state<PaginationState>({pageIndex: 0, pageSize: 10});
   let sorting = $state<SortingState>([]);
@@ -208,7 +207,7 @@
 
   const table = createSvelteTable({
     get data() {
-      return product_histories;
+      return histories;
     },
     columns,
     state: {
@@ -288,18 +287,8 @@
   }
 
   export const refreshData = async () => {
-    try {
-      const history_response = await fetch(`http://localhost:8000/api/v1/product/${product_id}/history`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json;charset=UTF-8'
-        }
-      });
-      const histories = await history_response.json();
-      product_histories = histories.data;
-    } catch (error) {
-      console.error(`Error in load function: ${error}`);
-    }
+    await invalidateAll();
+    toast("Operation Successful");
   };
 </script>
 

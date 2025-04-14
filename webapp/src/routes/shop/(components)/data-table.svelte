@@ -36,7 +36,6 @@
   import { invalidateAll } from '$app/navigation';
 
   let {data} = $props();
-  let shops = $state(data.shops);
 
   let open = $state(false);
   let dialog_title = $state('Are you sure?');
@@ -322,7 +321,7 @@
 
   const table = createSvelteTable({
     get data() {
-      return shops;
+      return data.shops;
     },
     columns,
     state: {
@@ -400,18 +399,8 @@
   }
 
   export const refreshData = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/api/v1/shops?limit=5000&&sort=update_ts&desc=true', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json;charset=UTF-8'
-        }
-      });
-      const body = await response.json();
-      shops = body.data;
-    } catch (error) {
-      console.error(`Error in load function: ${error}`);
-    }
+    await invalidateAll();
+    toast("Operation Successful");
   };
 </script>
 
