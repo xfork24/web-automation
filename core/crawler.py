@@ -32,6 +32,7 @@ TB_LOGIN_AUTH_TITLE_NAME = '登录-身份验证'
 
 CRAWL_PAGE_WAIT_IN_SECONDS = 5
 CRAWL_OPERATION_TRY_COUNT = 3
+LOGIN_SLIDE_RETRY_COUNT = 5
 LOGIN_CONFIRM_PAGE_WAIT_IN_SECONDS = 15
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
@@ -81,9 +82,6 @@ DETAIL_IMG_LINK_VALIDATE_RE_EXP = re.compile('^https://\\w+')
 
 # Taobao product manage controls
 ONSHELF_TAOBAO_NAV_BAR_RE_EXP = re.compile('^PicGroupList_treeDom__\\w+$')
-
-# others
-SHOP_PRODUCT_COVER_PLACEHOLDER_LINK = 'https://gw.alicdn.com/imgextra/i4/O1CN01CYtPWu1MUBqQAUK9D_!!6000000001437-2-tps-2-2.png'
 
 
 class WebDriverType(Enum):
@@ -186,7 +184,7 @@ class Crawler:
         while True:
             try:
                 try_count += 1
-                if try_count >= CRAWL_OPERATION_TRY_COUNT:
+                if try_count >= LOGIN_SLIDE_RETRY_COUNT:
                     msg = 'login retry max count exceeded, login failed.'
                     self.logger.error(msg)
                     raise LoginFailed(msg)
@@ -451,9 +449,19 @@ class Crawler:
                 shop_cover = div.find_element(By.XPATH, 'img').get_attribute('src')
         assert (shop_name is not None)
         update_shop_info(shop_name, update_id, self.craw_taobao_shop_page.__name__, shop_link, shop_cover, None)
+        # for craw_taobao_shop_sku_v2
+        target_products = []
+        if target_products is not None:
+            for target_id in target_product_ids:
+                try:
+                    target_products.append(ProductInfo.get(ProductInfo.product_id == target_id))
+                except DoesNotExist:
+                    self.logger.info(
+                        f'target product_id={target_id} in target_product_ids={target_product_ids} does not exist, just ignore')
+                    continue
         for sku_div in sku_divs:
             try:
-                self.craw_taobao_shop_sku(sku_div, shop_name, shop_link, update_id, target_product_ids)
+                self.craw_taobao_shop_sku_v2(sku_div, shop_name, shop_link, update_id, target_products)
             except PriceOCRError as e:
                 self.logger.error(f'get PriceOCRGetEmptyError={e}, nothing will be updated and just continue')
                 traceback.print_exc()
@@ -569,6 +577,46 @@ class Crawler:
                                          shop_name, shop_link,
                                          price_unit, display_price, product_sale, update_id)
 
+    def craw_taobao_shop_sku_v2(self, shop_sku_div, shop_name, shop_link, update_id, target_products):
+        if len(target_products) == 0:
+            self.logger.info('there is no target products, just return in v2')
+            return
+        self.logger.info('we can not parse product_id in v2, just ignore and compare product title')
+        product_cover = SHOP_PRODUCT_COVER_PLACEHOLDER_LINK
+        for _ in range(CRAWL_OPERATION_TRY_COUNT):
+            self.scroll_window_to_element(shop_sku_div)
+            product_cover = shop_sku_div.find_element(By.XPATH, 'img').get_attribute('src')
+            if product_cover != SHOP_PRODUCT_COVER_PLACEHOLDER_LINK:
+                break
+        divs = shop_sku_div.find_elements(By.XPATH, './/div')
+        title_div, price_div, sale_div = None, None, None
+        for div in divs:
+            cls_name = div.get_attribute('class')
+            if cls_name is None:
+                continue
+            elif re.match(SHOP_SKU_CARD_TITLE_RE_EXP, cls_name):
+                title_div = div
+            elif re.match(SHOP_SKU_CARD_PRICE_RE_EXP, cls_name):
+                price_div = div
+            elif re.match(SHOP_SKU_CARD_SALE_RE_EXP, cls_name):
+                sale_div = div
+        assert (title_div is not None and price_div is not None and sale_div is not None)
+        product_title = self.parse_product_title(title_div.text)
+        for product in target_products:
+            if product.product_title == product_title:
+                product_id = product.product_id
+                price_spans = price_div.find_elements(By.XPATH, 'span')
+                assert (len(price_spans) == 2)
+                price_unit = self.parse_price_unit(price_spans[0].text)
+                display_price = self.parse_price_span(price_spans[1], product_id)
+                product_sale = self.parse_sale_in_search(sale_div.text)
+                # update product_info and product_sales table
+                self.save_taobao_shop_sku_result_v2(product_id, product_cover,
+                                                    shop_name, shop_link,
+                                                    price_unit, display_price,
+                                                    product_sale, update_id)
+                break
+
     def save_taobao_shop_sku_result(self, product_id, sku_id, product_title, product_link, product_cover,
                                     shop_name, shop_link,
                                     price_unit, display_price, display_sale, update_id):
@@ -590,6 +638,25 @@ class Crawler:
                             shop_name, shop_link,
                             price_unit, display_price, display_sale,
                             None, None, None, None)
+        add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None, update_id, update_role)
+
+    def save_taobao_shop_sku_result_v2(self, product_id, product_cover,
+                                       shop_name, shop_link,
+                                       price_unit, display_price, display_sale, update_id):
+        self.logger.info(f'save_taobao_shop_sku_result parsed record:\n'
+                         f'\t\tproduct_id={product_id}\n'
+                         f'\t\tproduct_cover={product_cover}\n'
+                         f'\t\tshop_name={shop_name}\n'
+                         f'\t\tshop_link={shop_link}\n'
+                         f'\t\tprice_unit={price_unit}\n'
+                         f'\t\tdisplay_price={display_price}\n'
+                         f'\t\tdisplay_sale={display_sale}\n'
+                         f'\t\tupdate_id={update_id}\n')
+        update_role = self.save_taobao_shop_sku_result.__name__
+        update_product_info(product_id, update_id, update_role,
+                            product_cover=product_cover,
+                            shop_name=shop_name, shop_link=shop_link,
+                            price_unit=price_unit, display_price=display_price, display_sale=display_sale)
         add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None, update_id, update_role)
 
     def crawl_taobao_shop_link_by_search(self, shop_name, update_id):

@@ -128,8 +128,8 @@ class CrawlTaskRunner:
         self.run_search_crawler_task(update_id)
         self.generate_crawl_fix_tasks(update_id)
         self.run_shop_search_crawler_task(update_id)
-        # 暂时不执行，等待找到好策略
-        # self.run_shop_crawler_tasks(update_id)
+        # 使用v2版策略，按照商品名匹配更新，不更新其他商品
+        self.run_shop_crawler_tasks(update_id)
         # 暂时不执行这个，因为选出来的都是VIP充值，旗舰店内容等
         # self.analyze_and_add_hot_products(update_id)
         self.run_detail_crawler_tasks(update_id)
@@ -194,8 +194,11 @@ class CrawlTaskRunner:
                 if not shop_link_match:
                     self.logger.info(
                         f'handle shop link issue for shop_name={si.shop_name} with shop_link={si.shop_link}')
-                    tasks = ShopSearchCrawlTask.select().where(ShopSearchCrawlTask.shop_name == si.shop_name,
-                                                               ShopSearchCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
+                    tasks = ShopSearchCrawlTask.select().where(
+                        (ShopSearchCrawlTask.shop_name == si.shop_name) &
+                        ((ShopSearchCrawlTask.status == TASK_STATUS_ARCHIVED) |
+                         (ShopSearchCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS))
+                    ).order_by(
                         ShopSearchCrawlTask.update_ts.desc())
                     if tasks.count() == 0:
                         add_shop_search_crawl_task(si.shop_name, None, update_id, update_role)
@@ -209,8 +212,11 @@ class CrawlTaskRunner:
                 if fix_product_sale and fix_product_sale_by_search:
                     self.logger.info(f'handle display_sale issue by search for product_id={pi.product_id}')
                     # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
-                    tasks = SearchCrawlTask.select().where(SearchCrawlTask.search_key == pi.product_title,
-                                                           SearchCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
+                    tasks = SearchCrawlTask.select().where(
+                        (SearchCrawlTask.search_key == pi.product_title) &
+                        ((SearchCrawlTask.status == TASK_STATUS_ARCHIVED) |
+                         (SearchCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS))
+                    ).order_by(
                         SearchCrawlTask.update_ts.desc())
                     if len(tasks) > 0:
                         target_product_ids = json_loads(tasks[0].target_product_ids)
@@ -224,8 +230,11 @@ class CrawlTaskRunner:
                 if fix_product_sale and fix_product_sale_by_shop:
                     self.logger.info(f'handle display_sale issue by shop for product_id={pi.product_id}')
                     # 不考虑已标记为TASK_STATUS_ARCHIVED状态的店铺的商品，它们会被更新，但不会被抓取
-                    tasks = ShopCrawlTask.select().where(ShopCrawlTask.shop_name == pi.shop_name,
-                                                         ShopCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS).order_by(
+                    tasks = ShopCrawlTask.select().where(
+                        (ShopCrawlTask.shop_name == pi.shop_name) &
+                        ((ShopCrawlTask.status == TASK_STATUS_ARCHIVED) |
+                         (ShopCrawlTask.update_ts > ts - TASK_DEDUP_IN_SECONDS))
+                    ).order_by(
                         ShopCrawlTask.update_ts.desc())
                     if len(tasks) > 0:
                         target_product_ids = json_loads(tasks[0].target_product_ids)

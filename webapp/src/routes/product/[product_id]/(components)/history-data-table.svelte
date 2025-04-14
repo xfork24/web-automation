@@ -1,6 +1,5 @@
 <script lang="ts">
   import { ChevronDown } from '@lucide/svelte/icons';
-  import FunnelX from '@lucide/svelte/icons/funnel-x';
   import {
     type ColumnDef,
     type ColumnFiltersState,
@@ -20,16 +19,21 @@
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Select from '$lib/components/ui/select/index.js';
   import * as Table from '$lib/components/ui/table';
+  import * as Tooltip from "$lib/components/ui/tooltip";
   import {
     FlexRender,
     createSvelteTable,
     renderComponent,
     renderSnippet
   } from '$lib/components/ui/data-table';
-  import type { AdditionalProperties, ProductHistory } from '../../../(components)/model';
+  import { FunnelX, RotateCcw } from "@lucide/svelte/icons";
+  import type { AdditionalProperties, ProductHistory, ProductSale } from '../../../(components)/model';
   import { parseUUID4, timeConverter } from '../../../(components)/model';
+  import { getLocalTimeZone, today } from "@internationalized/date";
 
-  let {histories} = $props();
+  let {product_id, histories} = $props();
+
+  let product_histories = $state(histories)
 
   let pagination = $state<PaginationState>({pageIndex: 0, pageSize: 10});
   let sorting = $state<SortingState>([]);
@@ -204,7 +208,7 @@
 
   const table = createSvelteTable({
     get data() {
-      return histories;
+      return product_histories;
     },
     columns,
     state: {
@@ -282,6 +286,21 @@
       column.setFilterValue('');
     });
   }
+
+  export const refreshData = async () => {
+    try {
+      const history_response = await fetch(`http://localhost:8000/api/v1/product/${product_id}/history`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8'
+        }
+      });
+      const histories = await history_response.json();
+      product_histories = histories.data;
+    } catch (error) {
+      console.error(`Error in load function: ${error}`);
+    }
+  };
 </script>
 
 <div class="w-full">
@@ -312,9 +331,32 @@
       placeholder="Filter {triggerContent}..."
       value={(table.getColumn(triggerContent)?.getFilterValue() as string) ?? ""}
     />
-    <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
-      <FunnelX/>
-    </Button>
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button class="max-w-xs mr-4" onclick={ () => clearAllTableFilters()} variant="destructive">
+            <FunnelX/>
+          </Button>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <p>Clear all filters</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
+
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button class="max-w-xs mr-4" onclick={ () => refreshData()} variant="destructive">
+            <RotateCcw/>
+          </Button>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <p>Refresh data</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
+
     <DropdownMenu.Root>
       <DropdownMenu.Trigger>
         {#snippet child({props})}

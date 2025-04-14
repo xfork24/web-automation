@@ -31,11 +31,12 @@
     renderComponent,
     renderSnippet
   } from '$lib/components/ui/data-table';
-  import { FunnelX, LibraryBig, Search, PackageSearch, Trash2 } from "@lucide/svelte/icons";
+  import { FunnelX, RotateCcw, Search, PackageSearch, Trash2 } from "@lucide/svelte/icons";
   import { assert, parseUUID4, type ShopInfo, timeConverter } from '../../(components)/model';
   import { invalidateAll } from '$app/navigation';
 
   let {data} = $props();
+  let shops = $state(data.shops);
 
   let open = $state(false);
   let dialog_title = $state('Are you sure?');
@@ -321,7 +322,7 @@
 
   const table = createSvelteTable({
     get data() {
-      return data.shops;
+      return shops;
     },
     columns,
     state: {
@@ -397,6 +398,21 @@
       column.setFilterValue('');
     });
   }
+
+  export const refreshData = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/shops?limit=10000&&sort=update_ts&desc=true', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8'
+        }
+      });
+      const body = await response.json();
+      shops = body.data;
+    } catch (error) {
+      console.error(`Error in load function: ${error}`);
+    }
+  };
 </script>
 
 <div class="w-full">
@@ -436,6 +452,19 @@
         </Tooltip.Trigger>
         <Tooltip.Content>
           <p>Clear all filters</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
+
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button class="max-w-xs mr-4" onclick={ () => refreshData()} variant="destructive">
+            <RotateCcw/>
+          </Button>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <p>Refresh data</p>
         </Tooltip.Content>
       </Tooltip.Root>
     </Tooltip.Provider>

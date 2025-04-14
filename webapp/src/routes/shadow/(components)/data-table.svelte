@@ -25,7 +25,7 @@
   import * as Select from '$lib/components/ui/select';
   import * as Dialog from '$lib/components/ui/dialog';
   import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-  import { BookmarkCheck, BookmarkX, FunnelX, Trash2 } from "@lucide/svelte/icons";
+  import { BookmarkCheck, BookmarkX, FunnelX, RotateCcw, Trash2 } from "@lucide/svelte/icons";
   import {
     FlexRender,
     createSvelteTable,
@@ -43,11 +43,12 @@
     SHADOW_OPERATION_ONLINE,
     SHADOW_STATUS_ONLINE,
     SHADOW_OPERATION_OFFLINE,
-    SHADOW_STATUS_NEW, SHADOW_STATUS_READY
+    SHADOW_STATUS_NEW, SHADOW_STATUS_READY, shadowStatusToString
   } from '../../(components)/model';
   import { invalidateAll } from '$app/navigation';
 
   let {data} = $props();
+  let shadows = $state(data.shadow_products);
 
   let open = $state(false);
   let dialog_title = $state('Are you sure?');
@@ -472,7 +473,7 @@
 
   const table = createSvelteTable({
     get data() {
-      return data.shadow_products;
+      return shadows;
     },
     columns,
     state: {
@@ -556,6 +557,39 @@
       column.setFilterValue('');
     });
   }
+
+  export const refreshData = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/shadow_products?limit=10000&sort=update_ts&desc=true', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8'
+        }
+      });
+      const body = await response.json();
+      body.data.forEach((shadow: ShadowProductInfo) => {
+        if (shadow.additional_properties.hasOwnProperty('llm_analysis')) {
+          shadow.keyword = shadow.additional_properties.llm_analysis.keyword;
+          shadow.category = shadow.additional_properties.llm_analysis.category;
+          shadow.digital = shadow.additional_properties.llm_analysis.digital;
+        } else {
+          shadow.keyword = '';
+          shadow.category = '';
+          shadow.digital = false;
+        }
+        if (shadow.additional_properties.hasOwnProperty('platform_mask')) {
+          shadow.platform_mask = shadow.additional_properties.platform_mask;
+        } else {
+          shadow.platform_mask = 0;
+        }
+        shadow.digital_str = shadow.digital ? 'TRUE' : 'FALSE';
+        shadow.status_str = shadowStatusToString(shadow.status);
+      })
+      shadows = body.data;
+    } catch (error) {
+      console.error(`Error in load function: ${error}`);
+    }
+  };
 </script>
 
 <div class="w-full">
@@ -599,6 +633,18 @@
       </Tooltip.Root>
     </Tooltip.Provider>
 
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button class="max-w-xs mr-4" onclick={ () => refreshData()} variant="destructive">
+            <RotateCcw/>
+          </Button>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <p>Refresh data</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
 
     <Dialog.Root bind:open>
       <Dialog.Trigger class="mr-4">

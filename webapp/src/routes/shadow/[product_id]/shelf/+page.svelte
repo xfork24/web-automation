@@ -365,7 +365,7 @@
         </Dialog.Root>
         <div class="items-center justify-between px-4 text-4xl">Shadow Product Update History</div>
         <div class="items-center justify-between px-4">
-          <HistoryDataTable {histories}/>
+          <HistoryDataTable {product_id} {histories}/>
         </div>
       </div>
     {:else}

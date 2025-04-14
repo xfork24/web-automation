@@ -6,7 +6,7 @@ from core import *
 
 LOG_FILE_NAME = './logs/tb_fix_shop_link.log'
 UPDATE_TIME_PERIOD_IN_SECONDS = 86400
-SHOP_NAMES = ['一只猫生活店']
+SHOP_NAMES = ['灰太忙文化']
 UPDATE_ID = 'tb_shop_search_crawler'
 
 

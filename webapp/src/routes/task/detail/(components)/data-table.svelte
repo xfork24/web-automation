@@ -36,12 +36,13 @@
     type DetailCrawlTask,
     parseUUID4,
     timeConverter,
-    task_status_badge_class
+    task_status_badge_class, statusToString, parseTaskReason
   } from '../../../(components)/model';
-  import { FunnelX, Copy, Archive, Trash2 } from "@lucide/svelte/icons";
+  import { FunnelX, Copy, Archive, RotateCcw, Trash2 } from "@lucide/svelte/icons";
   import { invalidateAll } from '$app/navigation';
 
   let {data} = $props();
+  let tasks = $state(data.content);
 
   let open = $state(false);
   let dialog_title = $state('Are you sure?');
@@ -301,7 +302,7 @@
 
   const table = createSvelteTable({
     get data() {
-      return data.content;
+      return tasks;
     },
     columns,
     state: {
@@ -380,6 +381,25 @@
       column.setFilterValue('');
     });
   }
+
+  export const refreshData = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/detail_tasks?limit=1000&sort=update_ts&desc=true', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8'
+        }
+      });
+      let body = await response.json();
+      body.data.forEach((item: DetailCrawlTask) => {
+        item.status_str = statusToString(item.status);
+        item.reason = parseTaskReason(item);
+      });
+      tasks = body.data;
+    } catch (error) {
+      console.error(`Error in load function: ${error}`);
+    }
+  };
 </script>
 
 <div class="w-full">
@@ -419,6 +439,19 @@
         </Tooltip.Trigger>
         <Tooltip.Content>
           <p>Clear all filters</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
+
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button class="max-w-xs mr-4" onclick={ () => refreshData()} variant="destructive">
+            <RotateCcw/>
+          </Button>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <p>Refresh data</p>
         </Tooltip.Content>
       </Tooltip.Root>
     </Tooltip.Provider>

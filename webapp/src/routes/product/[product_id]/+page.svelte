@@ -199,7 +199,7 @@
       </div>
       <div class="items-center justify-between px-4 text-4xl">Product Update History</div>
       <div class="items-center justify-between px-4">
-        <HistoryDataTable {histories}/>
+        <HistoryDataTable {product_id} {histories}/>
       </div>
     {:else}
       <div class="items-center justify-between px-4 text-4xl">Please select a valid product from <a

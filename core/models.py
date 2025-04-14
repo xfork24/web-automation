@@ -61,6 +61,7 @@ SHADOW_PRODUCT_STATUS_OFFLINE = 4
 SHADOW_PRODUCT_STATUS_OFFSHELF = 5
 
 SHADOW_PRODUCT_DEFAULT_INVENTORY_SIZE = 9999
+SHOP_PRODUCT_COVER_PLACEHOLDER_LINK = 'https://gw.alicdn.com/imgextra/i4/O1CN01CYtPWu1MUBqQAUK9D_!!6000000001437-2-tps-2-2.png'
 SHOP_COVER_DEFAULT_LINK = 'https://img.alicdn.com/imgextra/i1/O1CN01pz5irY1bhDKceJor2_!!6000000003496-2-tps-144-144.png_320x320q75.jpg_.webp'
 SHOP_LINK_KNOWN_RE_EXP_LIST = [re.compile('^https://store.taobao.com/shop/view_shop.htm'),
                                re.compile('^https://shop\\w+.taobao.com/')]
@@ -358,7 +359,7 @@ def update_product_info(product_id, update_id, update_role,
             exist_pi.product_title = product_title
         if product_link != '':
             exist_pi.product_link = product_link
-        if product_cover != '':
+        if product_cover != '' and product_cover != SHOP_PRODUCT_COVER_PLACEHOLDER_LINK:
             exist_pi.product_cover = product_cover
         if shop_name != '':
             exist_pi.shop_name = shop_name
@@ -459,7 +460,7 @@ def update_shop_info(shop_name, update_id, update_role, shop_link='', shop_cover
             exist_si.shop_link = shop_link
         else:
             logger.info(f'find shop_name={shop_name} with unknown link={shop_link}, exist record not updated')
-        if shop_cover != '':
+        if shop_cover != '' and shop_cover != SHOP_COVER_DEFAULT_LINK:
             exist_si.shop_cover = shop_cover
         if additional_properties is not None:
             exist_si.additional_properties = json_dumps(additional_properties)
