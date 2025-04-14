@@ -3,7 +3,7 @@
   import * as Dialog from '$lib/components/ui/dialog';
   import * as Sidebar from '$lib/components/ui/sidebar';
   import * as Popover from "$lib/components/ui/popover/index.js";
-  import { Tally1 } from "@lucide/svelte/icons";
+  import * as Tooltip from "$lib/components/ui/tooltip/index.js";
   import { Label } from "$lib/components/ui/label";
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
@@ -17,6 +17,7 @@
     SHADOW_STATUS_NEW,
     SHADOW_STATUS_READY
   } from "../../../(components)/model";
+  import { LibraryBig, Tally1 } from "@lucide/svelte";
 
   let {data} = $props();
 
@@ -334,19 +335,68 @@
         </div>
         <Dialog.Root bind:open>
           <div class="flex flex-row gap-4 p-4 items-center justify-end">
-            <Dialog.Trigger>
-              <Button variant="destructive" class="mr-2" onclick={() => onResetProductDialog()}>Reset</Button>
+            <Dialog.Trigger class="mr-4">
+              <Tooltip.Provider>
+                <Tooltip.Root>
+                  <Tooltip.Trigger>
+                    <Dialog.Trigger>
+                      <Button variant="destructive" onclick={() => onResetProductDialog()}>Reset</Button>
+                    </Dialog.Trigger>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>
+                    <p>Reset to original product information</p>
+                  </Tooltip.Content>
+                </Tooltip.Root>
+              </Tooltip.Provider>
             </Dialog.Trigger>
-            <Dialog.Trigger>
-              <Button variant="destructive" class="mr-2" onclick={() => onSaveProductDialog()}>Save</Button>
+
+            <Dialog.Trigger class="mr-4">
+              <Tooltip.Provider>
+                <Tooltip.Root>
+                  <Tooltip.Trigger>
+                    <Dialog.Trigger>
+                      <Button variant="destructive" onclick={() => onSaveProductDialog()}>Save</Button>
+                    </Dialog.Trigger>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>
+                    <p>Save product information</p>
+                  </Tooltip.Content>
+                </Tooltip.Root>
+              </Tooltip.Provider>
             </Dialog.Trigger>
-            <Dialog.Trigger>
-              <Button variant="destructive" class="mr-2" onclick={() => onShelfTaobaoDialog()}>Onshelf Taobao</Button>
+
+            <Dialog.Trigger class="mr-4">
+              <Tooltip.Provider>
+                <Tooltip.Root>
+                  <Tooltip.Trigger>
+                    <Dialog.Trigger>
+                      <Button variant="destructive" onclick={() => onShelfTaobaoDialog()}>Onshelf Taobao</Button>
+                    </Dialog.Trigger>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>
+                    <p>Onshelf product to Taobao</p>
+                  </Tooltip.Content>
+                </Tooltip.Root>
+              </Tooltip.Provider>
             </Dialog.Trigger>
-            <Dialog.Trigger>
-              <Button variant="destructive" class="mr-2" onclick={() => onShelfRednoteDialog()}>Onshelf RedNote</Button>
+
+            <Dialog.Trigger class="mr-4">
+              <Tooltip.Provider>
+                <Tooltip.Root>
+                  <Tooltip.Trigger>
+                    <Dialog.Trigger>
+                      <Button variant="destructive" onclick={() => onShelfRednoteDialog()}>Onshelf RedNote
+                      </Button>
+                    </Dialog.Trigger>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>
+                    <p>Onshelf product to Rednote</p>
+                  </Tooltip.Content>
+                </Tooltip.Root>
+              </Tooltip.Provider>
             </Dialog.Trigger>
           </div>
+
           <Dialog.Content>
             <Dialog.Header>
               <Dialog.Title>{dialog_title}</Dialog.Title>

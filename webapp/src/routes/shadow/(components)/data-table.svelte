@@ -46,7 +46,8 @@
     SHADOW_OPERATION_OFFLINE,
     SHADOW_STATUS_NEW, SHADOW_STATUS_READY, shadowStatusToString
   } from '../../(components)/model';
-  import { invalidateAll } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
+  import { LibraryBig } from "@lucide/svelte";
 
   let {data} = $props();
 
@@ -77,6 +78,11 @@
   function beforeDeleteSelectProductDialog() {
     dialog_body = 'This action will try to delete select product(s)';
     handler = deleteSelectShadowProduct;
+  }
+
+  function beforeOnshelfProductDialog() {
+    dialog_body = 'This action will go to the product onshelf page';
+    handler = onshelfProduct;
   }
 
   async function createSelectOnlineTask(rows: Row<ShadowProductInfo>[]) {
@@ -176,6 +182,31 @@
       table.resetRowSelection(false);
       await invalidateAll();
       toast("Operation Successful");
+    } catch (error) {
+      console.error(`Error in function: ${error}`);
+    }
+  }
+
+  async function onshelfProduct(rows: Row<ShadowProductInfo>[]) {
+    try {
+      // 必须仅选中一个商品，且为Ready=1或OnShelf=2状态才可以操作上架
+      if (rows.length != 1) {
+        open = false;
+        await invalidateAll();
+        toast("Operation Failed: One and only one product should be selected.");
+        return;
+      }
+      if (rows[0].original.status == SHADOW_STATUS_NEW) {
+        open = false;
+        await invalidateAll();
+        toast("Operation Failed: Product must be READY first.");
+        return;
+      }
+      open = false;
+      table.resetRowSelection(false);
+      await invalidateAll();
+      toast("Operation Successful");
+      await goto(`/shadow/${rows[0].original.product_id}/shelf`);
     } catch (error) {
       console.error(`Error in function: ${error}`);
     }
@@ -663,6 +694,21 @@
             </Tooltip.Trigger>
             <Tooltip.Content>
               <p>Delete shadow products</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
+      </Dialog.Trigger>
+
+      <Dialog.Trigger class="mr-4">
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeOnshelfProductDialog()} variant="destructive">
+                <LibraryBig/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Onshelf product</p>
             </Tooltip.Content>
           </Tooltip.Root>
         </Tooltip.Provider>
