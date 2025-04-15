@@ -1,5 +1,6 @@
 # coding: utf-8
 # !./bin/python
+import sys
 
 DB_NAME = 'taobao'
 DB_HOST = 'localhost'
@@ -19,7 +20,12 @@ REDNOTE_USERS = {
     REDNOTE_SHOP_USER: 'A1148671B#c'
 }
 LOGGING_FORMAT = '%(asctime)s %(message)s'
-DEBUG_ROOT_DIR = '/Users/hengliu/workspace/web-automation'
+if sys.platform == 'win32':
+    DEBUG_ROOT_DIR = 'D:/workspace/web-automation'
+elif sys.platform == 'darwin':
+    DEBUG_ROOT_DIR = '/Users/hengliu/workspace/web-automation'
+else:
+    raise RuntimeError('Unsupported platform')
 IMAGE_DIR = './images'
 PRODUCT_DIR = './webapp/static/products'
 PRODUCT_DIR_KEY = '/products'

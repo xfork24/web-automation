@@ -108,10 +108,16 @@ class Crawler:
         driver = None
         if webdriver_type == WebDriverType.ChromDriver:
             # TBD: handle hiding selenium from chrome, remove 'chrome is controlled by automated test software'
-            driver_service = ChromeDriverService('./chromedriver')
+            if sys.platform == 'win32':
+                driver_service = ChromeDriverService('./chromedriver.exe')
+            elif sys.platform == 'darwin':
+                driver_service = ChromeDriverService('./chromedriver')
+            else:
+                raise RuntimeError('Unsupported platform')
             options = webdriver.ChromeOptions()
             options.add_experimental_option('excludeSwitches', ['load-extension', 'enable-automation'])
             options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_argument('--ignore-certificate-errors')
             if headless:
                 options.add_argument('--headless=new')
             options.add_argument('--disable-gpu')
