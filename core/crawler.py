@@ -84,6 +84,7 @@ DETAIL_IMG_LINK_VALIDATE_RE_EXP = re.compile('^https://\\w+')
 
 # Taobao product manage controls
 ONSHELF_TAOBAO_NAV_BAR_RE_EXP = re.compile('^PicGroupList_treeDom__\\w+$')
+ONSHELF_TAOBAO_UPLOAD_PANEL_RE_EXP = re.compile('^UploadPanel_baseConfig__\\w+$')
 
 
 class WebDriverType(Enum):
@@ -1068,7 +1069,108 @@ class Crawler:
             return True
 
     def handle_taobao_resource_upload(self, product):
-        pass
+        self.driver.get(TB_IMAGE_SPACE_PAGE)
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        upload_btn1 = self.driver.find_element(By.XPATH, '//*[@id="microapp-sucai-tu-container"]/div/div/div/div[1]/div[2]/div/div[1]/div[2]/button[2]')
+        self.element_click(upload_btn1)
+        form_controls = self.driver.find_elements(By.CLASS_NAME, 'next-form-item-control')
+        new_folder_btn = None
+        for form in form_controls:
+            spans = form.find_elements(By.XPATH, 'span/span[1]/span[1]')
+            if len(spans) == 1:
+                self.element_click(spans[0])
+            btns = form.find_elements(By.XPATH, 'button')
+            btn_spans = form.find_elements(By.XPATH, 'button/span')
+            if len(btns) == 1 and len(btn_spans) == 1 and btn_spans[0].text == '新建文件夹':
+                new_folder_btn = btns[0]
+        assert (new_folder_btn is not None)
+        # click products
+        menu_wrappers = self.driver.find_elements(By.CLASS_NAME, 'next-cascader-menu-wrapper')
+        found = False
+        for menu in menu_wrappers:
+            spans = menu.find_elements(By.XPATH, './/span')
+            for span in spans:
+                if span.text == 'products':
+                    self.element_click(span)
+                    found = True
+                    break
+        if not found:
+            self.logger.info('can not find products root path, raise exception')
+            raise RuntimeError('products root path not found')
+        menu_wrappers = self.driver.find_elements(By.CLASS_NAME, 'next-cascader-menu-wrapper')
+        product_found = False
+        for menu in menu_wrappers:
+            spans = menu.find_elements(By.XPATH, './/span')
+            for span in spans:
+                if span.text == product.product_id:
+                    self.element_click(span)
+                    product_found = True
+                    break
+        # if product_found:
+        #     self.logger.info(f'product_id={product.product_id} resource already uploaded to taobao image space, just return')
+        #     return
+        additional_properties = json_loads(product.additional_properties)
+        resource_root = additional_properties[RESOURCE_ROOT_KEY][1:]
+        # handle new folder creation
+        self.create_taobao_subfolders(new_folder_btn, f'{resource_root}/title_images')
+        self.create_taobao_subfolders(new_folder_btn, f'{resource_root}/page_images')
+        # handle product resource upload
+        upload_btn2 = self.driver.find_element(By.ID, 'sucai-tu-upload')
+        self.element_click(upload_btn2)
+        return
+
+    def create_taobao_subfolders(self, new_folder_btn, path):
+        path_list = path.split('/')
+        while True:
+            self.element_click(new_folder_btn)
+            dialog_wrappers = self.driver.find_elements(By.CLASS_NAME, 'next-dialog-inner-wrapper')
+            root_section = None
+            new_folder_section = None
+            confirm_btn = None
+            cancel_btn = None
+            for dialog_wrapper in dialog_wrappers:
+                sections = dialog_wrapper.find_elements(By.XPATH, './/section')
+                if len(sections) == 0:
+                    continue
+                assert (len(sections)) == 2
+                root_section, new_folder_section = sections
+                confirm_btn = dialog_wrapper.find_element(By.XPATH, 'div/div[3]/button[1]')
+                cancel_btn = dialog_wrapper.find_element(By.XPATH, 'div/div[3]/button[2]')
+            path_span = root_section.find_element(By.XPATH, 'span[2]/span[1]')
+            self.element_click(path_span)
+            dropdown_divs = self.driver.find_elements(By.CLASS_NAME, 'next-tree-select-dropdown')
+            assert (len(dropdown_divs)) == 1
+            parent = dropdown_divs[0].find_element(By.XPATH, 'ul')
+            idx = 0
+            last_div = None
+            while True:
+                found = False
+                for li in parent.find_elements(By.XPATH, 'li'):
+                    if li.get_attribute('name') == path_list[idx]:
+                        last_div = li.find_element(By.XPATH, 'div/div/div')
+                        span = li.find_element(By.XPATH, 'div/span')
+                        self.element_click(span)
+                        children = li.find_elements(By.XPATH, 'ul')
+                        if len(children) == 0:
+                            found = False
+                        else:
+                            assert (len(children) == 1)
+                            child = children[0]
+                            found = True
+                        idx += 1
+                        break
+                if found:
+                    parent = child
+                else:
+                    self.element_click(last_div)
+                    break
+            if idx >= len(path_list):
+                self.element_click(cancel_btn)
+                break
+            new_folder_input = new_folder_section.find_element(By.XPATH, 'span/input')
+            new_folder_input.clear()
+            new_folder_input.send_keys(path_list[idx])
+            self.element_click(confirm_btn)
 
     def handle_rednote_resource_upload(self, product):
         pass
@@ -1338,13 +1440,13 @@ class Crawler:
             return False
 
     def product_manage_on_shelf(self, product_id, shop_name, platform, update_id):
-        product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+        exist_sp = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
-            self.handle_taobao_resource_upload(product)
-            return self.handle_taobao_on_shelf(product, shop_name, update_id)
+            self.handle_taobao_resource_upload(exist_sp)
+            return self.handle_taobao_on_shelf(exist_sp, shop_name, update_id)
         elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
-            self.handle_rednote_resource_upload(product)
-            return self.handle_rednote_on_shelf(product, shop_name, update_id)
+            self.handle_rednote_resource_upload(exist_sp)
+            return self.handle_rednote_on_shelf(exist_sp, shop_name, update_id)
 
     def product_manage_online(self, ref_id, shop_name, platform, update_id):
         pass
