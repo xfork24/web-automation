@@ -1135,8 +1135,11 @@ class Crawler:
         edit = win32gui.FindWindowEx(comboBox, 0, 'Edit', None)
         button = win32gui.FindWindowEx(dialog, 0, 'Button', "打开(&O)")
         win32gui.SendMessage(edit, win32con.WM_SETTEXT, None, path)
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
         win32gui.SendMessage(dialog, win32con.WM_COMMAND, 1, button)
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
         win32gui.SendMessage(edit, win32con.WM_SETTEXT, None, ' '.join([f'"{f}"' for f in files]))
+        time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
         win32gui.SendMessage(dialog, win32con.WM_COMMAND, 1, button)
         time.sleep(RESOURCE_UPLOAD_WAIT_IN_SECONDS)
 
@@ -1194,7 +1197,94 @@ class Crawler:
             self.element_click(confirm_btn)
 
     def handle_rednote_resource_upload(self, product):
-        pass
+        self.driver.get(REDNOTE_IMAGE_SPACE_PAGE)
+        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        ul_list = self.driver.find_element(By.CLASS_NAME, 'tree-list')
+        list_opera = self.driver.find_element(By.CLASS_NAME, 'list-operas')
+        list_opera_divs = list_opera.find_elements(By.XPATH, 'div')
+        assert (len(list_opera_divs) == 2)
+        opera_btns = list_opera_divs[0].find_elements(By.XPATH, 'button')
+        assert (len(opera_btns) == 3)
+        upload_btn = opera_btns[0]
+        create_folder_btn = opera_btns[1]
+        opera_dropdowns = list_opera_divs[1].find_elements(By.XPATH, 'div')
+        assert (len(opera_dropdowns) == 3)
+        sort_div = opera_dropdowns[0].find_element(By.XPATH, 'div/div/div[1]/div[1]')
+        # sort name asc
+        self.element_click(sort_div)
+        option_names = self.driver.find_elements(By.CLASS_NAME, 'd-option-name')
+        for option_name in option_names:
+            span = option_name.find_element(By.XPATH, 'span')
+            if span.text == '按文件名称升序':
+                self.element_click(span)
+                break
+        # get resources
+        title_images = json_loads(product.title_imgs)
+        page_images = json_loads(product.page_imgs)
+        additional_properties = json_loads(product.additional_properties)
+        resource_root = additional_properties[RESOURCE_ROOT_KEY][1:]
+        # create folders
+        self.create_rednote_subfolders(ul_list, create_folder_btn, f'{resource_root}/title_images')
+        self.create_rednote_subfolders(ul_list, create_folder_btn, f'{resource_root}/page_images')
+        # handle product resource upload
+        self.upload_rednote_subfolder(ul_list, upload_btn, f'{resource_root}/title_images', title_images)
+        self.upload_rednote_subfolder(ul_list, upload_btn, f'{resource_root}/page_images', page_images)
+
+    def create_rednote_subfolders(self, ul_list, create_folder_btn, path):
+        path_list = path.split('/')
+        last_div = None
+        while True:
+            idx = 0
+            for i in range(len(path_list)):
+                found = False
+                subpath = path_list[i]
+                for li in ul_list.find_elements(By.XPATH, 'li'):
+                    name_div = li.find_elements(By.XPATH, 'div')[1]
+                    if name_div.text == subpath:
+                        last_div = name_div
+                        found = True
+                        break
+                if found:
+                    self.element_click(last_div)
+                    idx += 1
+                else:
+                    self.element_click(create_folder_btn)
+                    space_div = self.driver.find_element(By.CLASS_NAME, 'picture-space-list')
+                    create_folder_input = space_div.find_element(By.XPATH, 'div[3]/div/div/div[2]/div/input')
+                    confirm_btn = space_div.find_element(By.XPATH, 'div[3]/div/div/div[3]/button[2]')
+                    create_folder_input.clear()
+                    create_folder_input.send_keys(subpath)
+                    self.element_click(confirm_btn)
+                    break
+            if idx >= len(path_list):
+                break
+
+    def upload_rednote_subfolder(self, ul_list, upload_btn, path, images):
+        path_list = path.split('/')
+        last_div = None
+        for subpath in path_list:
+            found = False
+            for li in ul_list.find_elements(By.XPATH, 'li'):
+                name_div = li.find_elements(By.XPATH, 'div')[1]
+                if name_div.text == subpath:
+                    last_div = name_div
+                    found = True
+                    break
+            if found:
+                self.element_click(last_div)
+            else:
+                self.logger.error(f'can not find subpath={subpath}, raise exception')
+                raise RuntimeError(f'can not find subpath={subpath}')
+        self.element_click(upload_btn)
+        upload_div = self.driver.find_element(By.CLASS_NAME, 'modal-beer-box')
+        upload_ctx_div = upload_div.find_element(By.XPATH, 'div/div/div[2]/div[2]')
+        close_label = upload_div.find_element(By.XPATH, 'div/div/div[2]/div[2]/div[2]/div/label')
+        checked = close_label.get_attribute('data-checked')
+        if checked is None:
+            self.element_click(close_label)
+        self.element_click(upload_ctx_div)
+        self.upload_select_files(f'{os.getcwd()}\\webapp\\static\\' + path.replace("/", "\\"), images)
+        return
 
     def handle_taobao_on_shelf(self, product, shop_name, update_id):
         self.driver.get(TB_ONSHELF_PAGE)
