@@ -9,6 +9,8 @@ import traceback
 import uuid
 from enum import Enum
 from urllib.parse import urlparse, parse_qs
+import win32gui
+import win32con
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeDriverService
@@ -35,6 +37,7 @@ TB_LOGIN_AUTH_TITLE_NAME = '登录-身份验证'
 CRAWL_PAGE_WAIT_IN_SECONDS = 5
 CRAWL_OPERATION_TRY_COUNT = 3
 LOGIN_SLIDE_RETRY_COUNT = 5
+RESOURCE_UPLOAD_WAIT_IN_SECONDS = 10
 LOGIN_CONFIRM_PAGE_WAIT_IN_SECONDS = 15
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
@@ -84,7 +87,6 @@ DETAIL_IMG_LINK_VALIDATE_RE_EXP = re.compile('^https://\\w+')
 
 # Taobao product manage controls
 ONSHELF_TAOBAO_NAV_BAR_RE_EXP = re.compile('^PicGroupList_treeDom__\\w+$')
-ONSHELF_TAOBAO_UPLOAD_PANEL_RE_EXP = re.compile('^UploadPanel_baseConfig__\\w+$')
 
 
 class WebDriverType(Enum):
@@ -1074,50 +1076,69 @@ class Crawler:
         upload_btn1 = self.driver.find_element(By.XPATH, '//*[@id="microapp-sucai-tu-container"]/div/div/div/div[1]/div[2]/div/div[1]/div[2]/button[2]')
         self.element_click(upload_btn1)
         form_controls = self.driver.find_elements(By.CLASS_NAME, 'next-form-item-control')
+        upload_span = None
         new_folder_btn = None
         for form in form_controls:
             spans = form.find_elements(By.XPATH, 'span/span[1]/span[1]')
             if len(spans) == 1:
-                self.element_click(spans[0])
+                upload_span = spans[0]
             btns = form.find_elements(By.XPATH, 'button')
             btn_spans = form.find_elements(By.XPATH, 'button/span')
             if len(btns) == 1 and len(btn_spans) == 1 and btn_spans[0].text == '新建文件夹':
                 new_folder_btn = btns[0]
-        assert (new_folder_btn is not None)
-        # click products
-        menu_wrappers = self.driver.find_elements(By.CLASS_NAME, 'next-cascader-menu-wrapper')
-        found = False
-        for menu in menu_wrappers:
-            spans = menu.find_elements(By.XPATH, './/span')
-            for span in spans:
-                if span.text == 'products':
-                    self.element_click(span)
-                    found = True
-                    break
-        if not found:
-            self.logger.info('can not find products root path, raise exception')
-            raise RuntimeError('products root path not found')
-        menu_wrappers = self.driver.find_elements(By.CLASS_NAME, 'next-cascader-menu-wrapper')
-        product_found = False
-        for menu in menu_wrappers:
-            spans = menu.find_elements(By.XPATH, './/span')
-            for span in spans:
-                if span.text == product.product_id:
-                    self.element_click(span)
-                    product_found = True
-                    break
-        # if product_found:
-        #     self.logger.info(f'product_id={product.product_id} resource already uploaded to taobao image space, just return')
-        #     return
+        assert (upload_span is not None and new_folder_btn is not None)
+        title_images = json_loads(product.title_imgs)
+        page_images = json_loads(product.page_imgs)
         additional_properties = json_loads(product.additional_properties)
         resource_root = additional_properties[RESOURCE_ROOT_KEY][1:]
         # handle new folder creation
         self.create_taobao_subfolders(new_folder_btn, f'{resource_root}/title_images')
         self.create_taobao_subfolders(new_folder_btn, f'{resource_root}/page_images')
         # handle product resource upload
+        self.upload_taobao_subfolder(upload_span, f'{resource_root}/title_images', title_images)
+        self.upload_taobao_subfolder(upload_span, f'{resource_root}/page_images', page_images)
+
+    def upload_taobao_subfolder(self, upload_span, path, images):
+        path_list = path.split('/')
+        self.element_click(upload_span)
+        for i in range(0, len(path_list)):
+            menu_wrapper = self.driver.find_elements(By.CLASS_NAME, 'next-cascader-menu-wrapper')[i]
+            spans = menu_wrapper.find_elements(By.XPATH, './/span')
+            found = False
+            for span in spans:
+                if span.text == path_list[i]:
+                    self.element_click(span)
+                    found = True
+                    break
+            if not found:
+                self.logger.info('can not find products root path, raise exception')
+                raise RuntimeError(f'product path not found: {path_list[i]}')
         upload_btn2 = self.driver.find_element(By.ID, 'sucai-tu-upload')
         self.element_click(upload_btn2)
-        return
+        # upload files
+        self.upload_select_files(f'{os.getcwd()}\\webapp\\static\\' + path.replace("/", "\\"), images)
+        next_dialog_wrapper = self.driver.find_element(By.CLASS_NAME, 'next-dialog-inner-wrapper')
+        next_btns = next_dialog_wrapper.find_elements(By.XPATH, './/button')
+        cont_btn = None
+        for btn in next_btns:
+            spans = btn.find_elements(By.XPATH, 'span')
+            if len(spans) == 1 and spans[0].text == '继续上传':
+                cont_btn = btn
+                break
+        assert (cont_btn is not None)
+        self.element_click(cont_btn)
+
+    def upload_select_files(self, path, files):
+        dialog = win32gui.FindWindow('#32770', '打开')
+        ComboBoxEx32 = win32gui.FindWindowEx(dialog, 0, "ComboBoxEx32", None)
+        comboBox = win32gui.FindWindowEx(ComboBoxEx32, 0, "ComboBox", None)
+        edit = win32gui.FindWindowEx(comboBox, 0, 'Edit', None)
+        button = win32gui.FindWindowEx(dialog, 0, 'Button', "打开(&O)")
+        win32gui.SendMessage(edit, win32con.WM_SETTEXT, None, path)
+        win32gui.SendMessage(dialog, win32con.WM_COMMAND, 1, button)
+        win32gui.SendMessage(edit, win32con.WM_SETTEXT, None, ' '.join([f'"{f}"' for f in files]))
+        win32gui.SendMessage(dialog, win32con.WM_COMMAND, 1, button)
+        time.sleep(RESOURCE_UPLOAD_WAIT_IN_SECONDS)
 
     def create_taobao_subfolders(self, new_folder_btn, path):
         path_list = path.split('/')
