@@ -22,9 +22,11 @@ from core.models import *
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
 TB_ONSHELF_PAGE = 'https://item.upload.taobao.com/sell/v2/publish.htm?catId=201160807'
+TB_IMAGE_SPACE_PAGE = 'https://qn.taobao.com/home.htm/sucai-tu/home'
 REDNOTE_LOGIN_PAGE = 'https://customer.xiaohongshu.com/login?service=https://ark.xiaohongshu.com/app-item/good/create'
 REDNOTE_ONSHELF_PAGE = 'https://ark.xiaohongshu.com/app-item/good/create'
 REDNOTE_LIST_SHELF_PAGE = 'https://ark.xiaohongshu.com/app-item/list/shelf'
+REDNOTE_IMAGE_SPACE_PAGE = 'https://ark.xiaohongshu.com/app-system/pictureSpace'
 TB_HOMEPAGE_TITLE_NAME = '淘宝'
 TB_SHOP_BROWSE_TITLE_NAME = '店铺浏览-淘宝网'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
@@ -1065,6 +1067,12 @@ class Crawler:
             self.logger.info(f'shadow product_id={product_id}, shop_name={shop_name} is not in NEW status, just ignore')
             return True
 
+    def handle_taobao_resource_upload(self, product):
+        pass
+
+    def handle_rednote_resource_upload(self, product):
+        pass
+
     def handle_taobao_on_shelf(self, product, shop_name, update_id):
         self.driver.get(TB_ONSHELF_PAGE)
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
@@ -1332,8 +1340,10 @@ class Crawler:
     def product_manage_on_shelf(self, product_id, shop_name, platform, update_id):
         product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
+            self.handle_taobao_resource_upload(product)
             return self.handle_taobao_on_shelf(product, shop_name, update_id)
         elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
+            self.handle_rednote_resource_upload(product)
             return self.handle_rednote_on_shelf(product, shop_name, update_id)
 
     def product_manage_online(self, ref_id, shop_name, platform, update_id):
