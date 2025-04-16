@@ -9,7 +9,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
   import { toast } from "svelte-sonner";
-  import { invalidateAll } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import HistoryDataTable from "./(components)/history-data-table.svelte";
   import {
     PLATFORM_REDNOTE,
@@ -33,6 +33,7 @@
   let additional_properties = $state(data.shadow_info.additional_properties);
   let new_title_imgs: string[] = $state([]);
   let new_page_imgs: string[] = $state([]);
+  let platform_mask = $state(data.shadow_info.additional_properties.platform_mask);
 
   let open = $state(false);
   let dialog_title = $state('Are you sure?');
@@ -127,6 +128,8 @@
     additional_properties = data.shadow_info.additional_properties;
     new_title_imgs = [];
     new_page_imgs = [];
+    platform_mask = data.shadow_info.additional_properties.platform_mask;
+
     toast("Information Reset Successful");
   }
 
@@ -417,86 +420,111 @@
             <Label>{data.shadow_info.additional_properties.resource_root}</Label>
           </div>
         </div>
-        <Dialog.Root bind:open>
-          <div class="flex flex-row gap-4 p-4 items-center justify-end">
-            <Dialog.Trigger class="mr-4">
-              <Tooltip.Provider>
-                <Tooltip.Root>
-                  <Tooltip.Trigger>
-                    <Dialog.Trigger>
-                      <Button variant="destructive" onclick={() => onResetProductDialog()}>Reset</Button>
-                    </Dialog.Trigger>
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>
-                    <p>Reset to original product information</p>
-                  </Tooltip.Content>
-                </Tooltip.Root>
-              </Tooltip.Provider>
-            </Dialog.Trigger>
-
-            <Dialog.Trigger class="mr-4">
-              <Tooltip.Provider>
-                <Tooltip.Root>
-                  <Tooltip.Trigger>
-                    <Dialog.Trigger>
-                      <Button variant="destructive" onclick={() => onSaveProductDialog()}>Save</Button>
-                    </Dialog.Trigger>
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>
-                    <p>Save product information</p>
-                  </Tooltip.Content>
-                </Tooltip.Root>
-              </Tooltip.Provider>
-            </Dialog.Trigger>
-
-            <Dialog.Trigger class="mr-4">
-              <Tooltip.Provider>
-                <Tooltip.Root>
-                  <Tooltip.Trigger>
-                    <Dialog.Trigger>
-                      <Button variant="destructive" onclick={() => onShelfTaobaoDialog()}>Onshelf Taobao</Button>
-                    </Dialog.Trigger>
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>
-                    <p>Onshelf product to Taobao</p>
-                  </Tooltip.Content>
-                </Tooltip.Root>
-              </Tooltip.Provider>
-            </Dialog.Trigger>
-
-            <Dialog.Trigger class="mr-4">
-              <Tooltip.Provider>
-                <Tooltip.Root>
-                  <Tooltip.Trigger>
-                    <Dialog.Trigger>
-                      <Button variant="destructive" onclick={() => onShelfRednoteDialog()}>Onshelf RedNote
-                      </Button>
-                    </Dialog.Trigger>
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>
-                    <p>Onshelf product to Rednote</p>
-                  </Tooltip.Content>
-                </Tooltip.Root>
-              </Tooltip.Provider>
-            </Dialog.Trigger>
+        <div class="flex flex-row w-full">
+          <div class="flex flex-row items-center justify-start w-1/2">
+            <div>
+              {#if platform_mask === 0}
+                <div class="px-4 text-2xl w-full">
+                  <div>Product has not been put on any platforms.
+                  </div>
+                </div>
+              {:else}
+                <div class="flex flex-wrap items-center justify-start">
+                  {#if platform_mask & PLATFORM_TAOBAO }
+                    <div class="px-4 text-2xl">Product has been put on sale in
+                      <a href="/shadow" class="italic text-yellow-500">Taobao</a>.
+                    </div>
+                  {/if}
+                  {#if platform_mask & PLATFORM_REDNOTE }
+                    <div class="px-4 text-2xl">Product has been put on sale in
+                      <a href="/shadow" class="italic text-red-500">Rednote</a>.
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+            </div>
           </div>
+          <div class="flex flex-row items-center px-1 justify-end w-1/2">
+            <Dialog.Root bind:open>
+              <Dialog.Trigger class="mr-4">
+                <Tooltip.Provider>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger>
+                      <Dialog.Trigger>
+                        <Button variant="destructive" onclick={() => onResetProductDialog()}>Reset</Button>
+                      </Dialog.Trigger>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                      <p>Reset to original product information</p>
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
+              </Dialog.Trigger>
 
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>{dialog_title}</Dialog.Title>
-              <Dialog.Description>
-                {dialog_body}
-              </Dialog.Description>
-            </Dialog.Header>
-            <Dialog.Footer>
-              <Dialog.Footer>
-                <Button onclick={() => open = false} type="reset">Cancel</Button>
-                <Button class="bg-red-500 hover:bg-red-500" onclick={() => handler()} type="submit">Continue
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Root>
+              <Dialog.Trigger class="mr-4">
+                <Tooltip.Provider>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger>
+                      <Dialog.Trigger>
+                        <Button variant="destructive" onclick={() => onSaveProductDialog()}>Save</Button>
+                      </Dialog.Trigger>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                      <p>Save product information</p>
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
+              </Dialog.Trigger>
+
+              <Dialog.Trigger class="mr-4">
+                <Tooltip.Provider>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger>
+                      <Dialog.Trigger>
+                        <Button variant="destructive" onclick={() => onShelfTaobaoDialog()}>Onshelf Taobao</Button>
+                      </Dialog.Trigger>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                      <p>Onshelf product to Taobao</p>
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
+              </Dialog.Trigger>
+
+              <Dialog.Trigger class="mr-4">
+                <Tooltip.Provider>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger>
+                      <Dialog.Trigger>
+                        <Button variant="destructive" onclick={() => onShelfRednoteDialog()}>Onshelf RedNote
+                        </Button>
+                      </Dialog.Trigger>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                      <p>Onshelf product to Rednote</p>
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
+              </Dialog.Trigger>
+
+              <Dialog.Content>
+                <Dialog.Header>
+                  <Dialog.Title>{dialog_title}</Dialog.Title>
+                  <Dialog.Description>
+                    {dialog_body}
+                  </Dialog.Description>
+                </Dialog.Header>
+                <Dialog.Footer>
+                  <Dialog.Footer>
+                    <Button onclick={() => open = false} type="reset">Cancel</Button>
+                    <Button class="bg-red-500 hover:bg-red-500" onclick={() => handler()} type="submit">Continue
+                    </Button>
+                  </Dialog.Footer>
+                </Dialog.Footer>
+              </Dialog.Content>
+            </Dialog.Root>
+          </div>
+        </div>
         <div class="items-center justify-between px-4 text-4xl">Shadow Product Update History</div>
         <div class="items-center justify-between px-4">
           <HistoryDataTable {histories}/>
