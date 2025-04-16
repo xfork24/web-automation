@@ -14,24 +14,25 @@
   import {
     PLATFORM_REDNOTE,
     PLATFORM_TAOBAO, SHADOW_OPERATION_ONSHELF,
-    SHADOW_STATUS_NEW,
     SHADOW_STATUS_READY
   } from "../../../(components)/model";
-  import { LibraryBig, Tally1 } from "@lucide/svelte";
+  import { Tally1 } from "@lucide/svelte";
+  import { Separator } from "$lib/components/ui/separator";
 
   let {data} = $props();
 
-  const product_id = data.product_id;
+  const product_id = data.product_id!;
   const histories = data.shadow_histories;
 
-  let product_title = $state(data.shadow_info != undefined ? data.shadow_info.product_title : '');
-  let shop_name = $state(data.shadow_info != undefined ? data.shadow_info.shop_name : '');
-  let product_price = $state(data.shadow_info != undefined ? data.shadow_info.price : 0);
-  let product_inventory = $state(data.shadow_info != undefined ? data.shadow_info.inventory : 0);
-  let title_imgs = $state(data.shadow_info != undefined ? data.shadow_info.title_imgs : []);
-  let page_imgs = $state(data.shadow_info != undefined ? data.shadow_info.page_imgs : []);
-  let offer_details = $state(data.shadow_info != undefined ? data.shadow_info.offer_details : {});
-  let additional_properties = $state(data.shadow_info != undefined ? data.shadow_info.additional_properties : {});
+  let product_title = $state(data.shadow_info.product_title);
+  let product_price = $state(data.shadow_info.price)
+  let product_inventory = $state(data.shadow_info.inventory);
+  let title_imgs = $state(data.shadow_info.title_imgs);
+  let page_imgs = $state(data.shadow_info.page_imgs);
+  let offer_details = $state(data.shadow_info.offer_details);
+  let additional_properties = $state(data.shadow_info.additional_properties);
+  let new_title_imgs: string[] = $state([]);
+  let new_page_imgs: string[] = $state([]);
 
   let open = $state(false);
   let dialog_title = $state('Are you sure?');
@@ -45,6 +46,53 @@
     } else if (target == 'page') {
       page_imgs = page_imgs.filter((i: string) => i != img);
     }
+  }
+
+  function onAddImages(target: string, e: Event) {
+    Array.from((e.target as HTMLInputElement).files!).forEach(f => {
+      if (target == 'title') {
+        new_title_imgs.push(URL.createObjectURL(f));
+      } else if (target == 'page') {
+        new_page_imgs.push(URL.createObjectURL(f));
+      }
+    });
+  }
+
+  async function onSubmitImages(product_id: string, endpoint: string, e: Event) {
+    e.preventDefault();
+    const fileInput = document.getElementById(endpoint)! as HTMLInputElement;
+    const url = `http://localhost:8000/api/v1/shadow_product/${product_id}/upload/${endpoint}?update_id={data.user.name}`;
+    const selectedFiles = fileInput.files!;
+    if (selectedFiles.length === 0) {
+      toast("Please select at least one image to upload.");
+      return;
+    }
+    const formData = new FormData();
+    Array.from(selectedFiles as FileList).forEach(f => {
+      formData.append(endpoint, f);
+    })
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.onreadystatechange = async function () {
+      if (xhr.readyState === XMLHttpRequest.DONE) {
+        if (xhr.status === 200) {
+          // Handle successful response from the server
+          await invalidateAll();
+          title_imgs = data.shadow_info.title_imgs;
+          page_imgs = data.shadow_info.page_imgs;
+          new_title_imgs = [];
+          new_page_imgs = [];
+          fileInput.value = "";
+          toast("Submit Successful");
+        } else {
+          // Handle error response from the server
+          await invalidateAll();
+          toast("Submit Failed");
+        }
+      }
+    };
+    xhr.send(formData);
   }
 
   function onResetProductDialog() {
@@ -75,17 +123,15 @@
     product_inventory = data.shadow_info.inventory;
     title_imgs = data.shadow_info.title_imgs;
     page_imgs = data.shadow_info.page_imgs;
+    offer_details = data.shadow_info.offer_details;
+    additional_properties = data.shadow_info.additional_properties;
+    new_title_imgs = [];
+    new_page_imgs = [];
     toast("Information Reset Successful");
   }
 
   async function onSaveProduct() {
     try {
-      if (data.shadow_info.status !== SHADOW_STATUS_READY) {
-        open = false;
-        await invalidateAll();
-        toast("Operation Failed: Product must be in READY status.");
-        return;
-      }
       const response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
         method: 'POST',
         headers: {
@@ -95,13 +141,13 @@
           'status': SHADOW_STATUS_READY,
           'update_id': data.user.name,
           'product_title': product_title,
-          'shop_name': shop_name,
+          'shop_name': data.shadow_info.shop_name,
           'price': product_price,
           'inventory': product_inventory,
           'title_imgs': title_imgs,
           'page_imgs': page_imgs,
-          'offer_details': offer_details,
-          'additional_properties': additional_properties,
+          'offer_details': data.shadow_info.offer_details,
+          'additional_properties': data.shadow_info.additional_properties,
         })
       });
       const result = await response.json();
@@ -123,7 +169,7 @@
         toast("Operation Failed: Product must be in READY status.");
         return;
       }
-      additional_properties.platform_mask |= PLATFORM_TAOBAO;
+      data.shadow_info.additional_properties.platform_mask |= PLATFORM_TAOBAO;
       const save_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
         method: 'POST',
         headers: {
@@ -133,13 +179,13 @@
           'status': SHADOW_STATUS_READY,
           'update_id': data.user.name,
           'product_title': product_title,
-          'shop_name': shop_name,
+          'shop_name': data.shadow_info.shop_name,
           'price': product_price,
           'inventory': product_inventory,
           'title_imgs': title_imgs,
           'page_imgs': page_imgs,
-          'offer_details': offer_details,
-          'additional_properties': additional_properties,
+          'offer_details': data.shadow_info.offer_details,
+          'additional_properties': data.shadow_info.additional_properties,
         })
       });
       const save_result = await save_response.json();
@@ -177,7 +223,7 @@
         toast("Operation Failed: Product must be in READY status.");
         return;
       }
-      additional_properties.platform_mask |= PLATFORM_REDNOTE;
+      data.shadow_info.additional_properties.platform_mask |= PLATFORM_REDNOTE;
       const save_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
         method: 'POST',
         headers: {
@@ -187,13 +233,13 @@
           'status': SHADOW_STATUS_READY,
           'update_id': data.user.name,
           'product_title': product_title,
-          'shop_name': shop_name,
+          'shop_name': data.shadow_info.shop_name,
           'price': product_price,
           'inventory': product_inventory,
           'title_imgs': title_imgs,
           'page_imgs': page_imgs,
-          'offer_details': offer_details,
-          'additional_properties': additional_properties,
+          'offer_details': data.shadow_info.offer_details,
+          'additional_properties': data.shadow_info.additional_properties,
         })
       });
       const save_result = await save_response.json();
@@ -285,44 +331,82 @@
           <div class="w-1/6">
             <Label>Title Images: </Label>
           </div>
-          <div class="flex flex-wrap items-center gap-4 w-5/6">
+          <div class="flex flex-wrap gap-4 w-5/6">
             {#each title_imgs as title_img (title_img)}
               <Popover.Root>
                 <Popover.Trigger>
                   <img class="h-32 w-32 object-scale-down mr-2"
-                       src={additional_properties.resource_root + '/title_images/' + title_img} alt={title_img}/>
+                       src={data.shadow_info.additional_properties.resource_root + '/title_images/' + title_img}
+                       alt={title_img}/>
                 </Popover.Trigger>
                 <Popover.Content class="w-30">
-                  <div class="grid gap-4">
-                    <div class="space-y-2">
+                  <div class="flex flex-col items-center gap-4">
+                    <div>
                       <Button variant="outline" onclick={() => onRemoveImage('title', title_img)}>Remove</Button>
                     </div>
                   </div>
                 </Popover.Content>
               </Popover.Root>
             {/each}
+            <Separator orientation="vertical"/>
+            {#each new_title_imgs as new_title_img (new_title_img)}
+              <img class="h-32 w-32 object-scale-down mr-2" src={new_title_img} alt={new_title_img}/>
+            {/each}
+            <div class="flex flex-wrap items-center gap-4">
+              <form method="POST" enctype="multipart/form-data"
+                    onsubmit={(e) => onSubmitImages(product_id, 'title_images_upload', e)}>
+                <input type="file" id="title_images_upload" class="block py-2 w-full text-sm text-slate-500
+                       file:mr-4 file:py-2 file:px-4 file:rounded-full
+                       file:border-0 file:text-sm file:font-semibold
+                       file:bg-violet-50 file:text-violet-700
+                       hover:file:bg-violet-100 button" multiple onchange={(e) => onAddImages('title', e)}
+                       accept="image/jpeg,image/jpg,image/png"/>
+                <button type="submit" class="block text-sm mr-4 py-2 px-4 rounded-full font-semibold
+                text-violet-700 bg-violet-50 hover:bg-violet-100">Submit
+                </button>
+              </form>
+            </div>
           </div>
         </div>
         <div class="flex px-4 items-center">
           <div class="w-1/6">
             <Label>Page Images: </Label>
           </div>
-          <div class="flex flex-wrap items-center gap-4 w-5/6">
+          <div class="flex flex-wrap gap-4 w-5/6">
             {#each page_imgs as page_img (page_img)}
               <Popover.Root>
                 <Popover.Trigger>
                   <img class="h-32 w-32 object-scale-down mr-2"
-                       src={additional_properties.resource_root + '/page_images/' + page_img} alt={page_img}/>
+                       src={data.shadow_info.additional_properties.resource_root + '/page_images/' + page_img}
+                       alt={page_img}/>
                 </Popover.Trigger>
                 <Popover.Content class="w-30">
-                  <div class="grid gap-4">
-                    <div class="space-y-2">
+                  <div class="flex flex-col items-center gap-4">
+                    <div>
                       <Button variant="outline" onclick={() => onRemoveImage('page', page_img)}>Remove</Button>
                     </div>
                   </div>
                 </Popover.Content>
               </Popover.Root>
             {/each}
+            <Separator orientation="vertical"/>
+            {#each new_page_imgs as new_page_img (new_page_img)}
+              <img class="h-32 w-32 object-scale-down mr-2" src={new_page_img} alt={new_page_img}/>
+            {/each}
+            <div class="flex flex-wrap items-center gap-4">
+              <form method="POST" enctype="multipart/form-data"
+                    onsubmit={(e) => onSubmitImages(product_id, 'page_images_upload', e)}>
+                <input type="file" id="page_images_upload" class="block py-2 w-full text-sm text-slate-500
+                       file:mr-4 file:py-2 file:px-4 file:rounded-full
+                       file:border-0 file:text-sm file:font-semibold
+                       file:bg-violet-50 file:text-violet-700
+                       hover:file:bg-violet-100 button" multiple onchange={(e) => onAddImages('page', e)}
+                       accept="image/jpeg,image/jpg,image/png"/>
+                <button type="submit" class="block text-sm mr-4 py-2 px-4 rounded-full font-semibold
+                text-violet-700 bg-violet-50 hover:bg-violet-100">Submit
+                </button>
+              </form>
+            </div>
           </div>
         </div>
         <div class="flex flex-nowrap px-4 w-full items-center">
@@ -330,7 +414,7 @@
             <Label>Resource Root: </Label>
           </div>
           <div class="w-5/6">
-            <Label>{additional_properties.resource_root}</Label>
+            <Label>{data.shadow_info.additional_properties.resource_root}</Label>
           </div>
         </div>
         <Dialog.Root bind:open>

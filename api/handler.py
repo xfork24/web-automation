@@ -8,10 +8,18 @@ from core.analysis import (
     TASK_CHECK_PERIOD_IN_SECONDS
 )
 
+TITLE_IMAGE_UPLOAD_ENDPOINT = 'title_images_upload'
+PAGE_IMAGE_UPLOAD_ENDPOINT = 'page_images_upload'
+
 DB_QUERY_DEFAULT_LIMIT = 100
-ERROR_CODE_CLIENT_ERROR = -1
-ERROR_CODE_SERVER_ERROR = -2
-ERROR_CODE_NOT_FOUND = -3
+ERROR_CLIENT_ERROR = -1
+ERROR_NOT_FOUND = -2
+ERROR_UPDATE_ID_NOT_SET = -3
+ERROR_SHADOW_EXIST = -4
+ERROR_SHADOW_CANNOT_DELETE = -5
+ERROR_UNKNOWN_UPLOAD_ENDPOINT = -6
+
+ERROR_SERVER_ERROR = -100
 
 api = Flask(__name__)
 
@@ -22,25 +30,50 @@ def build_success_response(resp):
     return json_dumps(resp)
 
 
-def build_client_error_response(msg):
+def build_client_error_response(msg, err_code=ERROR_CLIENT_ERROR):
     return json_dumps({
-        'code': ERROR_CODE_CLIENT_ERROR,
+        'code': err_code,
         'msg': msg
     })
 
 
 def build_server_error_response(msg):
     return json_dumps({
-        'code': ERROR_CODE_SERVER_ERROR,
+        'code': ERROR_SERVER_ERROR,
         'msg': msg
     })
 
 
 def build_not_found_response(msg):
     return json_dumps({
-        'code': ERROR_CODE_NOT_FOUND,
+        'code': ERROR_NOT_FOUND,
         'msg': msg
     })
+
+
+def clean_resources(path, excludes):
+    if not os.path.exists(path):
+        return excludes
+    for f in os.listdir(path):
+        if f in excludes:
+            continue
+        elif f.find('.png') == -1:
+            continue
+        else:
+            os.remove(f'{path}/{f}')
+    idx = 1
+    images_bk = []
+    for f in excludes:
+        os.rename(f'{path}/{f}', f'{path}/{idx}.png.bk')
+        images_bk.append(f'{idx}.png.bk')
+        idx += 1
+    idx = 1
+    images = []
+    for f in images_bk:
+        os.rename(f'{path}/{f}', f'{path}/{idx}.png')
+        images.append(f'{idx}.png')
+        idx += 1
+    return images
 
 
 def parse_param_compare(x, v):
@@ -161,7 +194,8 @@ def delete_product_by_id(product_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_product_by_id request for product_id={product_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request product_id={product_id}')
+            return build_client_error_response(f'update_id not set for delete request product_id={product_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         # 若存在状态非NEW和READY的shadow_product，则不允许删除
         shadow_products = ShadowProductInfo.select().where(ShadowProductInfo.product_id == product_id,
                                                            ShadowProductInfo.status != SHADOW_PRODUCT_STATUS_NEW,
@@ -169,7 +203,8 @@ def delete_product_by_id(product_id):
         if len(shadow_products) > 0:
             logger.info(
                 f'there are existing shadow products with this product_id={product_id}, record can not be deleted')
-            return build_client_error_response(f'shadow product exist for product_id={product_id}')
+            return build_client_error_response(f'shadow product exist for product_id={product_id}',
+                                               ERROR_SHADOW_EXIST)
         x = delete_product(product_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -279,7 +314,8 @@ def delete_shop_by_name(shop_name):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_product_by_name request for shop_name={shop_name} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request shop_name={shop_name}')
+            return build_client_error_response(f'update_id not set for delete request shop_name={shop_name}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         # 若存在状态非NEW和READY的shadow_product，则不允许删除
         shadow_products = ShadowProductInfo.select().where(ShadowProductInfo.shop_name == shop_name,
                                                            ShadowProductInfo.status != SHADOW_PRODUCT_STATUS_NEW,
@@ -287,7 +323,8 @@ def delete_shop_by_name(shop_name):
         if len(shadow_products) > 0:
             logger.info(
                 f'there are existing shadow products with this shop_name={shop_name}, record can not be deleted')
-            return build_client_error_response(f'shadow product exist for shop_name={shop_name}')
+            return build_client_error_response(f'shadow product exist for shop_name={shop_name}',
+                                               ERROR_SHADOW_EXIST)
         x = delete_shop(shop_name, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -406,7 +443,8 @@ def delete_product_sale_by_id_and_ts(product_id, create_ts):
             logger.info(
                 f'get delete_product_sale_by_id_and_ts request for product_id={product_id}, create_ts={create_ts} without update_id set')
             return build_client_error_response(
-                f'update_id not set for delete request product_id={product_id}, create_ts={create_ts}')
+                f'update_id not set for delete request product_id={product_id}, create_ts={create_ts}',
+                ERROR_UPDATE_ID_NOT_SET)
         x = delete_product_sale(product_id, create_ts, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -539,14 +577,21 @@ def update_shadow_product(product_id):
     logger = get_logger()
     payload = request.json
     try:
+        title_images = payload.get('title_imgs')
+        page_images = payload.get('page_imgs')
+        additional_properties = payload.get('additional_properties')
+        resource_root = additional_properties[RESOURCE_ROOT_KEY]
+        # 清理资源目录
+        title_images = clean_resources(f'./webapp/static{resource_root}/title_images', title_images)
+        page_images = clean_resources(f'./webapp/static{resource_root}/page_images', page_images)
         update_shadow_product_info(product_id, payload.get('status'), payload.get('update_id'),
                                    update_shadow_product.__name__,
                                    product_title=payload.get('product_title'), shop_name=payload.get('shop_name'),
                                    price=payload.get('price'), inventory=payload.get('inventory'),
-                                   title_imgs=payload.get('title_imgs'),
-                                   page_imgs=payload.get('page_imgs'),
+                                   title_imgs=title_images,
+                                   page_imgs=page_images,
                                    offer_details=payload.get('offer_details'),
-                                   additional_properties=payload.get('additional_properties'))
+                                   additional_properties=additional_properties)
         return build_success_response({})
     except Exception as e:
         msg = f'get unhandled exception {e}'
@@ -579,15 +624,17 @@ def delete_shadow_product_by_id(product_id):
         if 'update_id' not in request.args.keys():
             logger.info(
                 f'get delete_shadow_product_by_id request for product_id={product_id} without update_id set')
-            return build_client_error_response(
-                f'update_id not set for delete request product_id={product_id}')
+            return build_client_error_response(f'update_id not set for delete request product_id={product_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         # 若存在状态非NEW和READY的shadow_product，则不允许删除
         shadow_product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         if shadow_product.status != SHADOW_PRODUCT_STATUS_NEW and shadow_product.status != SHADOW_PRODUCT_STATUS_READY:
             logger.info(
                 f'shadow product with product_id={product_id} can not be deleted with status={shadow_product.status}')
             return build_client_error_response(
-                f'shadow product with product_id={product_id} can not be deleted with status={shadow_product.status}')
+                f'shadow product with product_id={product_id} can not be deleted with status={shadow_product.status}',
+                ERROR_SHADOW_CANNOT_DELETE
+            )
         x = delete_shadow_product(product_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -654,6 +701,48 @@ def query_shadow_products():
         return build_server_error_response(msg)
 
 
+@api.post('/api/v1/shadow_product/<product_id>/upload/<endpoint>')
+def upload_resource(product_id, endpoint):
+    logger = get_logger()
+    if 'update_id' not in request.args.keys():
+        logger.info(
+            f'get upload_resource request with product_id={product_id} and endpoint={endpoint} without update_id set')
+        return build_client_error_response(
+            f'get upload_resource request with product_id={product_id} and endpoint={endpoint} without update_id set',
+            ERROR_UPDATE_ID_NOT_SET)
+    try:
+        exist_sp = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
+    except DoesNotExist:
+        logger.error(f'shadow product with product_id={product_id} do not exist')
+        return build_not_found_response(f'shadow product with product_id={product_id} do not exist')
+    ad = json_loads(exist_sp.additional_properties)
+    resource_root = ad[RESOURCE_ROOT_KEY]
+    if endpoint == TITLE_IMAGE_UPLOAD_ENDPOINT:
+        download_path = f'./webapp/static{resource_root}/title_images'
+        exist_imgs = json_loads(exist_sp.title_imgs)
+    elif endpoint == PAGE_IMAGE_UPLOAD_ENDPOINT:
+        download_path = f'./webapp/static{resource_root}/page_images'
+        exist_imgs = json_loads(exist_sp.page_imgs)
+    else:
+        logger.error(f'unknown upload endpoint={endpoint}')
+        return build_client_error_response(f'unknown upload endpoint={endpoint}', ERROR_UNKNOWN_UPLOAD_ENDPOINT)
+    idx = 0
+    for name in exist_imgs:
+        idx = max(idx, int(name[:name.find('.')]))
+    for f in request.files.getlist(endpoint):
+        idx += 1
+        file_name = f'{idx}.png'
+        f.save(f'{download_path}/{file_name}')
+        exist_imgs.append(file_name)
+    if endpoint == TITLE_IMAGE_UPLOAD_ENDPOINT:
+        update_shadow_product_info(product_id, exist_sp.status, request.args['update_id'], upload_resource.__name__,
+                                   title_imgs=exist_imgs)
+    elif endpoint == PAGE_IMAGE_UPLOAD_ENDPOINT:
+        update_shadow_product_info(product_id, exist_sp.status, request.args['update_id'], upload_resource.__name__,
+                                   page_imgs=exist_imgs)
+    return build_success_response({})
+
+
 @api.get('/api/v1/hot_product/<product_id>/<create_ts>')
 def get_hot_product_by_id_and_ts(product_id, create_ts):
     logger = get_logger()
@@ -674,9 +763,6 @@ def get_hot_product_by_id_and_ts(product_id, create_ts):
 def create_hot_product():
     logger = get_logger()
     try:
-        if 'update_id' not in request.args.keys():
-            logger.info(f'get create_hot_product request for without update_id set')
-            return build_client_error_response(f'update_id not set for create_hot_product')
         payload = request.json
         add_hot_product(payload.get('product_id'),
                         payload.get('shop_name'),
@@ -698,7 +784,9 @@ def delete_hot_product_by_id_and_ts(product_id, create_ts):
             logger.info(
                 f'get delete_hot_product_by_id_and_ts request for product_id={product_id}, create_ts={create_ts} without update_id set')
             return build_client_error_response(
-                f'update_id not set for delete request product_id={product_id}, create_ts={create_ts}')
+                f'update_id not set for delete request product_id={product_id}, create_ts={create_ts}',
+                ERROR_UPDATE_ID_NOT_SET
+            )
         x = delete_hot_product(product_id, create_ts, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -931,7 +1019,8 @@ def delete_detail_crawl_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_detail_crawl_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         x = delete_detail_crawl_task(task_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -946,7 +1035,8 @@ def archive_detail_crawl_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get archive_detail_crawl_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         task = DetailCrawlTask.get(DetailCrawlTask.id == task_id)
         update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
         return build_success_response({})
@@ -1062,7 +1152,8 @@ def delete_shop_crawl_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_shop_crawl_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         x = delete_shop_crawl_task(task_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -1077,7 +1168,8 @@ def archive_shop_crawl_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get archive_shop_crawl_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         task = ShopCrawlTask.get(ShopCrawlTask.id == task_id)
         update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
         return build_success_response({})
@@ -1195,7 +1287,8 @@ def delete_search_crawl_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_search_crawl_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         x = delete_search_crawl_task(task_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -1210,7 +1303,8 @@ def archive_search_crawl_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get archive_search_crawl_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         task = SearchCrawlTask.get(SearchCrawlTask.id == task_id)
         update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
         return build_success_response({})
@@ -1321,7 +1415,8 @@ def delete_shop_search_crawl_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_shop_search_crawl_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         x = delete_shop_search_crawl_task(task_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -1336,7 +1431,8 @@ def archive_shop_search_crawl_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get archive_shop_search_crawl_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         task = ShopSearchCrawlTask.get(ShopSearchCrawlTask.id == task_id)
         update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
         return build_success_response({})
@@ -1448,7 +1544,8 @@ def delete_llm_analyze_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_llm_analyze_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         x = delete_llm_analyze_task(task_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -1463,7 +1560,8 @@ def archive_llm_analyze_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get archive_llm_analyze_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         task = LLMAnalyzeTask.get(LLMAnalyzeTask.id == task_id)
         update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
         return build_success_response({})
@@ -1578,7 +1676,8 @@ def delete_product_manage_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get delete_product_manage_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         x = delete_product_manage_task(task_id, request.args['update_id'])
         return build_success_response({'delete': x})
     except Exception as e:
@@ -1593,7 +1692,8 @@ def archive_product_manage_task_by_id(task_id):
     try:
         if 'update_id' not in request.args.keys():
             logger.info(f'get archive_product_manage_task_by_id request for task_id={task_id} without update_id set')
-            return build_client_error_response(f'update_id not set for delete request task_id={task_id}')
+            return build_client_error_response(f'update_id not set for delete request task_id={task_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
         task = ProductManageTask.get(ProductManageTask.id == task_id)
         update_task_info(task, request.args['update_id'], TASK_STATUS_ARCHIVED)
         return build_success_response({})
