@@ -168,12 +168,6 @@
 
   async function onShelfTaobao() {
     try {
-      if (data.shadow_info.status !== SHADOW_STATUS_READY) {
-        open = false;
-        await invalidateAll();
-        toast("Operation Failed: Product must be in READY status.");
-        return;
-      }
       data.shadow_info.additional_properties.platform_mask |= PLATFORM_TAOBAO;
       const save_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
         method: 'POST',
@@ -222,12 +216,6 @@
 
   async function onShelfRednote() {
     try {
-      if (data.shadow_info.status !== SHADOW_STATUS_READY) {
-        open = false;
-        await invalidateAll();
-        toast("Operation Failed: Product must be in READY status.");
-        return;
-      }
       data.shadow_info.additional_properties.platform_mask |= PLATFORM_REDNOTE;
       const save_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
         method: 'POST',
