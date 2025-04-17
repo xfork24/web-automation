@@ -251,15 +251,15 @@
             </div>
           </div>
         {:else}
-          <div class="flex flex-row w-full">
-            <div class="items-center justify-between px-4 text-2xl w-3/5">
+          <div class="flex items-center">
+            <div class="flex flex-wrap items-center justify-start w-3/5">
               {#if platform_mask & PLATFORM_TAOBAO }
-                <div class="items-center justify-between px-4 text-2xl">Product has been put on sale in
+                <div class="px-4 text-2xl">Product has been put on sale in
                   <a href="/shadow" class="italic text-yellow-500">Taobao</a>.
                 </div>
               {/if}
               {#if platform_mask & PLATFORM_REDNOTE }
-                <div class="items-center justify-between px-4 text-2xl">Product has been put on sale in
+                <div class="px-4 text-2xl">Product has been put on sale in
                   <a href="/shadow" class="italic text-red-500">Rednote</a>.
                 </div>
               {/if}
