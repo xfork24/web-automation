@@ -21,7 +21,7 @@ if __name__ == '__main__':
     logger = get_logger()
     signal.signal(signal.SIGINT, signal_handler)
     pmt = ProductManageTaskRunner(headless=False)
-    pmt.login(tb_user=TB_SHOP_USER, rn_user=REDNOTE_SHOP_USER)
+    # pmt.login(tb_user=TB_SHOP_USER, rn_user=REDNOTE_SHOP_USER)
     while True:
         # scan search_crawl_task and get all unfinished tasks
         try:

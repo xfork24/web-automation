@@ -33,6 +33,7 @@ TB_HOMEPAGE_TITLE_NAME = '淘宝'
 TB_SHOP_BROWSE_TITLE_NAME = '店铺浏览-淘宝网'
 TB_PERSONAL_HOMEPAGE_TITLE_NAME = '我的淘宝'
 TB_LOGIN_AUTH_TITLE_NAME = '登录-身份验证'
+REDNOTE_ONSHELF_TITLE_NAME = '商品创建'
 
 CRAWL_PAGE_WAIT_IN_SECONDS = 5
 CRAWL_OPERATION_TRY_COUNT = 3
@@ -262,21 +263,24 @@ class Crawler:
     def login_rednote(self, user=REDNOTE_SHOP_USER):
         self.driver.get(REDNOTE_LOGIN_PAGE)
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
-        tab_div = self.driver.find_element(By.CLASS_NAME, 'beer-login-container')
-        account_div = tab_div.find_element(By.XPATH, 'div/div/div[1]/div[2]/div[1]')
-        self.element_click(account_div)
-        login_form = self.driver.find_element(By.ID, 'login-form')
-        login_inputs = login_form.find_elements(By.XPATH, 'div/div/input')
-        assert (len(login_inputs) == 2)
-        email_input, password_input = login_inputs
-        email_input.clear()
-        email_input.send_keys(user)
-        password_input.clear()
-        password_input.send_keys(REDNOTE_USERS[user])
-        btns = self.driver.find_elements(By.XPATH, '//button')
-        assert (len(btns) == 1)
-        btns[0].click()
-        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        if self.driver.title == REDNOTE_ONSHELF_TITLE_NAME:
+            self.logger.info('already logged in, just ignore login')
+        else:
+            tab_div = self.driver.find_element(By.CLASS_NAME, 'beer-login-container')
+            account_div = tab_div.find_element(By.XPATH, 'div/div/div[1]/div[2]/div[1]')
+            self.element_click(account_div)
+            login_form = self.driver.find_element(By.ID, 'login-form')
+            login_inputs = login_form.find_elements(By.XPATH, 'div/div/input')
+            assert (len(login_inputs) == 2)
+            email_input, password_input = login_inputs
+            email_input.clear()
+            email_input.send_keys(user)
+            password_input.clear()
+            password_input.send_keys(REDNOTE_USERS[user])
+            btns = self.driver.find_elements(By.XPATH, '//button')
+            assert (len(btns) == 1)
+            btns[0].click()
+            time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
         self.set_window_size()
 
     def crawl_taobao_search_results(self, search_key, num_of_pages, sale_order, update_id, target_product_ids=None):
@@ -1557,9 +1561,11 @@ class Crawler:
     def product_manage_on_shelf(self, product_id, shop_name, platform, update_id):
         exist_sp = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
+            self.login_taobao(TB_SHOP_USER)
             self.handle_taobao_resource_upload(exist_sp, update_id)
             return self.handle_taobao_on_shelf(exist_sp, shop_name, update_id)
         elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
+            self.login_rednote(REDNOTE_SHOP_USER)
             self.handle_rednote_resource_upload(exist_sp, update_id)
             return self.handle_rednote_on_shelf(exist_sp, shop_name, update_id)
 
@@ -1575,8 +1581,10 @@ class Crawler:
     def product_manage_sync(self, product_id, shop_name, platform, update_id):
         product = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
+            self.login_taobao(TB_SHOP_USER)
             return self.handle_taobao_sync(product, shop_name, update_id)
         elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
+            self.login_rednote(REDNOTE_SHOP_USER)
             return self.handle_rednote_sync(product, shop_name, update_id)
 
     def parse_product_id_from_post_onshelf_link(self, link):
