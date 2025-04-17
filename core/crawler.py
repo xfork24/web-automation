@@ -277,6 +277,7 @@ class Crawler:
         assert (len(btns) == 1)
         btns[0].click()
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        self.set_window_size()
 
     def crawl_taobao_search_results(self, search_key, num_of_pages, sale_order, update_id, target_product_ids=None):
         self.logger.info(
