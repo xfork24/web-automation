@@ -40,6 +40,7 @@ CRAWL_OPERATION_TRY_COUNT = 3
 LOGIN_SLIDE_RETRY_COUNT = 5
 RESOURCE_UPLOAD_WAIT_IN_SECONDS = 10
 LOGIN_CONFIRM_PAGE_WAIT_IN_SECONDS = 15
+REDNOTE_CREATE_PRODUCT_WAIT_IN_SECONDS = 30
 DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS = 1
 TB_PAGE_DEFAULT_ZOOM_RATIO = 0.5
 SHOP_PAGE_MAX_SKU_NUM = 100
@@ -1420,7 +1421,7 @@ class Crawler:
 
     def handle_rednote_on_shelf(self, product, shop_name, update_id):
         self.driver.get(REDNOTE_ONSHELF_PAGE)
-        time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
+        time.sleep(REDNOTE_CREATE_PRODUCT_WAIT_IN_SECONDS)
         # product title
         title_input = self.driver.find_element(By.XPATH, '//*[@id="anchor-cell-itemName"]/div[2]/div[1]/div/div/input')
         title_input.clear()
@@ -1562,11 +1563,13 @@ class Crawler:
         exist_sp = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
             self.login_taobao(TB_SHOP_USER)
-            self.handle_taobao_resource_upload(exist_sp, update_id)
+            if sys.platform == 'win32':
+                self.handle_taobao_resource_upload(exist_sp, update_id)
             return self.handle_taobao_on_shelf(exist_sp, shop_name, update_id)
         elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
             self.login_rednote(REDNOTE_SHOP_USER)
-            self.handle_rednote_resource_upload(exist_sp, update_id)
+            if sys.platform == 'win32':
+                self.handle_rednote_resource_upload(exist_sp, update_id)
             return self.handle_rednote_on_shelf(exist_sp, shop_name, update_id)
 
     def product_manage_online(self, ref_id, shop_name, platform, update_id):
