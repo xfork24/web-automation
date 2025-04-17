@@ -13,6 +13,7 @@ USE taobao;
 CREATE TABLE IF NOT EXISTS product_info
 (
     product_id            varchar(32)  NOT NULL,
+    status                tinyint      NOT NULL,
     sku_id                varchar(32)  NOT NULL,
     product_title         varchar(128) NOT NULL,
     product_link          varchar(512) NOT NULL,
@@ -41,6 +42,7 @@ CREATE TABLE IF NOT EXISTS product_info
 CREATE TABLE IF NOT EXISTS shop_info
 (
     shop_name             varchar(128) NOT NULL,
+    status                tinyint      NOT NULL,
     shop_link             varchar(512) NOT NULL,
     shop_cover            varchar(512) NOT NULL,
     additional_properties text         NOT NULL,
@@ -250,6 +252,8 @@ CREATE TABLE IF NOT EXISTS product_manage_task
 -- Create Indexes And Foreign Keys
 -- -----------------------------------
 ALTER TABLE product_info
+    ADD INDEX idx_status (status);
+ALTER TABLE product_info
     ADD INDEX idx_sku_id (sku_id);
 ALTER TABLE product_info
     ADD INDEX idx_shop_name (shop_name);
@@ -262,6 +266,8 @@ ALTER TABLE product_info
 ALTER TABLE product_info
     ADD INDEX idx_update_id (update_id);
 
+ALTER TABLE shop_info
+    ADD INDEX idx_status (status);
 ALTER TABLE shop_info
     ADD INDEX idx_update_ts (update_ts);
 ALTER TABLE shop_info

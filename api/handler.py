@@ -128,6 +128,28 @@ def get_product_by_id(product_id):
         return build_server_error_response(msg)
 
 
+@api.put('/api/v1/product/<product_id>/archive')
+def archive_product_by_id(product_id):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get archive_product_by_id request for product_id={product_id} without update_id set')
+            return build_client_error_response(f'update_id not set for archive request product_id={product_id}',
+                                               ERROR_UPDATE_ID_NOT_SET)
+        p = ProductInfo.get(ProductInfo.product_id == product_id)
+        update_product_info(product_id, request.args['update_id'], archive_product_by_id.__name__,
+                            status=PRODUCT_STATUS_ARCHIVED)
+        return build_success_response({'data': p.to_json()})
+    except DoesNotExist:
+        msg = f'product_id={product_id} not found'
+        logger.info(f'invalid product_id={product_id}, not found')
+        return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 @api.get('/api/v1/product/<product_id>/history')
 def get_product_history_by_id(product_id):
     logger = get_logger()
@@ -258,11 +280,9 @@ def query_products():
                 limit = int(v)
             elif k == 'offset':
                 offset = int(v)
+        select_exps.append(ProductInfo.status == PRODUCT_STATUS_NORMAL)
         sort = sort.desc() if desc else sort
-        if len(select_exps) == 0:
-            query = ProductInfo.select().order_by(sort).limit(limit).offset(offset)
-        else:
-            query = ProductInfo.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        query = ProductInfo.select().where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = [q.to_json() for q in query]
         return build_success_response({'data': data})
     except Exception as e:
@@ -333,6 +353,28 @@ def delete_shop_by_name(shop_name):
         return build_server_error_response(msg)
 
 
+@api.put('/api/v1/shop/<shop_name>/archive')
+def archive_shop_by_name(shop_name):
+    logger = get_logger()
+    try:
+        if 'update_id' not in request.args.keys():
+            logger.info(f'get archive_shop_by_name request for shop_name={shop_name} without update_id set')
+            return build_client_error_response(f'update_id not set for archive request shop_name={shop_name}',
+                                               ERROR_UPDATE_ID_NOT_SET)
+        s = ShopInfo.get(ShopInfo.shop_name == shop_name)
+        update_shop_info(shop_name, request.args['update_id'], archive_shop_by_name.__name__,
+                         status=SHOP_STATUS_ARCHIVED)
+        return build_success_response({'data': s.to_json()})
+    except DoesNotExist:
+        msg = f'shop_name={shop_name} not found'
+        logger.info(f'invalid shop_name={shop_name}, not found')
+        return build_not_found_response(msg)
+    except Exception as e:
+        msg = f'get unhandled exception {e}'
+        logger.error(msg)
+        return build_server_error_response(msg)
+
+
 # supported query params:
 # shop_name = XXX
 # update_ts = {"lt": 100, "gt": 30}
@@ -374,35 +416,21 @@ def query_shops():
                 limit = int(v)
             elif k == 'offset':
                 offset = int(v)
+        select_exps.append(ShopInfo.status == SHOP_STATUS_NORMAL)
         sort = sort.desc() if desc else sort
-        if len(select_exps) == 0:
-            query = ShopInfo.select(ShopInfo.shop_name,
-                                    ShopInfo.shop_link,
-                                    ShopInfo.shop_cover,
-                                    ShopInfo.additional_properties,
-                                    ShopInfo.create_ts,
-                                    ShopInfo.update_ts,
-                                    ShopInfo.update_id,
-                                    ShopInfo.update_role,
-                                    fn.AVG(ProductInfo.display_price).alias('avg_price'),
-                                    fn.SUM(ProductInfo.display_sale).alias('total_sale'),
-                                    fn.SUM(ProductInfo.estimated_revenue).alias('total_revenue')).join(ProductInfo,
-                                                                                                       JOIN.LEFT_OUTER).group_by(
-                ShopInfo.shop_name).order_by(sort).limit(limit).offset(offset)
-        else:
-            query = ShopInfo.select(ShopInfo.shop_name,
-                                    ShopInfo.shop_link,
-                                    ShopInfo.shop_cover,
-                                    ShopInfo.additional_properties,
-                                    ShopInfo.create_ts,
-                                    ShopInfo.update_ts,
-                                    ShopInfo.update_id,
-                                    ShopInfo.update_role,
-                                    fn.AVG(ProductInfo.display_price).alias('avg_price'),
-                                    fn.SUM(ProductInfo.display_sale).alias('total_sale'),
-                                    fn.SUM(ProductInfo.estimated_revenue).alias('total_revenue')).join(ProductInfo,
-                                                                                                       JOIN.LEFT_OUTER).group_by(
-                ShopInfo.shop_name).where(*select_exps).order_by(sort).limit(limit).offset(offset)
+        query = ShopInfo.select(ShopInfo.shop_name,
+                                ShopInfo.shop_link,
+                                ShopInfo.shop_cover,
+                                ShopInfo.additional_properties,
+                                ShopInfo.create_ts,
+                                ShopInfo.update_ts,
+                                ShopInfo.update_id,
+                                ShopInfo.update_role,
+                                fn.AVG(ProductInfo.display_price).alias('avg_price'),
+                                fn.SUM(ProductInfo.display_sale).alias('total_sale'),
+                                fn.SUM(ProductInfo.estimated_revenue).alias('total_revenue')).join(ProductInfo,
+                                                                                                   JOIN.LEFT_OUTER).group_by(
+            ShopInfo.shop_name).where(*select_exps).order_by(sort).limit(limit).offset(offset)
         data = []
         for q in query:
             item = {

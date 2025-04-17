@@ -32,7 +32,7 @@
     renderComponent,
     renderSnippet
   } from '$lib/components/ui/data-table';
-  import { FunnelX, LibraryBig, RotateCcw, Search, PackageSearch, Trash2 } from "@lucide/svelte/icons";
+  import { Archive, FunnelX, LibraryBig, RotateCcw, Search, PackageSearch, Trash2 } from "@lucide/svelte/icons";
   import { parseUUID4, type ProductInfo, timeConverter, assert } from '../../(components)/model';
   import { goto, invalidateAll } from '$app/navigation';
 
@@ -52,6 +52,11 @@
   function beforeCrawlSelectProductInShopDialog() {
     dialog_body = 'This action will add select shop crawl task(s) for target products. The task(s) will be scheduled later.';
     handler = createSelectShopCrawlTask;
+  }
+
+  function beforeArchiveSelectProductDialog() {
+    dialog_body = 'This action will archive select product(s).';
+    handler = archiveSelectProduct;
   }
 
   function beforeDeleteSelectProductDialog() {
@@ -106,6 +111,27 @@
         });
         const result = await response.json();
         assert(result.code == 0, `create shop_crawl_task failed for shop ${row.original.shop_name} with target product ids [${row.original.product_id}]`);
+      }
+      open = false;
+      table.resetRowSelection(false);
+      await invalidateAll();
+      toast("Operation Successful");
+    } catch (error) {
+      console.error(`Error in function: ${error}`);
+    }
+  }
+
+  async function archiveSelectProduct(rows: Row<ProductInfo>[]) {
+    try {
+      for (const row of rows) {
+        const response = await fetch(`http://localhost:8000/api/v1/product/${row.original.product_id}/archive?update_id=${data.user.name}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+          }
+        });
+        const result = await response.json();
+        assert(result.code == 0, `archive failed for product ${row.original.product_id}`);
       }
       open = false;
       table.resetRowSelection(false);
@@ -597,6 +623,21 @@
             </Tooltip.Trigger>
             <Tooltip.Content>
               <p>Crawl products in shop page</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
+      </Dialog.Trigger>
+
+      <Dialog.Trigger class="mr-4">
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeArchiveSelectProductDialog()} variant="destructive">
+                <Archive/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Archive products</p>
             </Tooltip.Content>
           </Tooltip.Root>
         </Tooltip.Provider>

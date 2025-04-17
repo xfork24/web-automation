@@ -37,6 +37,12 @@ TASK_STATUS_DONE = 3
 TASK_STATUS_ERROR = 4
 TASK_STATUS_ARCHIVED = 5
 
+PRODUCT_STATUS_NORMAL = 0
+PRODUCT_STATUS_ARCHIVED = 5
+
+SHOP_STATUS_NORMAL = 0
+SHOP_STATUS_ARCHIVED = 5
+
 PRODUCT_MANAGE_PLATFORM_NONE = 0
 PRODUCT_MANAGE_PLATFORM_TAOBAO = 1
 PRODUCT_MANAGE_PLATFORM_REDNOTE = 2
@@ -108,6 +114,7 @@ class BaseModel(Model):
 
 class ShopInfo(BaseModel):
     shop_name = CharField(max_length=128, primary_key=True)
+    status = SmallIntegerField(index=True)
     shop_link = CharField(max_length=512)
     shop_cover = CharField(max_length=512)
     additional_properties = TextField()
@@ -122,6 +129,7 @@ class ShopInfo(BaseModel):
 
 class ProductInfo(BaseModel):
     product_id = CharField(max_length=32, primary_key=True)
+    status = SmallIntegerField(index=True)
     sku_id = CharField(max_length=32, index=True)
     product_title = CharField(max_length=128)
     product_link = CharField(max_length=512)
@@ -344,7 +352,7 @@ class ProductManageTask(BaseModel):
         )
 
 
-def update_product_info(product_id, update_id, update_role,
+def update_product_info(product_id, update_id, update_role, status=PRODUCT_STATUS_NORMAL,
                         sku_id='', product_title='', product_link='', product_cover='',
                         shop_name='', shop_link='',
                         price_unit='', display_price=-1, display_sale=-1,
@@ -356,6 +364,7 @@ def update_product_info(product_id, update_id, update_role,
         # if record already exists, update only if value is valid
         exist_pi = ProductInfo.get(ProductInfo.product_id == product_id)
         original_json = exist_pi.to_json()
+        exist_pi.status = status
         if sku_id != '':
             exist_pi.sku_id = sku_id
         if product_title != '':
@@ -406,6 +415,7 @@ def update_product_info(product_id, update_id, update_role,
     except DoesNotExist:
         new_pi = ProductInfo()
         new_pi.product_id = product_id
+        new_pi.status = status
         new_pi.sku_id = sku_id
         new_pi.product_title = product_title
         new_pi.product_link = product_link
@@ -446,7 +456,8 @@ def update_product_info(product_id, update_id, update_role,
                               update_id, update_role, ts, DB_OPS_CREATE_NEW)
 
 
-def update_shop_info(shop_name, update_id, update_role, shop_link='', shop_cover='', additional_properties=None):
+def update_shop_info(shop_name, update_id, update_role, status=SHOP_STATUS_NORMAL, shop_link='', shop_cover='',
+                     additional_properties=None):
     # update shop_info table
     logger = get_logger()
     ts = int(time.time())
@@ -454,6 +465,7 @@ def update_shop_info(shop_name, update_id, update_role, shop_link='', shop_cover
         # update only when value is valid
         exist_si = ShopInfo.get(ShopInfo.shop_name == shop_name)
         original_json = exist_si.to_json()
+        exist_si.status = status
         shop_link_match = False
         for reg_exp in SHOP_LINK_KNOWN_RE_EXP_LIST:
             if re.match(reg_exp, shop_link):
@@ -479,6 +491,7 @@ def update_shop_info(shop_name, update_id, update_role, shop_link='', shop_cover
     except DoesNotExist:
         new_si = ShopInfo()
         new_si.shop_name = shop_name
+        new_si.status = status
         new_si.shop_link = shop_link
         new_si.shop_cover = shop_cover
         if additional_properties is not None:

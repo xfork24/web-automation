@@ -31,8 +31,8 @@
     renderComponent,
     renderSnippet
   } from '$lib/components/ui/data-table';
-  import { ChevronDown, FunnelX, RotateCcw, Search, PackageSearch, Trash2 } from "@lucide/svelte/icons";
-  import { assert, parseUUID4, type ShopInfo, timeConverter } from '../../(components)/model';
+  import { Archive, ChevronDown, FunnelX, RotateCcw, Search, PackageSearch, Trash2 } from "@lucide/svelte/icons";
+  import { assert, parseUUID4, type ProductInfo, type ShopInfo, timeConverter } from '../../(components)/model';
   import { invalidateAll } from '$app/navigation';
 
   let {data} = $props();
@@ -51,6 +51,11 @@
   function beforeCrawlSelectShopInSearchDialog() {
     dialog_body = 'This action will add select shop search crawl task(s). The task(s) will be scheduled later.';
     handler = createSelectShopSearchCrawlTask;
+  }
+
+  function beforeArchiveSelectShopDialog() {
+    dialog_body = 'This action will archive select shop(s).';
+    handler = archiveSelectShop;
   }
 
   function beforeDeleteSelectShopDialog() {
@@ -99,6 +104,27 @@
         });
         const result = await response.json();
         assert(result.code == 0, `create shop_search_crawl_task failed for shop ${row.original.shop_name}`);
+      }
+      open = false;
+      table.resetRowSelection(false);
+      await invalidateAll();
+      toast("Operation Successful");
+    } catch (error) {
+      console.error(`Error in function: ${error}`);
+    }
+  }
+
+  async function archiveSelectShop(rows: Row<ShopInfo>[]) {
+    try {
+      for (const row of rows) {
+        const response = await fetch(`http://localhost:8000/api/v1/shop/${row.original.shop_name}/archive?update_id=${data.user.name}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+          }
+        });
+        const result = await response.json();
+        assert(result.code == 0, `archive failed for shop ${row.original.shop_name}`);
       }
       open = false;
       table.resetRowSelection(false);
@@ -484,6 +510,21 @@
             </Tooltip.Trigger>
             <Tooltip.Content>
               <p>Crawl shops in search page</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
+      </Dialog.Trigger>
+
+      <Dialog.Trigger class="mr-4">
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <Button class="max-w-xs" onclick={ () => beforeArchiveSelectShopDialog()} variant="destructive">
+                <Archive/>
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p>Archive shops</p>
             </Tooltip.Content>
           </Tooltip.Root>
         </Tooltip.Provider>

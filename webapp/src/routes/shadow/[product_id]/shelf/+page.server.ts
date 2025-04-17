@@ -6,13 +6,13 @@ export const load = async ({url}) => {
     if (matches && matches.groups) {
       product_id = matches.groups.product_id;
     }
-    const product_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
+    const shadow_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json;charset=UTF-8'
       }
     });
-    const product = await product_response.json();
+    const shadow = await shadow_response.json();
 
     const history_response = await fetch(`http://localhost:8000/api/v1/shadow_product/${product_id}/history`, {
       method: 'GET',
@@ -24,7 +24,7 @@ export const load = async ({url}) => {
 
     return {
       product_id: decodeURI(product_id!),
-      shadow_info: product.data,
+      shadow_info: shadow.data,
       shadow_histories: histories.data
     };
   } catch (error) {

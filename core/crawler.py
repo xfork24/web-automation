@@ -427,9 +427,10 @@ class Crawler:
         # save shop info
         update_role = self.save_taobao_search_result.__name__
         # save shop info
-        update_shop_info(shop_name, update_id, update_role, shop_link, SHOP_COVER_DEFAULT_LINK, None)
+        update_shop_info(shop_name, update_id, update_role, SHOP_STATUS_NORMAL,
+                         shop_link, SHOP_COVER_DEFAULT_LINK, None)
         # save product info
-        update_product_info(product_id, update_id, update_role,
+        update_product_info(product_id, update_id, update_role, PRODUCT_STATUS_NORMAL,
                             sku_id, product_title, product_link, product_cover,
                             shop_name, shop_link,
                             price_unit, display_price, display_sale,
@@ -462,7 +463,8 @@ class Crawler:
             elif re.match(SHOP_IMG_WRAPPER_RE_EXP, cls_name):
                 shop_cover = div.find_element(By.XPATH, 'img').get_attribute('src')
         assert (shop_name is not None)
-        update_shop_info(shop_name, update_id, self.craw_taobao_shop_page.__name__, shop_link, shop_cover, None)
+        update_shop_info(shop_name, update_id, self.craw_taobao_shop_page.__name__, SHOP_STATUS_NORMAL,
+                         shop_link, shop_cover, None)
         # for craw_taobao_shop_sku_v2
         target_products = []
         if target_products is not None:
@@ -647,7 +649,7 @@ class Crawler:
                          f'\t\tdisplay_sale={display_sale}\n'
                          f'\t\tupdate_id={update_id}\n')
         update_role = self.save_taobao_shop_sku_result.__name__
-        update_product_info(product_id, update_id, update_role,
+        update_product_info(product_id, update_id, update_role, PRODUCT_STATUS_NORMAL,
                             sku_id, product_title, product_link, product_cover,
                             shop_name, shop_link,
                             price_unit, display_price, display_sale,
@@ -667,7 +669,7 @@ class Crawler:
                          f'\t\tdisplay_sale={display_sale}\n'
                          f'\t\tupdate_id={update_id}\n')
         update_role = self.save_taobao_shop_sku_result.__name__
-        update_product_info(product_id, update_id, update_role,
+        update_product_info(product_id, update_id, update_role, PRODUCT_STATUS_NORMAL,
                             product_cover=product_cover,
                             shop_name=shop_name, shop_link=shop_link,
                             price_unit=price_unit, display_price=display_price, display_sale=display_sale)
@@ -719,8 +721,8 @@ class Crawler:
                 break
         if shop_link is not None:
             self.logger.info(f'update shop_name={shop_name} and shop_link={shop_link}')
-            update_shop_info(shop_name, update_id, self.crawl_taobao_shop_link_by_search.__name__, shop_link,
-                             shop_cover, None)
+            update_shop_info(shop_name, update_id, self.crawl_taobao_shop_link_by_search.__name__, SHOP_STATUS_NORMAL,
+                             shop_link, shop_cover, None)
         else:
             msg = f'can not find shop_name={shop_name} by shop search, all results parsed'
             self.logger.error(msg)
@@ -970,14 +972,15 @@ class Crawler:
                          f'\t\toffer_details={offer_details}\n'
                          f'\t\tupdate_id={update_id}\n')
         update_role = self.save_taobao_detail_result.__name__
-        update_product_info(product_id, update_id, update_role,
+        update_product_info(product_id, update_id, update_role, PRODUCT_STATUS_NORMAL,
                             sku_id, product_title, product_link, '',
                             shop_name, shop_link,
                             price_unit, display_price, display_sale,
                             title_images, main_images, offer_details, None)
         add_product_sale(product_id, shop_name, price_unit, display_price, display_sale, None,
                          update_id, update_role)
-        update_shop_info(shop_name, update_id, update_role, shop_link, SHOP_COVER_DEFAULT_LINK, None)
+        update_shop_info(shop_name, update_id, update_role, SHOP_STATUS_NORMAL,
+                         shop_link, SHOP_COVER_DEFAULT_LINK, None)
 
     def download_product_resources(self, product_id, update_id, ts=None, force_download=False):
         try:

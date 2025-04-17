@@ -44,7 +44,8 @@
     SHADOW_OPERATION_ONLINE,
     SHADOW_STATUS_ONLINE,
     SHADOW_OPERATION_OFFLINE,
-    SHADOW_STATUS_NEW, SHADOW_STATUS_READY, shadowStatusToString
+    SHADOW_STATUS_NEW,
+    SHADOW_STATUS_READY
   } from '../../(components)/model';
   import { goto, invalidateAll } from '$app/navigation';
   import { LibraryBig } from "@lucide/svelte";
@@ -310,9 +311,15 @@
         const statusSnippet = createRawSnippet<[number]>((getData) => {
           const status = getData();
           const badge_class = shadow_status_badge_class[row.original.status];
-          return {
-            render: () => `<div><span class="${badge_class}">${status}</span></div>`
-          };
+          if (row.original.status == 0) {
+            return {
+              render: () => `<div><span class="${badge_class}">${status}</span></div>`
+            };
+          } else {
+            return {
+              render: () => `<div><span class="${badge_class}"><a href="/shadow/${row.original.product_id}/shelf">${status}</a></span></div>`
+            };
+          }
         });
         return renderSnippet(statusSnippet, row.getValue('Status'));
       }
