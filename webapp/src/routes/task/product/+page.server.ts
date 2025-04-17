@@ -1,7 +1,8 @@
 import {
   parseTaskReason,
   type ProductManageTask,
-  shadowOperationToString, shadowPlatformToString,
+  shadowOperationToString,
+  shadowPlatformToString,
   statusToString
 } from '../../(components)/model';
 

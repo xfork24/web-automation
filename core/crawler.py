@@ -3,15 +3,11 @@
 
 import os
 import shutil
-import time
 from pathlib import Path
 import traceback
 import uuid
 from enum import Enum
 from urllib.parse import urlparse, parse_qs
-import win32gui
-import win32con
-
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeDriverService
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
@@ -20,6 +16,10 @@ from selenium.webdriver.common.keys import Keys
 from core.config import *
 from core.exceptions import *
 from core.models import *
+
+if sys.platform == 'win32':
+    import win32gui
+    import win32con
 
 TB_LOGIN_PAGE = 'https://login.taobao.com/member/login.jhtml'
 TB_SEARCH_PAGE = 'https://s.taobao.com/search'
@@ -1390,7 +1390,8 @@ class Crawler:
         return True
 
     def handle_taobao_select_images(self, path, confirm=False):
-        sort_btn = self.driver.find_element(By.XPATH, '//*[@id="sucai-tu-selector-container"]/div[2]/div[2]/div[3]/div/div[1]/div/button')
+        sort_btn = self.driver.find_element(By.XPATH,
+                                            '//*[@id="sucai-tu-selector-container"]/div[2]/div[2]/div[3]/div/div[1]/div/button')
         self.element_click(sort_btn)
         spans = self.driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
         for span in spans:

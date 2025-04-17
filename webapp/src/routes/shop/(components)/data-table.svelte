@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { ChevronDown } from '@lucide/svelte/icons';
   import {
     type ColumnDef,
     type ColumnFiltersState,
@@ -10,7 +9,8 @@
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
-    getSortedRowModel, type Row
+    getSortedRowModel,
+    type Row
   } from '@tanstack/table-core';
   import { createRawSnippet } from 'svelte';
   import DataTableCheckbox from '../../(components)/data-table-checkbox.svelte';
@@ -31,7 +31,7 @@
     renderComponent,
     renderSnippet
   } from '$lib/components/ui/data-table';
-  import { FunnelX, RotateCcw, Search, PackageSearch, Trash2 } from "@lucide/svelte/icons";
+  import { ChevronDown, FunnelX, RotateCcw, Search, PackageSearch, Trash2 } from "@lucide/svelte/icons";
   import { assert, parseUUID4, type ShopInfo, timeConverter } from '../../(components)/model';
   import { invalidateAll } from '$app/navigation';
 

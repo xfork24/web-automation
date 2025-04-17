@@ -1,8 +1,6 @@
 <script lang="ts">
   import { Ellipsis } from '@lucide/svelte/icons';
-  import {
-    Button
-  } from '$lib/components/ui/button';
+  import { Button } from '$lib/components/ui/button';
   import { goto, invalidateAll } from '$app/navigation';
   import type { ProductInfo } from '../../(components)/model';
   import { Toaster } from "$lib/components/ui/sonner";

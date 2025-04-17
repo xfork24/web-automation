@@ -1,12 +1,16 @@
 <script lang="ts">
+  import {
+    ChevronDown,
+    ChevronUp,
+    ChevronRight,
+    House,
+    User,
+    History,
+    Settings
+  } from '@lucide/svelte/icons';
+  import Task from '@lucide/svelte/icons/square-check-big'
   import Product from '@lucide/svelte/icons/package-search';
   import Shop from '@lucide/svelte/icons/store';
-  import Task from '@lucide/svelte/icons/square-check-big';
-  import History from '@lucide/svelte/icons/history';
-  import Settings from '@lucide/svelte/icons/settings';
-  import House from '@lucide/svelte/icons/house';
-  import User from '@lucide/svelte/icons/user';
-  import { ChevronDown, ChevronUp, ChevronRight } from '@lucide/svelte/icons';
   import * as Sidebar from '$lib/components/ui/sidebar';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Collapsible from '$lib/components/ui/collapsible';

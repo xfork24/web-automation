@@ -10,7 +10,8 @@
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
-    getSortedRowModel, type Row
+    getSortedRowModel,
+    type Row
   } from '@tanstack/table-core';
   import { createRawSnippet } from 'svelte';
   import DataTableCheckbox from '../../(components)/data-table-checkbox.svelte';

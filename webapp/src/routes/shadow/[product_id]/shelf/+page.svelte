@@ -9,12 +9,13 @@
   import { Button } from "$lib/components/ui/button";
   import { Toaster } from "$lib/components/ui/sonner";
   import { toast } from "svelte-sonner";
-  import { goto, invalidateAll } from "$app/navigation";
+  import { invalidateAll } from "$app/navigation";
   import HistoryDataTable from "./(components)/history-data-table.svelte";
   import {
     PLATFORM_REDNOTE,
-    PLATFORM_TAOBAO, SHADOW_OPERATION_ONSHELF,
-    SHADOW_STATUS_READY
+    PLATFORM_TAOBAO,
+    SHADOW_STATUS_READY,
+    SHADOW_OPERATION_ONSHELF
   } from "../../../(components)/model";
   import { Tally1 } from "@lucide/svelte";
   import { Separator } from "$lib/components/ui/separator";
@@ -432,12 +433,14 @@
                 <div class="flex flex-wrap items-center justify-start">
                   {#if platform_mask & PLATFORM_TAOBAO }
                     <div class="px-4 text-2xl">Product has been put on sale in
-                      <a href="https://item.taobao.com/item.htm?id={data.shadow_info.shadow_id}" target="_blank" class="italic text-yellow-500">Taobao</a>.
+                      <a href="https://item.taobao.com/item.htm?id={data.shadow_info.shadow_id}" target="_blank"
+                         class="italic text-yellow-500">Taobao</a>.
                     </div>
                   {/if}
                   {#if platform_mask & PLATFORM_REDNOTE }
                     <div class="px-4 text-2xl">Product has been put on sale in
-                      <a href="https://www.xiaohongshu.com/goods-detail/{data.shadow_info.rednote_id}" target="_blank" class="italic text-red-500">Rednote</a>.
+                      <a href="https://www.xiaohongshu.com/goods-detail/{data.shadow_info.rednote_id}" target="_blank"
+                         class="italic text-red-500">Rednote</a>.
                     </div>
                   {/if}
                 </div>

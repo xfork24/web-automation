@@ -1,14 +1,14 @@
 <script lang="ts">
   import { Ellipsis } from '@lucide/svelte/icons';
-  import {
-    Button
-  } from '$lib/components/ui/button';
+  import { Button } from '$lib/components/ui/button';
   import { goto, invalidateAll } from '$app/navigation';
   import {
     SHADOW_OPERATION_OFFLINE,
-    SHADOW_OPERATION_ONLINE, SHADOW_OPERATION_READY, SHADOW_STATUS_NEW,
+    SHADOW_OPERATION_ONLINE,
+    SHADOW_STATUS_NEW,
     SHADOW_STATUS_OFFLINE,
-    SHADOW_STATUS_ONLINE, SHADOW_STATUS_READY,
+    SHADOW_STATUS_ONLINE,
+    SHADOW_STATUS_READY,
     type ShadowProductInfo
   } from '../../(components)/model';
   import { Toaster } from "$lib/components/ui/sonner";

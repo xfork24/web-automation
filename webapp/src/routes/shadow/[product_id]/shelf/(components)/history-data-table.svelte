@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { ChevronDown } from '@lucide/svelte/icons';
   import {
     type ColumnDef,
     type ColumnFiltersState,
@@ -13,7 +12,7 @@
     getSortedRowModel
   } from '@tanstack/table-core';
   import { createRawSnippet } from 'svelte';
-  import { FunnelX, RotateCcw } from "@lucide/svelte/icons";
+  import { ChevronDown, FunnelX, RotateCcw } from "@lucide/svelte/icons";
   import DataTableSortButton from '../../../../(components)/data-table-sort-button.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
