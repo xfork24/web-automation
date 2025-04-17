@@ -1071,10 +1071,15 @@ class Crawler:
             self.logger.info(f'shadow product_id={product_id}, shop_name={shop_name} is not in NEW status, just ignore')
             return True
 
-    def handle_taobao_resource_upload(self, product):
+    def handle_taobao_resource_upload(self, product, update_id):
+        additional_properties = json_loads(product.additional_properties)
+        if RESOURCE_UPLOAD_KEY in additional_properties and additional_properties[RESOURCE_UPLOAD_KEY]:
+            self.logger.info(f'resource already uploaded for product_id={product.product_id}, just return')
+            return
         self.driver.get(TB_IMAGE_SPACE_PAGE)
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
-        upload_btn1 = self.driver.find_element(By.XPATH, '//*[@id="microapp-sucai-tu-container"]/div/div/div/div[1]/div[2]/div/div[1]/div[2]/button[2]')
+        upload_btn1 = self.driver.find_element(By.XPATH,
+                                               '//*[@id="microapp-sucai-tu-container"]/div/div/div/div[1]/div[2]/div/div[1]/div[2]/button[2]')
         self.element_click(upload_btn1)
         form_controls = self.driver.find_elements(By.CLASS_NAME, 'next-form-item-control')
         upload_span = None
@@ -1090,7 +1095,6 @@ class Crawler:
         assert (upload_span is not None and new_folder_btn is not None)
         title_images = json_loads(product.title_imgs)
         page_images = json_loads(product.page_imgs)
-        additional_properties = json_loads(product.additional_properties)
         resource_root = additional_properties[RESOURCE_ROOT_KEY][1:]
         # handle new folder creation
         self.create_taobao_subfolders(new_folder_btn, f'{resource_root}/title_images')
@@ -1098,6 +1102,10 @@ class Crawler:
         # handle product resource upload
         self.upload_taobao_subfolder(upload_span, f'{resource_root}/title_images', title_images)
         self.upload_taobao_subfolder(upload_span, f'{resource_root}/page_images', page_images)
+        additional_properties[RESOURCE_UPLOAD_KEY] = True
+        update_shadow_product_info(product.product_id, product.status, update_id,
+                                   self.handle_taobao_resource_upload.__name__,
+                                   additional_properties=additional_properties)
 
     def upload_taobao_subfolder(self, upload_span, path, images):
         path_list = path.split('/')
@@ -1131,9 +1139,9 @@ class Crawler:
 
     def upload_select_files(self, path, files):
         dialog = win32gui.FindWindow('#32770', '打开')
-        ComboBoxEx32 = win32gui.FindWindowEx(dialog, 0, "ComboBoxEx32", None)
-        comboBox = win32gui.FindWindowEx(ComboBoxEx32, 0, "ComboBox", None)
-        edit = win32gui.FindWindowEx(comboBox, 0, 'Edit', None)
+        combobox_ex32 = win32gui.FindWindowEx(dialog, 0, "ComboBoxEx32", None)
+        combobox = win32gui.FindWindowEx(combobox_ex32, 0, "ComboBox", None)
+        edit = win32gui.FindWindowEx(combobox, 0, 'Edit', None)
         button = win32gui.FindWindowEx(dialog, 0, 'Button', "打开(&O)")
         win32gui.SendMessage(edit, win32con.WM_SETTEXT, None, path)
         time.sleep(DRIVER_SIMPLE_OPS_WAIT_IN_SECONDS)
@@ -1168,6 +1176,7 @@ class Crawler:
             parent = dropdown_divs[0].find_element(By.XPATH, 'ul')
             idx = 0
             last_div = None
+            child = None
             while True:
                 found = False
                 for li in parent.find_elements(By.XPATH, 'li'):
@@ -1197,7 +1206,11 @@ class Crawler:
             new_folder_input.send_keys(path_list[idx])
             self.element_click(confirm_btn)
 
-    def handle_rednote_resource_upload(self, product):
+    def handle_rednote_resource_upload(self, product, update_id):
+        additional_properties = json_loads(product.additional_properties)
+        if RESOURCE_UPLOAD_KEY in additional_properties and additional_properties[RESOURCE_UPLOAD_KEY]:
+            self.logger.info(f'resource already uploaded for product_id={product.product_id}, just return')
+            return
         self.driver.get(REDNOTE_IMAGE_SPACE_PAGE)
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
         ul_list = self.driver.find_element(By.CLASS_NAME, 'tree-list')
@@ -1230,6 +1243,10 @@ class Crawler:
         # handle product resource upload
         self.upload_rednote_subfolder(ul_list, upload_btn, f'{resource_root}/title_images', title_images)
         self.upload_rednote_subfolder(ul_list, upload_btn, f'{resource_root}/page_images', page_images)
+        additional_properties[RESOURCE_UPLOAD_KEY] = True
+        update_shadow_product_info(product.product_id, product.status, update_id,
+                                   self.handle_taobao_resource_upload.__name__,
+                                   additional_properties=additional_properties)
 
     def create_rednote_subfolders(self, ul_list, create_folder_btn, path):
         path_list = path.split('/')
@@ -1389,7 +1406,7 @@ class Crawler:
             if cls_name is None:
                 continue
             elif re.match(ONSHELF_TAOBAO_HEAD_ACTION_RE_EXP, cls_name):
-                sort_span = div.find_elements(By.XPATH, 'span[3]/span[1]/span[1]')
+                sort_span = div.find_element(By.XPATH, 'span[3]/span[1]/span[1]')
         assert (sort_span is not None)
         self.element_click(sort_span)
         spans = self.driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
@@ -1561,10 +1578,10 @@ class Crawler:
     def product_manage_on_shelf(self, product_id, shop_name, platform, update_id):
         exist_sp = ShadowProductInfo.get(ShadowProductInfo.product_id == product_id)
         if platform == PRODUCT_MANAGE_PLATFORM_TAOBAO:
-            self.handle_taobao_resource_upload(exist_sp)
+            self.handle_taobao_resource_upload(exist_sp, update_id)
             return self.handle_taobao_on_shelf(exist_sp, shop_name, update_id)
         elif platform == PRODUCT_MANAGE_PLATFORM_REDNOTE:
-            self.handle_rednote_resource_upload(exist_sp)
+            self.handle_rednote_resource_upload(exist_sp, update_id)
             return self.handle_rednote_on_shelf(exist_sp, shop_name, update_id)
 
     def product_manage_online(self, ref_id, shop_name, platform, update_id):

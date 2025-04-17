@@ -17,10 +17,11 @@ from core.utils import get_logger
 from json import JSONDecodeError
 from playhouse.shortcuts import model_to_dict
 
-LLM_ANALYSIS_KEY = 'llm_analysis'
-ERRORS_KEY = 'errors'
-RESOURCE_ROOT_KEY = 'resource_root'
-PLATFORM_MASK_KEY = 'platform_mask'
+LLM_ANALYSIS_KEY = 'llm_analysis'  # map with keys: keyword, category, digital
+ERRORS_KEY = 'errors'  # list of error_entity with keys: update_ts, err_code, call_stack
+RESOURCE_ROOT_KEY = 'resource_root'  # string
+PLATFORM_MASK_KEY = 'platform_mask'  # int
+RESOURCE_UPLOAD_KEY = 'resource_uploaded'  # boolean
 SHADOW_PRODUCT_DEFAULT_ID = '000000000000'
 REDNOTE_PRODUCT_DEFAULT_ID = '000000000000000000000000'
 PRODUCT_IMAGE_MAX_NUM = 100
