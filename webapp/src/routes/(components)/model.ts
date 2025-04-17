@@ -391,6 +391,15 @@ export function parseTaskReason(task: any) {
   }
 }
 
+export function parse_rednote_preview_id(rednote_id: string) {
+  const x = rednote_id[rednote_id.length - 1];
+  let y = Number.parseInt(x) + 1;
+  if (y == 10) {
+    y = 0
+  }
+  return rednote_id.substring(0, rednote_id.length - 1) + y.toString();
+}
+
 export function assert(condition: boolean, message: string) {
   if (!condition) {
     throw message || 'Assertion failed';
