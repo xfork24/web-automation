@@ -327,11 +327,11 @@ class Crawler:
                 self.logger.error(
                     'assertion failed in search result page, just stop crawling')
                 traceback.print_exc()
-                break
+                raise RuntimeError('assertion failed, we got slide verfication')
             except Exception:
                 self.logger.error('get unexcepted exception while parsing search results, just stop crawling')
                 traceback.print_exc()
-                break
+                raise RuntimeError('get unexcepted exception while parsing search results')
 
     def parse_taobao_search_result(self, search_result, ids_set, update_id, target_product_ids=None):
         try:
