@@ -87,6 +87,7 @@ DETAIL_IMG_LINK_VALIDATE_RE_EXP = re.compile('^https://\\w+')
 
 # Taobao product manage controls
 ONSHELF_TAOBAO_NAV_BAR_RE_EXP = re.compile('^PicGroupList_treeDom__\\w+$')
+ONSHELF_TAOBAO_HEAD_ACTION_RE_EXP = re.compile('^HeadActions_headActionsLeft__\\w+')
 
 
 class WebDriverType(Enum):
@@ -1381,8 +1382,15 @@ class Crawler:
                 navbar_root = div
                 break
         assert (navbar_root is not None)
-        sort_span = self.driver.find_element(By.XPATH,
-                                             '//*[@id="sucai-tu-selector-container"]/div[3]/div[2]/div[3]/div/div[1]/span[3]/span[1]/span[1]/span')
+        selector_container = self.driver.find_element(By.ID, 'sucai-tu-selector-container')
+        sort_span = None
+        for div in selector_container.find_elements(By.XPATH, './/div'):
+            cls_name = div.get_attribute('class')
+            if cls_name is None:
+                continue
+            elif re.match(ONSHELF_TAOBAO_HEAD_ACTION_RE_EXP, cls_name):
+                sort_span = div.find_elements(By.XPATH, 'span[3]/span[1]/span[1]')
+        assert (sort_span is not None)
         self.element_click(sort_span)
         spans = self.driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
         for span in spans:
