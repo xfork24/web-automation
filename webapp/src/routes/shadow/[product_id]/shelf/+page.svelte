@@ -432,12 +432,12 @@
                 <div class="flex flex-wrap items-center justify-start">
                   {#if platform_mask & PLATFORM_TAOBAO }
                     <div class="px-4 text-2xl">Product has been put on sale in
-                      <a href="https://item.taobao.com/item.htm?id=${data.shadow_info.shadow_id}" target="_blank" class="italic text-yellow-500">Taobao</a>.
+                      <a href="https://item.taobao.com/item.htm?id={data.shadow_info.shadow_id}" target="_blank" class="italic text-yellow-500">Taobao</a>.
                     </div>
                   {/if}
                   {#if platform_mask & PLATFORM_REDNOTE }
                     <div class="px-4 text-2xl">Product has been put on sale in
-                      <a href="https://www.xiaohongshu.com/goods-detail/${data.shadow_info.rednote_id}" target="_blank" class="italic text-red-500">Rednote</a>.
+                      <a href="https://www.xiaohongshu.com/goods-detail/{data.shadow_info.rednote_id}" target="_blank" class="italic text-red-500">Rednote</a>.
                     </div>
                   {/if}
                 </div>
