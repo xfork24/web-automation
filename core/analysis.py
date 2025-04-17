@@ -56,7 +56,8 @@ def analyze_and_add_shop_crawl_tasks(update_id, top_n=TB_SHOP_REVENUE_TOPN,
     pi_query = ProductInfo.select(ProductInfo.shop_name,
                                   fn.AVG(ProductInfo.display_price).alias('avg_price'),
                                   fn.SUM(ProductInfo.display_sale).alias('total_sale'),
-                                  fn.SUM(ProductInfo.estimated_revenue).alias('total_revenue')).group_by(
+                                  fn.SUM(ProductInfo.estimated_revenue).alias('total_revenue')).where(
+        ProductInfo.status == PRODUCT_STATUS_NORMAL).group_by(
         ProductInfo.shop_name).order_by(fn.SUM(ProductInfo.estimated_revenue).desc())
     idx = 0
     for pi in pi_query:
@@ -85,7 +86,8 @@ def analyze_and_add_detail_crawl_tasks(update_id, top_n=TB_SKU_REVENUE_TOPN,
                                        revenue_threshold=TB_SKU_REVENUE_THRESHOLD):
     logger = get_logger()
     ts = int(time.time())
-    pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
+    pi_query = ProductInfo.select().where(ProductInfo.status == PRODUCT_STATUS_NORMAL).order_by(
+        ProductInfo.estimated_revenue.desc())
     idx = 0
     for pi in pi_query:
         if idx > top_n or pi.estimated_revenue < revenue_threshold * 100:
@@ -342,7 +344,8 @@ class CrawlTaskRunner:
     def analyze_and_add_hot_products(self, update_id, top_n=TB_SKU_REVENUE_TOPN,
                                      revenue_threshold=TB_SKU_REVENUE_THRESHOLD):
         ts = int(time.time())
-        pi_query = ProductInfo.select().order_by(ProductInfo.estimated_revenue.desc())
+        pi_query = ProductInfo.select().where(ProductInfo.status == PRODUCT_STATUS_NORMAL).order_by(
+            ProductInfo.estimated_revenue.desc())
         idx = 0
         for pi in pi_query:
             # 我们暂时不分析商品销量历史数据，因为这逻辑上相当于年度均线，且淘宝给出的信息很含糊
