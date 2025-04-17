@@ -85,10 +85,6 @@ DETAIL_MAIN_IMGS_SINGLE_IMG_V8_RE_EXP = re.compile('^descV8-singleImage$')
 DETAIL_MAIN_IMGS_RICHTEXT_V8_RE_EXP = re.compile('^descV8-richtext$')
 DETAIL_IMG_LINK_VALIDATE_RE_EXP = re.compile('^https://\\w+')
 
-# Taobao product manage controls
-ONSHELF_TAOBAO_NAV_BAR_RE_EXP = re.compile('^PicGroupList_treeDom__\\w+$')
-ONSHELF_TAOBAO_HEAD_ACTION_RE_EXP = re.compile('^HeadActions_headActionsLeft__\\w+')
-
 
 class WebDriverType(Enum):
     ChromDriver = 1
@@ -1302,7 +1298,6 @@ class Crawler:
             self.element_click(close_label)
         self.element_click(upload_ctx_div)
         self.upload_select_files(f'{os.getcwd()}\\webapp\\static\\' + path.replace("/", "\\"), images)
-        return
 
     def handle_taobao_on_shelf(self, product, shop_name, update_id):
         self.driver.get(TB_ONSHELF_PAGE)
@@ -1389,32 +1384,15 @@ class Crawler:
         return True
 
     def handle_taobao_select_images(self, path, confirm=False):
-        navbar_root = None
-        divs = self.driver.find_elements(By.XPATH, '//div')
-        for div in divs:
-            cls_name = div.get_attribute('class')
-            if cls_name is None:
-                continue
-            elif re.match(ONSHELF_TAOBAO_NAV_BAR_RE_EXP, cls_name):
-                navbar_root = div
-                break
-        assert (navbar_root is not None)
-        selector_container = self.driver.find_element(By.ID, 'sucai-tu-selector-container')
-        sort_span = None
-        for div in selector_container.find_elements(By.XPATH, './/div'):
-            cls_name = div.get_attribute('class')
-            if cls_name is None:
-                continue
-            elif re.match(ONSHELF_TAOBAO_HEAD_ACTION_RE_EXP, cls_name):
-                sort_span = div.find_element(By.XPATH, 'span[3]/span[1]/span[1]')
-        assert (sort_span is not None)
-        self.element_click(sort_span)
+        sort_btn = self.driver.find_element(By.XPATH, '//*[@id="sucai-tu-selector-container"]/div[2]/div[2]/div[3]/div/div[1]/div/button')
+        self.element_click(sort_btn)
         spans = self.driver.find_elements(By.CLASS_NAME, 'next-menu-item-text')
         for span in spans:
             if span.text == '文件名升序':
                 self.element_click(span)
                 break
         path_list = path.split('/')
+        navbar_root = self.driver.find_element(By.XPATH, '//*[@id="sucai-tu-selector-container"]/div[2]/div[1]/div')
         parent_li = navbar_root
         for token in path_list:
             child_li = None
@@ -1432,7 +1410,7 @@ class Crawler:
         [self.element_click(image_div) for image_div in image_divs]
         if confirm:
             confirm_btn = self.driver.find_element(By.XPATH,
-                                                   '//*[@id="sucai-tu-selector-container"]/div[4]/div[3]/button')
+                                                   '//*[@id="sucai-tu-selector-container"]/div[3]/div[5]/button')
             self.element_click(confirm_btn)
 
     def handle_rednote_on_shelf(self, product, shop_name, update_id):
