@@ -1069,7 +1069,7 @@ class Crawler:
 
     def handle_taobao_resource_upload(self, product, update_id):
         additional_properties = json_loads(product.additional_properties)
-        if RESOURCE_UPLOAD_KEY in additional_properties and additional_properties[RESOURCE_UPLOAD_KEY]:
+        if TAOBAO_RESOURCE_UPLOAD_KEY in additional_properties and additional_properties[TAOBAO_RESOURCE_UPLOAD_KEY]:
             self.logger.info(f'resource already uploaded for product_id={product.product_id}, just return')
             return
         self.driver.get(TB_IMAGE_SPACE_PAGE)
@@ -1098,7 +1098,7 @@ class Crawler:
         # handle product resource upload
         self.upload_taobao_subfolder(upload_span, f'{resource_root}/title_images', title_images)
         self.upload_taobao_subfolder(upload_span, f'{resource_root}/page_images', page_images)
-        additional_properties[RESOURCE_UPLOAD_KEY] = True
+        additional_properties[TAOBAO_RESOURCE_UPLOAD_KEY] = True
         update_shadow_product_info(product.product_id, product.status, update_id,
                                    self.handle_taobao_resource_upload.__name__,
                                    additional_properties=additional_properties)
@@ -1204,7 +1204,7 @@ class Crawler:
 
     def handle_rednote_resource_upload(self, product, update_id):
         additional_properties = json_loads(product.additional_properties)
-        if RESOURCE_UPLOAD_KEY in additional_properties and additional_properties[RESOURCE_UPLOAD_KEY]:
+        if REDNOTE_RESOURCE_UPLOAD_KEY in additional_properties and additional_properties[REDNOTE_RESOURCE_UPLOAD_KEY]:
             self.logger.info(f'resource already uploaded for product_id={product.product_id}, just return')
             return
         self.driver.get(REDNOTE_IMAGE_SPACE_PAGE)
@@ -1239,7 +1239,7 @@ class Crawler:
         # handle product resource upload
         self.upload_rednote_subfolder(ul_list, upload_btn, f'{resource_root}/title_images', title_images)
         self.upload_rednote_subfolder(ul_list, upload_btn, f'{resource_root}/page_images', page_images)
-        additional_properties[RESOURCE_UPLOAD_KEY] = True
+        additional_properties[REDNOTE_RESOURCE_UPLOAD_KEY] = True
         update_shadow_product_info(product.product_id, product.status, update_id,
                                    self.handle_taobao_resource_upload.__name__,
                                    additional_properties=additional_properties)
