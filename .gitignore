@@ -1,2 +1,12 @@
 # Created by venv; see https://docs.python.org/3/library/venv.html
-*
+.idea/
+CACHEDIR.TAG
+Include/
+Lib/
+Scripts/
+api/__pycache__/
+core/__pycache__/
+etc/supervisor-pyv310-service.log
+images/
+share/
+pyvenv.cfg
