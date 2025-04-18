@@ -26,7 +26,10 @@
   let {data} = $props();
   let sales = $state(data.product_sales);
 
-  const additional_properties = data.shadow_info.additional_properties;
+  let additional_properties = undefined;
+  if (data.shadow_info != undefined) {
+    additional_properties = data.shadow_info.additional_properties;
+  }
   let taobao_onshelf = $state(false)
   if (additional_properties != undefined && additional_properties.hasOwnProperty('taobao_onshelf_finished') && additional_properties['taobao_onshelf_finished']) {
     taobao_onshelf = true
