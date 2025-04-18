@@ -1388,8 +1388,11 @@ class Crawler:
         # 获取上架后的product_id
         shadow_id = self.parse_product_id_from_post_onshelf_link(self.driver.current_url)
         assert (shadow_id is not None)
+        additional_properties[TAOBAO_ONSHELF_FINISHED_KEY] = True
         update_shadow_product_info(product.product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
-                                   self.handle_taobao_on_shelf.__name__, shadow_id=shadow_id)
+                                   self.handle_taobao_on_shelf.__name__,
+                                   shadow_id=shadow_id,
+                                   additional_properties=additional_properties)
         return True
 
     def handle_taobao_select_images(self, path, confirm=False):
@@ -1485,8 +1488,9 @@ class Crawler:
         self.logger.info(f'onshelf product_id={product.product_id} to rednote successfully')
         time.sleep(CRAWL_PAGE_WAIT_IN_SECONDS)
         # 后续通过任务更新rednote_id
+        additional_properties[REDNOTE_ONSHELF_FINISHED_KEY] = True
         update_shadow_product_info(product.product_id, SHADOW_PRODUCT_STATUS_ONSHELF, update_id,
-                                   self.handle_rednote_on_shelf.__name__)
+                                   self.handle_rednote_on_shelf.__name__, additional_properties=additional_properties)
         return True
 
     def handle_rednote_select_images(self, path):

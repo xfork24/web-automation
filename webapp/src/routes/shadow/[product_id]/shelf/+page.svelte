@@ -31,9 +31,17 @@
   let product_inventory = $state(data.shadow_info != undefined ? data.shadow_info.inventory : 0);
   let title_imgs = $state(data.shadow_info != undefined ? data.shadow_info.title_imgs : []);
   let page_imgs = $state(data.shadow_info != undefined ? data.shadow_info.page_imgs : []);
-  let offer_details = $state(data.shadow_info != undefined ? data.shadow_info.offer_details : {});
-  let additional_properties = $state(data.shadow_info != undefined ? data.shadow_info.additional_properties : {});
+  let offer_details = data.shadow_info != undefined ? data.shadow_info.offer_details : {};
+  let additional_properties = data.shadow_info != undefined ? data.shadow_info.additional_properties : {};
   let platform_mask = $state(data.shadow_info != undefined ? data.shadow_info.additional_properties.platform_mask : 0);
+  let taobao_onshelf = $state(false)
+  if (additional_properties != undefined && additional_properties.hasOwnProperty('taobao_onshelf_finished') && additional_properties['taobao_onshelf_finished']) {
+    taobao_onshelf = true
+  }
+  let rednote_onshelf = $state(false)
+  if (additional_properties != undefined && additional_properties.hasOwnProperty('rednote_onshelf_finished') && additional_properties['rednote_onshelf_finished']) {
+    rednote_onshelf = true
+  }
 
   let new_title_imgs: string[] = $state([]);
   let new_page_imgs: string[] = $state([]);
@@ -426,25 +434,37 @@
               {:else}
                 <div class="flex flex-wrap items-center justify-start">
                   {#if platform_mask & PLATFORM_TAOBAO }
-                    <div class="flex flex-nowrap px-4 text-2xl">Product has been put on sale in
-                      <a href="https://item.taobao.com/item.htm?id={data.shadow_info.shadow_id}"
-                         target="_blank" class="italic text-yellow-500">Taobao</a>
-                      <a href="https://item.upload.taobao.com/sell/v2/publish.htm?itemId={data.shadow_info.shadow_id}"
-                         target="_blank">
-                        <FilePenLine size={16}/>
-                      </a>.
-                    </div>
+                    {#if taobao_onshelf}
+                      <div class="flex flex-nowrap px-4 text-2xl">Product has been put on sale in
+                        <a href="https://item.taobao.com/item.htm?id={data.shadow_info.shadow_id}"
+                           target="_blank" class="italic text-yellow-500">Taobao</a>
+                        <a href="https://item.upload.taobao.com/sell/v2/publish.htm?itemId={data.shadow_info.shadow_id}"
+                           target="_blank">
+                          <FilePenLine size={16}/>
+                        </a>.
+                      </div>
+                    {:else}
+                      <div class="flex flex-nowrap px-4 text-2xl">Product is being put on sale in
+                        <a href="/shadow" class="italic text-yellow-500">Taobao</a>.
+                      </div>
+                    {/if}
                   {/if}
                   {#if platform_mask & PLATFORM_REDNOTE }
-                    <div class="flex flex-nowrap px-4 text-2xl">Product has been put on sale in
-                      <a
-                        href="https://www.xiaohongshu.com/goods-detail/{parse_rednote_preview_id(data.shadow_info.rednote_id)}"
-                        target="_blank" class="italic text-red-500">Rednote</a>
-                      <a href="https://ark.xiaohongshu.com/app-item/good/edit/{data.shadow_info.rednote_id}"
-                         target="_blank">
-                        <FilePenLine size={16}/>
-                      </a>.
-                    </div>
+                    {#if rednote_onshelf}
+                      <div class="flex flex-nowrap px-4 text-2xl">Product has been put on sale in
+                        <a
+                          href="https://www.xiaohongshu.com/goods-detail/{parse_rednote_preview_id(data.shadow_info.rednote_id)}"
+                          target="_blank" class="italic text-red-500">Rednote</a>
+                        <a href="https://ark.xiaohongshu.com/app-item/good/edit/{data.shadow_info.rednote_id}"
+                           target="_blank">
+                          <FilePenLine size={16}/>
+                        </a>.
+                      </div>
+                    {:else}
+                      <div class="flex flex-nowrap px-4 text-2xl">Product is being put on sale in
+                        <a href="/shadow" class="italic text-red-500">Rednote</a>.
+                      </div>
+                    {/if}
                   {/if}
                 </div>
               {/if}
