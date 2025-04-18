@@ -1,5 +1,6 @@
 # Created by venv; see https://docs.python.org/3/library/venv.html
 .idea/
+.DS_Store
 CACHEDIR.TAG
 Include/
 Lib/
@@ -9,3 +10,5 @@ core/__pycache__/
 images/
 share/
 pyvenv.cfg
+bin/
+logs/
