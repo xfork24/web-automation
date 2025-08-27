@@ -7,6 +7,8 @@ Lib/
 Scripts/
 api/__pycache__/
 core/__pycache__/
+projects/__pycache__/
+projects/output/
 images/
 share/
 pyvenv.cfg
